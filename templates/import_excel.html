@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}Excel Import - JA Uniforms{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Excel Data Import</h1>
+    
+    <!-- Navigation -->
+    <div class="mb-4">
+        <a href="/admin-panel" class="btn btn-secondary">Back to Admin</a>
+    </div>
+    
+    <!-- Error/Success Messages -->
+    {% if error %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>Error:</strong> {{ error }}
+        <button type="button" class="close" data-dismiss="alert">
+            <span>&times;</span>
+        </button>
+    </div>
+    {% endif %}
+    
+    {% if success %}
+    <div class="alert alert-success" role="alert">
+        <h4 class="alert-heading">Import Successful!</h4>
+        <p>Successfully imported {{ success_count }} records.</p>
+    </div>
+    {% endif %}
+    
+    {% if warnings %}
+    <div class="alert alert-warning" role="alert">
+        <h5>Warnings:</h5>
+        <ul class="mb-0">
+        {% for warning in warnings %}
+            <li>{{ warning }}</li>
+        {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    {% if errors %}
+    <div class="alert alert-danger" role="alert">
+        <h5>Errors:</h5>
+        <ul class="mb-0">
+        {% for error in errors %}
+            <li>{{ error }}</li>
+        {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    <!-- Import Instructions -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Import Instructions</h5>
+        </div>
+        <div class="card-body">
+            <p><strong>Import Order:</strong> You must import data in this sequence:</p>
+            <ol>
+                <li><strong>Vendors</strong> - Import fabric vendors and notion vendors first</li>
+                <li><strong>Products</strong> - Import fabrics and notions (requires vendors)</li>
+                <li><strong>Styles</strong> - Import styles with BOMs (requires products)</li>
+            </ol>
+            <p class="mb-0"><strong>Note:</strong> Download and use the templates below to ensure your data is formatted correctly.</p>
+        </div>
+    </div>
+    
+    <!-- Import Sections -->
+    <div class="row">
+        <!-- Vendors Section -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">1. Import Vendors</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Fabric Vendors -->
+                    <h6>Fabric Vendors</h6>
+                    <p class="small">Import fabric supplier information</p>
+                    <div class="mb-3">
+                        <a href="/download-template/vendors" class="btn btn-sm btn-outline-primary">
+                            Download Template
+                        </a>
+                    </div>
+                    <form action="/import/fabric_vendors" method="POST" enctype="multipart/form-data" class="mb-4">
+                        <div class="input-group">
+                            <div class="custom-file">
+                                <input type="file" class="custom-file-input" id="fabric_vendors_file" name="file" accept=".xlsx,.xls" required>
+                                <label class="custom-file-label" for="fabric_vendors_file">Choose file</label>
+                            </div>
+                            <div class="input-group-append">
+                                <button type="submit" class="btn btn-primary">Import</button>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <!-- Notion Vendors -->
+                    <h6>Notion Vendors</h6>
+                    <p class="small">Import notion supplier information</p>
+                    <form action="/import/notion_vendors" method="POST" enctype="multipart/form-data">
+                        <div class="input-group">
+                            <div class="custom-file">
+                                <input type="file" class="custom-file-input" id="notion_vendors_file" name="file" accept=".xlsx,.xls" required>
+                                <label class="custom-file-label" for="notion_vendors_file">Choose file</label>
+                            </div>
+                            <div class="input-group-append">
+                                <button type="submit" class="btn btn-primary">Import</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Products Section -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">2. Import Products</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Fabrics -->
+                    <h6>Fabrics</h6>
+                    <p class="small">Import fabric materials and pricing</p>
+                    <div class="mb-3">
+                        <a href="/download-template/fabrics" class="btn btn-sm btn-outline-success">
+                            Download Template
+                        </a>
+                    </div>
+                    <form action="/import/fabrics" method="POST" enctype="multipart/form-data" class="mb-4">
+                        <div class="input-group">
+                            <div class="custom-file">
+                                <input type="file" class="custom-file-input" id="fabrics_file" name="file" accept=".xlsx,.xls" required>
+                                <label class="custom-file-label" for="fabrics_file">Choose file</label>
+                            </div>
+                            <div class="input-group-append">
+                                <button type="submit" class="btn btn-success">Import</button>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <!-- Notions -->
+                    <h6>Notions</h6>
+                    <p class="small">Import notions and accessories</p>
+                    <div class="mb-3">
+                        <a href="/download-template/notions" class="btn btn-sm btn-outline-success">
+                            Download Template
+                        </a>
+                    </div>
+                    <form action="/import/notions" method="POST" enctype="multipart/form-data">
+                        <div class="input-group">
+                            <div class="custom-file">
+                                <input type="file" class="custom-file-input" id="notions_file" name="file" accept=".xlsx,.xls" required>
+                                <label class="custom-file-label" for="notions_file">Choose file</label>
+                            </div>
+                            <div class="input-group-append">
+                                <button type="submit" class="btn btn-success">Import</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Styles Section -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">3. Import Styles with BOMs</h5>
+                </div>
+                <div class="card-body">
+                    <p>Import complete style information including fabrics, notions, and labor requirements.</p>
+                    <div class="alert alert-info">
+                        <strong>Important:</strong> Before importing styles, ensure all referenced fabrics and notions are already in the system.
+                    </div>
+                    <div class="mb-3">
+                        <a href="/download-template/styles" class="btn btn-outline-warning">
+                            Download Style Template
+                        </a>
+                    </div>
+                    <form action="/import/styles" method="POST" enctype="multipart/form-data">
+                        <div class="input-group">
+                            <div class="custom-file">
+                                <input type="file" class="custom-file-input" id="styles_file" name="file" accept=".xlsx,.xls" required>
+                                <label class="custom-file-label" for="styles_file">Choose file</label>
+                            </div>
+                            <div class="input-group-append">
+                                <button type="submit" class="btn btn-warning">Import Styles</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tips -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">Tips for Successful Import</h5>
+        </div>
+        <div class="card-body">
+            <ul class="mb-0">
+                <li>Always use the provided templates to ensure correct column headers</li>
+                <li>Remove any sample data rows from templates before importing your data</li>
+                <li>Ensure vendor codes in products match existing vendor codes exactly</li>
+                <li>For styles, fabric and notion names must match existing items exactly</li>
+                <li>Leave cells empty rather than using "N/A" or similar text</li>
+                <li>Save your Excel files in .xlsx format for best compatibility</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for file input labels -->
+<script>
+// Update file input labels with selected filename
+document.querySelectorAll('.custom-file-input').forEach(input => {
+    input.addEventListener('change', function(e) {
+        const fileName = e.target.files[0]?.name || 'Choose file';
+        const label = e.target.nextElementSibling;
+        label.textContent = fileName;
+    });
+});
+</script>
+{% endblock %}

@@ -317,16 +317,86 @@ def master_costs():
     """
     return html
 
-# ===== PLACEHOLDER ROUTES FOR FUTURE FEATURES =====
+# ===== IMPORT ROUTES =====
+from flask import send_file
+from import_excel import ExcelImporter
+import os
+
 @app.route('/import-excel')
 def import_excel():
-    return """
-    <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
-        <h1>Excel Import</h1>
-        <p>This feature will be implemented in the next phase to import your 400 existing uniform styles from Excel.</p>
-        <a href="/admin-panel" style="background-color: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Back to Admin</a>
-    </div>
-    """
+    return render_template('import_excel.html')
+
+@app.route('/download-template/<template_type>')
+def download_template(template_type):
+    importer = ExcelImporter()
+    template_file = importer.generate_template(template_type)
+    
+    if template_file:
+        return send_file(
+            template_file,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'{template_type}_import_template.xlsx'
+        )
+    else:
+        return "Invalid template type", 404
+
+@app.route('/import/<import_type>', methods=['POST'])
+def import_data(import_type):
+    if 'file' not in request.files:
+        return render_template('import_excel.html', error='No file uploaded')
+    
+    file = request.files['file']
+    if file.filename == '':
+        return render_template('import_excel.html', error='No file selected')
+    
+    importer = ExcelImporter()
+    
+    # Validate file
+    is_valid, result = importer.validate_excel_file(file)
+    if not is_valid:
+        return render_template('import_excel.html', error=result)
+    
+    # Save file temporarily
+    upload_folder = app.config.get('UPLOAD_FOLDER', 'uploads')
+    if not os.path.exists(upload_folder):
+        os.makedirs(upload_folder)
+    
+    file_path = os.path.join(upload_folder, result)
+    file.save(file_path)
+    
+    try:
+        # Process import based on type
+        success = False
+        if import_type == 'fabric_vendors':
+            success = importer.import_vendors(file_path, 'fabric')
+        elif import_type == 'notion_vendors':
+            success = importer.import_vendors(file_path, 'notion')
+        elif import_type == 'fabrics':
+            success = importer.import_fabrics(file_path)
+        elif import_type == 'notions':
+            success = importer.import_notions(file_path)
+        elif import_type == 'styles':
+            success = importer.import_styles(file_path)
+        else:
+            return render_template('import_excel.html', error='Invalid import type')
+        
+        # Clean up file
+        os.remove(file_path)
+        
+        # Return results
+        return render_template('import_excel.html',
+            success=success,
+            success_count=importer.success_count,
+            errors=importer.errors,
+            warnings=importer.warnings,
+            import_type=import_type
+        )
+        
+    except Exception as e:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        return render_template('import_excel.html', error=f'Import failed: {str(e)}')
 
 # ===== APPLICATION STARTUP =====
 if __name__ == '__main__':
