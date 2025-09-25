@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1>J.A Uniforms Pricing Tool</h1>
+        <p class="lead">Search for uniform styles and view pricing information</p>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h5>Style Lookup</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('search_style') }}">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <label class="form-label">Vendor Style Code</label>
+                            <input type="text" name="vendor_style" class="form-control form-control-lg" 
+                                   placeholder="Enter style code (e.g., 21324-3202)" required>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary btn-lg w-100">Search</button>
+                        </div>
+                    </div>
+                </form>
+                
+                <div class="mt-3 text-muted">
+                    <small>Try searching: <code>21324-3202</code></small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
