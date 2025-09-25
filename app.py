@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, request
+from flask import Flask, render_template, redirect, url_for, request, jsonify
 from config import Config
 from database import db
 
@@ -11,6 +11,7 @@ db.init_app(app)
 
 # Import models AFTER db is initialized
 from models import *
+from import_excel import import_workbook
 
 # ===== MAIN APPLICATION ROUTES =====
 @app.route('/')
@@ -321,12 +322,67 @@ def master_costs():
 @app.route('/import-excel')
 def import_excel():
     return """
-    <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+    <div style="max-width: 700px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
         <h1>Excel Import</h1>
-        <p>This feature will be implemented in the next phase to import your 400 existing uniform styles from Excel.</p>
+        <p>Upload an .xlsx workbook with sheets named: <em>FabricVendors</em>, <em>NotionVendors</em>, <em>Fabrics</em>, <em>Notions</em>, <em>LaborOperations</em>, <em>CleaningCosts</em>, <em>SizeVariants</em>, <em>Styles</em>, <em>StyleFabrics</em>, <em>StyleNotions</em>, <em>StyleLabor</em>.</p>
+        <form action="/import-excel" method="post" enctype="multipart/form-data" style="margin: 20px 0;">
+            <input type="file" name="file" accept=".xlsx" required />
+            <button type="submit" style="background-color: #007bff; color: white; padding: 8px 16px; border: none; border-radius: 4px; margin-left: 8px;">Upload & Import</button>
+        </form>
         <a href="/admin-panel" style="background-color: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Back to Admin</a>
     </div>
     """
+
+@app.route('/import-excel', methods=['POST'])
+def import_excel_post():
+    if 'file' not in request.files:
+        return "<h1>No file uploaded</h1><a href='/import-excel'>Back</a>", 400
+    file = request.files['file']
+    if file.filename == '':
+        return "<h1>No selected file</h1><a href='/import-excel'>Back</a>", 400
+    try:
+        # Save to a temporary file path in memory via pandas (it can read file-like)
+        summary = import_workbook(file)
+        # Render a lightweight HTML summary
+        html = """
+        <div style='max-width: 900px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;'>
+            <h1>Import Summary</h1>
+            <table style='width: 100%; border-collapse: collapse;'>
+                <thead>
+                    <tr style='background: #f8f9fa;'>
+                        <th style='border:1px solid #ddd; padding:8px; text-align:left;'>Sheet</th>
+                        <th style='border:1px solid #ddd; padding:8px; text-align:right;'>Created</th>
+                        <th style='border:1px solid #ddd; padding:8px; text-align:right;'>Updated</th>
+                        <th style='border:1px solid #ddd; padding:8px; text-align:right;'>Skipped</th>
+                        <th style='border:1px solid #ddd; padding:8px; text-align:left;'>Errors</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """
+        for sheet, stats in summary.items():
+            errors = stats.get('errors') or []
+            html += f"""
+                <tr>
+                    <td style='border:1px solid #ddd; padding:8px;'>{sheet}</td>
+                    <td style='border:1px solid #ddd; padding:8px; text-align:right;'>{stats.get('created',0)}</td>
+                    <td style='border:1px solid #ddd; padding:8px; text-align:right;'>{stats.get('updated',0)}</td>
+                    <td style='border:1px solid #ddd; padding:8px; text-align:right;'>{stats.get('skipped',0)}</td>
+                    <td style='border:1px solid #ddd; padding:8px; white-space: pre-wrap;'>{'; '.join(errors[:5])}{'...' if len(errors) > 5 else ''}</td>
+                </tr>
+            """
+        html += """
+                </tbody>
+            </table>
+            <div style='margin-top: 16px;'>
+                <a href='/view-all-styles' style='background:#007bff;color:#fff;padding:8px 12px;border-radius:4px;text-decoration:none;'>View Styles</a>
+                <a href='/master-costs' style='background:#28a745;color:#fff;padding:8px 12px;border-radius:4px;text-decoration:none;margin-left:8px;'>Master Costs</a>
+                <a href='/import-excel' style='background:#6c757d;color:#fff;padding:8px 12px;border-radius:4px;text-decoration:none;margin-left:8px;'>Back</a>
+            </div>
+        </div>
+        """
+        return html
+    except Exception as e:
+        return f"<h1>Import failed</h1><p>{str(e)}</p><a href='/import-excel'>Back</a>", 500
 
 # ===== APPLICATION STARTUP =====
 if __name__ == '__main__':
