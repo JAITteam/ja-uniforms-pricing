@@ -1,5 +1,7 @@
 import pandas as pd
 from flask import Config, Flask, request, redirect, url_for
+from flask import jsonify, request
+from sqlalchemy import func
 from models import Style
 from database import db
 from flask import Flask, render_template, redirect, url_for, request, flash, send_from_directory
@@ -321,6 +323,48 @@ def master_costs():
     return html
 
 # ===== PLACEHOLDER ROUTES FOR FUTURE FEATURES =====
+@app.route("/style/new")
+def style_wizard():
+    defaults = {"gender":"MENS","garment_type":"SS TOP/SS DRESS","size_range":"XS-4XL"}
+    return render_template("style_wizard.html", defaults=defaults)
+
+@app.route("/import-step1", methods=["GET","POST"])
+def import_step1():
+    if request.method == "POST":
+        file = request.files.get("file")
+        if not file:
+            flash("Upload an .xlsx file", "warning")
+            return redirect(url_for("import_step1"))
+        import pandas as pd
+        xls = pd.ExcelFile(file)
+        sheets = []
+        for name in xls.sheet_names:
+            df = pd.read_excel(xls, sheet_name=name)
+            if df.empty: 
+                continue
+            cols = {c.lower().strip(): c for c in df.columns}
+            item_col = next((cols[k] for k in cols if "item" in k), None)
+            variant_col = next((cols[k] for k in cols if "variant" in k), None)
+            name_col = next((cols[k] for k in cols if k in ("name","style name","description")), None)
+            preview = []
+            if item_col and name_col:
+                row0 = df.iloc[0]
+                base = str(row0[item_col]).strip().split("-")[0]
+                variant = str(row0[variant_col]).strip() if variant_col else ""
+                vendor_style = "-".join([p for p in [base, variant] if p])
+                preview.append({
+                    "sheet": name,
+                    "vendor_style": vendor_style,
+                    "base_item_number": base,
+                    "variant_code": variant,
+                    "style_name": str(row0[name_col]).strip(),
+                })
+            sheets.append(preview)
+        return render_template("import_step1.html", previews=sheets)
+    return render_template("import_step1.html", previews=None)
+
+
+
 @app.route('/import-excel', methods=['GET', 'POST'])
 def import_excel():
     if request.method == 'GET':
