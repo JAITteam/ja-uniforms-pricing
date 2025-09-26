@@ -1,7 +1,10 @@
-from flask import Flask, render_template, redirect, url_for, request
+import pandas as pd
+from flask import Config, Flask, request, redirect, url_for
+from models import Style
+from database import db
+from flask import Flask, render_template, redirect, url_for, request, flash, send_from_directory
 from config import Config
 from database import db
-
 # Initialize Flask app
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -318,16 +321,155 @@ def master_costs():
     return html
 
 # ===== PLACEHOLDER ROUTES FOR FUTURE FEATURES =====
-@app.route('/import-excel')
+@app.route('/import-excel', methods=['GET', 'POST'])
 def import_excel():
-    return """
-    <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
-        <h1>Excel Import</h1>
-        <p>This feature will be implemented in the next phase to import your 400 existing uniform styles from Excel.</p>
-        <a href="/admin-panel" style="background-color: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Back to Admin</a>
-    </div>
-    """
-
+    if request.method == 'GET':
+        return """
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+            <h1>Import Excel Data</h1>
+            <form method="POST" enctype="multipart/form-data">
+                <div style="margin: 20px 0;">
+                    <label>Select Excel File:</label><br>
+                    <input type="file" name="excel_file" accept=".xlsx,.xls" required style="margin: 10px 0;">
+                </div>
+                <button type="submit" style="background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px;">Import Uniforms</button>
+                <a href="/admin-panel" style="margin-left: 10px; background-color: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Cancel</a>
+            </form>
+        </div>
+        """
+    
+    if 'excel_file' not in request.files:
+        return "No file selected"
+    
+    file = request.files['excel_file']
+    if file.filename == '':
+        return "No file selected"
+    
+    try:
+        # Read Excel file
+        df = pd.read_excel(file)
+        
+        imported_count = 0
+        errors = []
+        current_style = None
+        
+        # Process each row
+        for index, row in df.iterrows():
+            try:
+                # Check if this is a style header (row with Item#)
+                if pd.notna(row.iloc[0]) and str(row.iloc[0]).replace('.', '').isdigit():
+                    # This is a new uniform style
+                    item_number = str(int(float(row.iloc[0])))  # Convert to clean integer string
+                    style_name = str(row.iloc[1]) if pd.notna(row.iloc[1]) else f"Style {item_number}"
+                    variant = str(row.iloc[2]) if pd.notna(row.iloc[2]) else ""
+                    
+                    # Create vendor_style (your lookup key)
+                    if variant and variant != "nan":
+                        vendor_style = f"{item_number}-{variant}"
+                    else:
+                        vendor_style = item_number
+                    
+                    # Check if style already exists
+                    existing_style = Style.query.filter_by(vendor_style=vendor_style).first()
+                    if existing_style:
+                        current_style = existing_style
+                        continue
+                    
+                    # Determine gender from style name
+                    gender = "UNISEX"
+                    if "Mens" in style_name or "MENS" in style_name:
+                        gender = "MENS"
+                    elif "Ladies" in style_name or "LADIES" in style_name:
+                        gender = "LADIES"
+                    
+                    # Create new style
+                    current_style = Style(
+                        vendor_style=vendor_style,
+                        base_item_number=item_number,
+                        variant_code=variant if variant != "nan" else None,
+                        style_name=style_name,
+                        gender=gender,
+                        garment_type="IMPORTED",  # Default
+                        size_range="XS-4XL"      # Default
+                    )
+                    db.session.add(current_style)
+                    db.session.flush()  # Get the ID
+                    imported_count += 1
+                    
+                # Check if this is a fabric row (under MATERIALS section)
+                elif pd.notna(row.iloc[0]) and "Fabric" in str(row.iloc[0]) and current_style:
+                    fabric_name = str(row.iloc[1]) if pd.notna(row.iloc[1]) else "Unknown Fabric"
+                    cost_per_yard = float(row.iloc[2]) if pd.notna(row.iloc[2]) else 0.0
+                    yards_required = float(row.iloc[3]) if pd.notna(row.iloc[3]) else 0.0
+                    
+                    # Find or create fabric
+                    fabric = Fabric.query.filter_by(name=fabric_name).first()
+                    if not fabric:
+                        # Create imported vendor if needed
+                        vendor = FabricVendor.query.filter_by(name="IMPORTED").first()
+                        if not vendor:
+                            vendor = FabricVendor(name="IMPORTED", vendor_code="IMP")
+                            db.session.add(vendor)
+                            db.session.flush()
+                        
+                        fabric = Fabric(
+                            name=fabric_name,
+                            cost_per_yard=cost_per_yard,
+                            fabric_vendor_id=vendor.id
+                        )
+                        db.session.add(fabric)
+                        db.session.flush()
+                    
+                    # Create style-fabric relationship
+                    style_fabric = StyleFabric(
+                        style_id=current_style.id,
+                        fabric_id=fabric.id,
+                        yards_required=yards_required
+                    )
+                    db.session.add(style_fabric)
+                    
+            except Exception as e:
+                errors.append(f"Row {index}: {str(e)}")
+                continue
+        
+        # Commit all changes
+        db.session.commit()
+        
+        # Return results
+        result_html = f"""
+        <div style="max-width: 800px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+            <h1>Import Results</h1>
+            <div style="background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <h3>Import Completed!</h3>
+                <p><strong>{imported_count} uniform styles imported successfully</strong></p>
+            </div>
+        """
+        
+        if errors:
+            result_html += f"""
+            <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <h3>Warnings ({len(errors)} issues):</h3>
+                <ul>
+            """
+            for error in errors[:5]:  # Show first 5 errors
+                result_html += f"<li>{error}</li>"
+            if len(errors) > 5:
+                result_html += f"<li>... and {len(errors) - 5} more issues</li>"
+            result_html += "</ul></div>"
+        
+        result_html += """
+            <div style="margin: 30px 0;">
+                <a href="/view-all-styles" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Imported Styles</a>
+                <a href="/import-excel" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-left: 10px;">Import More Files</a>
+                <a href="/admin-panel" style="background-color: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-left: 10px;">Back to Admin</a>
+            </div>
+        </div>
+        """
+        
+        return result_html
+        
+    except Exception as e:
+        return f"<h1>Import Error:</h1><p>{str(e)}</p><a href='/import-excel'>Try Again</a>"
 # ===== APPLICATION STARTUP =====
 if __name__ == '__main__':
     with app.app_context():
