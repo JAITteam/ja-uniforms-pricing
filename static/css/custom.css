@@ -25,3 +25,126 @@
 .table th {
     background-color: #e9ecef;
 }
+
+/* Style Wizard specific styles */
+:root{
+    --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb; --panel:#fafafa; --panel-2:#f3f4f6;
+    --brand:#2563eb; --accent:#111827; --chip:#eef2ff;
+}
+
+body { 
+    font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; 
+    color:var(--ink);
+}
+
+.panel { 
+    border:1px solid var(--line); 
+    background:var(--panel); 
+    border-radius:14px; 
+    overflow:hidden; 
+    box-shadow:0 6px 14px rgba(17,24,39,.04);
+}
+
+.ph { 
+    background:var(--panel-2); 
+    padding:10px 14px; 
+    font-weight:600; 
+    letter-spacing:.2px; 
+    color:var(--accent); 
+    border-bottom:1px solid var(--line);
+}
+
+.pb { padding:14px; }
+
+.kv { 
+    display:flex; 
+    gap:10px; 
+    align-items:center; 
+    flex-wrap:wrap;
+}
+
+.kv label { 
+    margin:0; 
+    font-size:.84rem; 
+    color:var(--muted); 
+    white-space:nowrap;
+}
+
+.kv .form-control, .kv .form-select { 
+    height:36px; 
+    padding:6px 10px; 
+    border-radius:10px; 
+    border:1px solid var(--line); 
+    background:#fff;
+}
+
+.kv .form-control:focus, .kv .form-select:focus { 
+    border-color:#c7d2fe; 
+    box-shadow:0 0 0 3px #e0e7ff;
+}
+
+.xs { width:82px; }
+.sm { width:120px; }
+.md { width:180px; }
+.lg { width:260px; }
+.w-110 { width:110px; }
+.qty { width:84px; text-align:right; }
+
+.btn-pill { border-radius:999px; }
+.btn-soft { background:#eef2ff; border:1px solid #dbe3ff; color:#374151; }
+.btn-soft:hover { background:#e5ecff; }
+
+.linklike { 
+    color:var(--brand); 
+    cursor:pointer; 
+    user-select:none; 
+    font-weight:500;
+}
+
+.chip { 
+    font-size:.72rem; 
+    padding:3px 8px; 
+    background:var(--chip); 
+    border:1px solid #dbe3ff; 
+    border-radius:999px; 
+    color:#4b5563;
+}
+
+.sumline { 
+    display:flex; 
+    justify-content:flex-end; 
+    gap:12px; 
+    align-items:center;
+}
+
+.sumline strong { 
+    min-width:110px; 
+    text-align:right; 
+    font-size:1.05rem; 
+    letter-spacing:.2px;
+}
+
+.right-sticky { position:sticky; top:86px; }
+.snapshot .sumline strong { font-weight:700; }
+.snapshot hr { margin:.5rem 0; }
+
+.table-like .kv { 
+    padding:6px 0; 
+    border-bottom:1px dashed #edf0f4;
+}
+.table-like .kv:last-child { border-bottom:0; }
+
+.sketch { 
+    min-height:190px; 
+    border:1px dashed #cfd5e1; 
+    border-radius:12px; 
+    background:#fff;
+}
+
+.toolbar { 
+    display:flex; 
+    justify-content:space-between; 
+    align-items:center; 
+    margin-bottom:.5rem;
+}
+.toolbar .group { display:flex; gap:.5rem; }

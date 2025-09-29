@@ -2,55 +2,6 @@
 {% block title %}Cost Calculator (Refined PDF Layout){% endblock %}
 {% block content %}
 
-<!-- Aesthetic upgrade: font + variables -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-
-<style>
-  :root{
-    --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb; --panel:#fafafa; --panel-2:#f3f4f6;
-    --brand:#2563eb; --accent:#111827; --chip:#eef2ff;
-  }
-  body{ font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:var(--ink) }
-
-  /* Panels (like your PDF frames) */
-  .panel{ border:1px solid var(--line); background:var(--panel); border-radius:14px; overflow:hidden; box-shadow:0 6px 14px rgba(17,24,39,.04) }
-  .ph{ background:var(--panel-2); padding:10px 14px; font-weight:600; letter-spacing:.2px; color:var(--accent); border-bottom:1px solid var(--line) }
-  .pb{ padding:14px }
-
-  /* Inline controls */
-  .kv{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
-  .kv label{ margin:0; font-size:.84rem; color:var(--muted); white-space:nowrap }
-  .kv .form-control,.kv .form-select{ height:36px; padding:6px 10px; border-radius:10px; border:1px solid var(--line); background:#fff }
-  .kv .form-control:focus,.kv .form-select:focus{ border-color:#c7d2fe; box-shadow:0 0 0 3px #e0e7ff }
-  .xs{ width:82px } .sm{ width:120px } .md{ width:180px } .lg{ width:260px } .w-110{ width:110px } .qty{ width:84px; text-align:right }
-
-  /* Buttons */
-  .btn-pill{ border-radius:999px }
-  .btn-soft{ background:#eef2ff; border:1px solid #dbe3ff; color:#374151 }
-  .btn-soft:hover{ background:#e5ecff }
-
-  .linklike{ color:var(--brand); cursor:pointer; user-select:none; font-weight:500 }
-  .chip{ font-size:.72rem; padding:3px 8px; background:var(--chip); border:1px solid #dbe3ff; border-radius:999px; color:#4b5563 }
-
-  .sumline{ display:flex; justify-content:flex-end; gap:12px; align-items:center }
-  .sumline strong{ min-width:110px; text-align:right; font-size:1.05rem; letter-spacing:.2px }
-
-  /* Snapshot */
-  .right-sticky{ position:sticky; top:86px }
-  .snapshot .sumline strong{ font-weight:700 }
-  .snapshot hr{ margin:.5rem 0 }
-
-  /* Table-like feel */
-  .table-like .kv{ padding:6px 0; border-bottom:1px dashed #edf0f4 }
-  .table-like .kv:last-child{ border-bottom:0 }
-
-  /* Image box */
-  .sketch{ min-height:190px; border:1px dashed #cfd5e1; border-radius:12px; background:#fff }
-
-  .toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:.5rem }
-  .toolbar .group{ display:flex; gap:.5rem }
-</style>
 
 <div class="toolbar">
   <div class="group">
@@ -66,119 +17,140 @@
 
     <!-- BASICS -->
     <div class="panel">
-      <div class="ph"> </div>
-      <div class="pb">
-        <div class="row g-3">
-          <div class="col-lg-8">
-            <div class="kv">
-              <label>Vendor</label><input id="vendor" class="form-control md" value="JA uniforms">
-              <label>Vendor Code</label><input id="vendor_code" class="form-control xs" value="V100">
-            </div>
-            <div class="kv">
-              <label>Base Item #</label><input id="base_item_number" class="form-control xs" placeholder="21324" value="">
-              <label>Variant Code #</label><input id="variant_code" class="form-control xs" placeholder="3202" value="">
-              <label>Fabric Code #</label><input id="fabric_code" class="form-control xs" placeholder="F6" value="">
-            </div>
-            <div class="kv">
-              <label>Vendor Style</label><input id="vendor_style" class="form-control lg" placeholder="auto" value="">
-              <span class="chip">Auto: base — variant — fabric (skip F6 / BASE)</span>
-            </div>
-            <div class="kv">
-              <label>Style name</label>
-              <input id="style_name" class="form-control lg" placeholder="Type existing Style Name to load" value="">
-            </div>
-            <div class="kv">
-              <label>Gender</label>
-              <select id="gender" class="form-select sm">
-                <option>MENS</option><option>LADIES</option><option>UNISEX</option>
-              </select>
-            </div>
-          </div>
-          <div class="col-lg-4">
-            <div class="p-2">
-              <div class="sketch d-flex align-items-center justify-content-center">
-                <span class="text-muted">Style sketch / image</span>
-              </div>
-            </div>
+  <div class="ph">BASIC INFO</div>
+  <div class="pb">
+    <div class="row g-3">
+      <div class="col-lg-8">
+        <div class="kv">
+          <label>Vendor</label><input id="vendor" class="form-control md" value="JA uniforms">
+          <label>Vendor Code</label><input id="vendor_code" class="form-control xs" value="V100">
+        </div>
+        <div class="kv">
+          <label>Base Item #</label><input id="base_item_number" class="form-control xs" placeholder="21324" value="">
+          <label>Variant Code #</label><input id="variant_code" class="form-control xs" placeholder="3202" value="">
+          <label>Fabric Code #</label><input id="fabric_code" class="form-control xs" placeholder="F6" value="">
+        </div>
+        <div class="kv">
+          <label>Vendor Style</label><input id="vendor_style" class="form-control lg" placeholder="auto" value="">
+          <span class="chip">Auto or enter to load existing</span>
+        </div>
+        <div class="kv">
+          <label>Style name</label>
+          <input id="style_name" class="form-control lg" placeholder="Enter style name" value="">
+        </div>
+        <div class="kv">
+          <label>Gender</label>
+          <select id="gender" class="form-select sm">
+            <option>MENS</option><option>LADIES</option><option>UNISEX</option>
+          </select>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="p-2">
+          <div class="sketch d-flex align-items-center justify-content-center">
+            <span class="text-muted">Style sketch / image</span>
           </div>
         </div>
       </div>
     </div>
-
+  </div>
+</div>
     <!-- MATERIALS COST -->
-    <div class="panel" id="materialsPanel">
-      <div class="ph">MATERIALS COST</div>
-      <div class="pb table-like">
-        <!-- fabric row -->
-        <div class="kv">
-          <label>Vendor</label><input class="form-control md" value="" data-fabric-vendor>
-          <label>Fabric</label><input class="form-control md" value="" data-fabric-name>
-          <span class="chip">Sub.</span>
-          <label>Avg.Cost/yd</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-fabric-cost>
-          <label>Avg.Yds</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-fabric-yds>
-          <label>Total</label><input class="form-control w-110 text-end" value="" disabled data-fabric-total>
-        </div>
-
-        <div class="kv"><span class="linklike" id="addFabric">+ Fabric</span></div>
-
-        <!-- notion row -->
-        <div class="kv">
-          <label>Vendor</label><input class="form-control md" value="" data-notion-vendor>
-          <label>Notion</label><input class="form-control md" value="" data-notion-name>
-          <label>Avg.Cost</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-notion-cost>
-          <label>Qty</label><input class="form-control qty text-end" type="number" step="1" value="" data-notion-qty>
-          <label>Total</label><input class="form-control w-110 text-end" value="" disabled data-notion-total>
-        </div>
-
-        <div class="kv"><span class="linklike" id="addNotion">+ Notion</span></div>
-
-        <div class="kv">
-          <span class="text-muted">Avg. Label(s) Cost</span>
-          <input class="form-control w-110 text-end" id="label_cost" type="number" step="0.01" value="0.20">
-        </div>
-
-        <div class="sumline"><span class="text-muted">TOTAL MATERIALS COST</span><strong id="sumMaterials">$0.00</strong></div>
-      </div>
+<div class="panel" id="materialsPanel">
+  <div class="ph">MATERIALS COST</div>
+  <div class="pb table-like">
+    <!-- fabric row -->
+    <div class="kv">
+      <label>Vendor</label>
+      <select class="form-select md" data-fabric-vendor-id>
+        <option value="">Select Vendor</option>
+        {% for v in fabric_vendors %}
+        <option value="{{ v.id }}">{{ v.name }}</option>
+        {% endfor %}
+      </select>
+      
+      <label>Fabric</label>
+      <select class="form-select md" data-fabric-id>
+        <option value="">Select Fabric</option>
+        {% for f in fabrics %}
+        <option value="{{ f.id }}" data-cost="{{ f.cost_per_yard }}" data-vendor="{{ f.fabric_vendor_id }}">{{ f.name }}</option>
+        {% endfor %}
+      </select>
+      
+      <label>Cost/yd</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-fabric-cost readonly>
+      <label>Yards</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-fabric-yds>
+      <label>Total</label><input class="form-control w-110 text-end" value="" disabled data-fabric-total>
     </div>
 
+    <div class="kv"><span class="linklike" id="addFabric">+ Fabric</span></div>
+
+    <!-- notion row -->
+    <div class="kv">
+      <label>Vendor</label>
+      <select class="form-select md" data-notion-vendor-id>
+        <option value="">Select Vendor</option>
+        {% for v in notion_vendors %}
+        <option value="{{ v.id }}">{{ v.name }}</option>
+        {% endfor %}
+      </select>
+      
+      <label>Notion</label>
+      <select class="form-select md" data-notion-id>
+        <option value="">Select Notion</option>
+        {% for n in notions %}
+        <option value="{{ n.id }}" data-cost="{{ n.cost_per_unit }}" data-vendor="{{ n.notion_vendor_id }}">{{ n.name }}</option>
+        {% endfor %}
+      </select>
+      
+      <label>Cost</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-notion-cost readonly>
+      <label>Qty</label><input class="form-control qty text-end" type="number" step="1" value="" data-notion-qty>
+      <label>Total</label><input class="form-control w-110 text-end" value="" disabled data-notion-total>
+    </div>
+
+    <div class="kv"><span class="linklike" id="addNotion">+ Notion</span></div>
+
+    <div class="kv">
+      <span class="text-muted">Avg. Label(s) Cost</span>
+      <input class="form-control w-110 text-end" id="label_cost" type="number" step="0.01" value="0.20">
+    </div>
+
+    <div class="sumline"><span class="text-muted">TOTAL MATERIALS COST</span><strong id="sumMaterials">$0.00</strong></div>
+  </div>
+</div>
     <!-- LABOR COST -->
-    <div class="panel" id="laborPanel">
-      <div class="ph">LABOR COST</div>
-      <div class="pb table-like" id="laborRows">
-        <div class="kv" data-labor-row>
-          <label>Fusing + (Marker+Cut)</label>
-          <label class="ms-2">Avg.Cost</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-labor-rate>
-          <label>Qty</label><input class="form-control qty text-end" type="number" step="1" value="" data-labor-qoh>
-          <label>Total</label><input class="form-control w-110 text-end" value="" disabled data-labor-total>
-        </div>
-        <div class="kv" data-labor-row>
-          <label>Marker+Cut</label>
-          <label class="ms-2">Avg.Cost</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-labor-rate>
-          <label>Qty</label><input class="form-control qty text-end" type="number" step="1" value="" data-labor-qoh>
-          <label>Total</label><input class="form-control w-110 text-end" value="" disabled data-labor-total>
-        </div>
-        <div class="kv" data-labor-row>
-          <label>Sewing</label>
-          <label class="ms-2">Avg.Cost/Hr</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-labor-rate>
-          <label>Hours</label><input class="form-control qty text-end" type="number" step="0.01" value="" data-labor-qoh>
-          <label>Total</label><input class="form-control w-110 text-end" value="" disabled data-labor-total>
-        </div>
-        <div class="kv" data-labor-row>
-          <label>Button/Snap/Grommet</label>
-          <label class="ms-2">Avg.Cost</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-labor-rate>
-          <label>Qty</label><input class="form-control qty text-end" type="number" step="1" value="" data-labor-qoh>
-          <label>Total</label><input class="form-control w-110 text-end" value="" disabled data-labor-total>
-        </div>
+<div class="panel" id="laborPanel">
+  <div class="ph">LABOR COST</div>
+  <div class="pb table-like" id="laborRows">
+    {% for labor in labor_ops %}
+    <div class="kv" data-labor-row data-labor-name="{{ labor.name }}">
+      <label>{{ labor.name }}</label>
+      <label class="ms-2">
+        {% if labor.cost_type == 'hourly' %}Avg.Cost/Hr{% else %}Avg.Cost{% endif %}
+      </label>
+      <input class="form-control w-110 text-end" type="number" step="0.01" 
+             value="{% if labor.cost_type == 'flat_rate' %}{{ labor.fixed_cost }}{% elif labor.cost_type == 'hourly' %}{{ labor.cost_per_hour }}{% else %}{{ labor.cost_per_piece }}{% endif %}" 
+             data-labor-rate readonly>
+      <label>{% if labor.cost_type == 'hourly' %}Hours{% else %}Qty{% endif %}</label>
+      <input class="form-control qty text-end" type="number" step="{% if labor.cost_type == 'hourly' %}0.01{% else %}1{% endif %}" value="" data-labor-qoh>
+      <label>Total</label><input class="form-control w-110 text-end" value="" disabled data-labor-total>
+    </div>
+    {% endfor %}
 
-        <div class="kv">
-          <label>Cleaning & Ironing</label><input class="form-control md" id="garment_type" value="">
-          <label class="ms-2">Total</label><input class="form-control w-110 text-end" type="number" step="0.01" id="cleaning_cost" value="">
-        </div>
-
-        <div class="sumline"><span class="text-muted">TOTAL LABOR COST</span><strong id="sumLabor">$0.00</strong></div>
-      </div>
+    <div class="kv">
+      <label>Cleaning & Ironing</label>
+      <select class="form-select md" id="garment_type">
+        <option value="">Select Garment Type</option>
+        {% for gt in garment_types %}
+        <option value="{{ gt }}">{{ gt }}</option>
+        {% endfor %}
+      </select>
+      <label class="ms-2">Total</label>
+      <input class="form-control w-110 text-end" type="number" step="0.01" id="cleaning_cost" value="" readonly>
     </div>
 
+    <div class="sumline"><span class="text-muted">TOTAL LABOR COST</span><strong id="sumLabor">$0.00</strong></div>
+  </div>
+</div>
     <!-- TOTAL COST -->
     <div class="panel">
       <div class="ph">TOTAL COST</div>
@@ -199,19 +171,39 @@
     </div>
 
     <!-- ADDITIONAL INFO -->
+    <!-- ADDITIONAL INFO -->
     <div class="panel">
-      <div class="ph">ADDITIONAL INFO</div>
-      <div class="pb">
-        <div class="row g-3">
-          <div class="col-lg-4">
-            <div class="kv">
-              <span class="chip">Color</span>
-              <input id="color_input" class="form-control sm" value="">
-              <button class="btn btn-soft btn-sm btn-pill" id="add_color">Add</button>
+        <div class="ph">ADDITIONAL INFO</div>
+        <div class="pb">
+            <div class="row g-3">
+                <div class="col-lg-4">
+                    <div class="mb-2">
+                        <label class="form-label fw-bold">Colors</label>
+                        <div class="input-group mb-2">
+                            <select id="color_dropdown" class="form-select">
+                                <option value="">Select Color</option>
+                            </select>
+                            <button class="btn btn-primary" type="button" onclick="addSelectedColor()">Add</button>
+                        </div>
+                        <div class="input-group">
+                            <input id="new_color_input" class="form-control" placeholder="Or type new color...">
+                            <button class="btn btn-success" type="button" onclick="addNewColor()">Create & Add</button>
+                        </div>
+                    </div>
+                    <select multiple class="form-select" style="height:150px" id="color_list"></select>
+                    <button class="btn btn-sm btn-danger mt-1" onclick="removeSelectedColors()">Remove Selected</button>
+                </div>
+            
+            <!-- Rest of your existing Variable and Pricing sections -->
+            <div class="col-lg-4">
+                <!-- Variable section stays the same -->
             </div>
-            <select multiple class="form-select" style="height:150px" id="color_list">
-            </select>
-          </div>
+            <div class="col-lg-4">
+                <!-- Pricing section stays the same -->
+            </div>
+        </div>
+    </div>
+</div>
           <div class="col-lg-4">
             <div class="kv">
               <span class="chip">Variable</span>
@@ -263,223 +255,6 @@
     </div>
   </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  // ---------- Helpers ----------
-  const $ = s => document.querySelector(s);
-  const fmt = n => '$' + (Number(n||0).toFixed(2));
-  const set = (sel, val) => { const el = $(sel); if (el) el.value = (val ?? ""); };
-  const setText = (sel, txt) => { const el = $(sel); if (el) el.textContent = (txt ?? ""); };
-
-  // ---------- Auto Vendor Style ----------
-  function buildVendorStyle(){
-    const base=$('#base_item_number')?.value.trim() || '';
-    const variant=$('#variant_code')?.value.trim() || '';
-    const fabric=$('#fabric_code')?.value.trim() || '';
-    const parts=[]; if(base)parts.push(base);
-    if(variant && variant.toUpperCase()!=='BASE') parts.push(variant);
-    if(fabric && fabric.toUpperCase()!=='F6') parts.push(fabric);
-    const auto=parts.join('-'); const input=$('#vendor_style');
-    if(input && !input.dataset.touched) input.value=auto;
-    setText('#snap_vendor_style', (input?.value || auto || '(vendor style)'));
-  }
-  ['#base_item_number','#variant_code','#fabric_code'].forEach(sel=> $(sel)?.addEventListener('input',buildVendorStyle));
-  $('#vendor_style')?.addEventListener('input',e=> e.target.dataset.touched='1');
-
-  // ---------- Totals ----------
-  function recalcMaterials(){
-    const fcost=+($('[data-fabric-cost]')?.value||0);
-    const fyds=+($('[data-fabric-yds]')?.value||0);
-    const ftotal=fcost*fyds; if ($('[data-fabric-total]')) $('[data-fabric-total]').value=ftotal?fmt(ftotal):'';
-    const ncost=+($('[data-notion-cost]')?.value||0);
-    const nqty=+($('[data-notion-qty]')?.value||0);
-    const ntotal=ncost*nqty; if ($('[data-notion-total]')) $('[data-notion-total]').value=ntotal?fmt(ntotal):'';
-    const labels=+( $('#label_cost')?.value || 0 );
-    const shipping=+( $('#shipping_cost')?.value || 0 );
-    const materials=ftotal+ntotal;
-    setText('#sumMaterials', fmt(materials));
-    setText('#snap_mat', fmt(materials));
-    setText('#snap_lbl', fmt(labels));
-    setText('#snap_ship', fmt(shipping));
-    recalcTotals();
-  }
-
-  function recalcLabor(){
-    let sum=0;
-    document.querySelectorAll('[data-labor-row]').forEach(r=>{
-      const rate=+(r.querySelector('[data-labor-rate]')?.value||0);
-      const q=+(r.querySelector('[data-labor-qoh]')?.value||0);
-      const tot=rate*q; const out=r.querySelector('[data-labor-total]');
-      if (out) out.value = tot ? fmt(tot) : '';
-      sum+=tot;
-    });
-    sum+=+( $('#cleaning_cost')?.value || 0 );
-    setText('#sumLabor', fmt(sum));
-    setText('#snap_lab', fmt(sum));
-    recalcTotals();
-  }
-
-  function recalcTotals(){
-    const mat=parseFloat((($('#sumMaterials')?.textContent)||'').replace('$',''))||0;
-    const lab=parseFloat((($('#sumLabor')?.textContent)||'').replace('$',''))||0;
-    const labels=+( $('#label_cost')?.value || 0 );
-    const ship=+( $('#shipping_cost')?.value || 0 );
-    const total=mat+lab+labels+ship;
-    setText('#snap_total', fmt(total));
-    if ($('#total_reg')) $('#total_reg').value = total ? fmt(total) : '';
-    if ($('#total_ext')) $('#total_ext').value = total ? fmt(total*1.15) : '';
-    const m=Math.max(0,Math.min(95,+($('#margin')?.value||60)));
-    const retail= total ? (total/(1-(m/100))) : 0; if ($('#retail_price')) $('#retail_price').value = retail ? fmt(retail) : '';
-    const sp=+($('#suggested_price')?.value||0);
-    const sugg = sp ? ((sp-total)/sp)*100 : 0; if ($('#suggested_margin')) $('#suggested_margin').value = sp ? (sugg.toFixed(0)+'%') : '';
-  }
-
-  document.querySelectorAll('[data-fabric-cost],[data-fabric-yds],[data-notion-cost],[data-notion-qty],#label_cost,#shipping_cost')
-    .forEach(i=> i?.addEventListener('input',recalcMaterials));
-  document.querySelectorAll('[data-labor-rate],[data-labor-qoh],#cleaning_cost')
-    .forEach(i=> i?.addEventListener('input',recalcLabor));
-  ['#margin','#suggested_price'].forEach(sel=> $(sel)?.addEventListener('input',recalcTotals));
-  ['#vendor','#vendor_code','#gender','#style_name','#garment_type','#size_range'].forEach(sel=>{
-    $(sel)?.addEventListener('input', ()=> setText('#snap_style', $('#style_name')?.value||''));
-  });
-
-  // ---------- Blank start ----------
-  function clearAll() {
-    set('#base_item_number',''); set('#variant_code',''); set('#fabric_code',''); set('#vendor_style','');
-    set('#garment_type',''); set('#size_range',''); set('#style_name','');
-    // materials
-    set('[data-fabric-vendor]',''); set('[data-fabric-name]',''); set('[data-fabric-cost]',''); set('[data-fabric-yds]',''); set('[data-fabric-total]','');
-    set('[data-notion-vendor]',''); set('[data-notion-name]',''); set('[data-notion-cost]',''); set('[data-notion-qty]',''); set('[data-notion-total]','');
-    // labor
-    document.querySelectorAll('[data-labor-rate],[data-labor-qoh],[data-labor-total]').forEach(i=> i.value='');
-    // cleaning/labels/shipping
-    set('#cleaning_cost',''); if ($('#label_cost')) $('#label_cost').value = $('#label_cost').value || '0.20';
-    if ($('#shipping_cost')) $('#shipping_cost').value = $('#shipping_cost').value || '0.00';
-    // snapshot/totals
-    setText('#snap_vendor_style','(vendor style)'); setText('#snap_style','');
-    setText('#sumMaterials','$0.00'); setText('#sumLabor','$0.00'); setText('#snap_mat','$0.00'); setText('#snap_lab','$0.00');
-    setText('#snap_lbl', fmt(+($('#label_cost')?.value||0))); setText('#snap_ship', fmt(+($('#shipping_cost')?.value||0)));
-    setText('#snap_total','$0.00'); if ($('#total_reg')) $('#total_reg').value=''; if ($('#total_ext')) $('#total_ext').value='';
-  }
-  clearAll();
-
-  // ---------- Load by Style Name ----------
-  async function tryLoadByStyleName() {
-    const name = ($('#style_name')?.value || '').trim();
-    if (!name) { clearAll(); return; }
-
-    const res = await fetch(`/api/style/by-name?name=${encodeURIComponent(name)}`);
-    if (!res.ok) { clearAll(); return; }
-    const data = await res.json();
-    if (!data.found) { clearAll(); return; }
-
-    const s = data.style || {};
-    set('#base_item_number', s.base_item_number);
-    set('#variant_code', s.variant_code);
-    set('#vendor_style', s.vendor_style);
-    set('#gender', s.gender || 'MENS');
-    set('#garment_type', s.garment_type);
-    set('#size_range', s.size_range);
-    setText('#snap_vendor_style', s.vendor_style || '(vendor style)');
-    setText('#snap_style', name);
-
-    const f = data.fabric || {};
-    set('[data-fabric-vendor]', f.vendor);
-    set('[data-fabric-name]', f.name);
-    set('[data-fabric-cost]', f.cost_per_yard);
-    set('[data-fabric-yds]', f.yards);
-
-    const n = data.notion || {};
-    set('[data-notion-vendor]', n.vendor);
-    set('[data-notion-name]', n.name);
-    set('[data-notion-cost]', n.cost_per_unit);
-    set('[data-notion-qty]', n.qty);
-
-    const ops = data.labor || [];
-    document.querySelectorAll('[data-labor-row]').forEach((row,i)=>{
-      const l = ops[i] || {};
-      const r = row.querySelector('[data-labor-rate]'); if (r) r.value = (l.rate ?? '');
-      const q = row.querySelector('[data-labor-qoh]');  if (q) q.value = (l.qty_or_hours ?? '');
-    });
-
-    set('#cleaning_cost', (data.cleaning && data.cleaning.cost) ?? '');
-    if ($('#label_cost'))    $('#label_cost').value = (data.avg_label_cost ?? '0.20');
-    if ($('#shipping_cost')) $('#shipping_cost').value = (data.shipping_cost ?? '0.00');
-
-    recalcMaterials();
-    recalcLabor();
-  }
-  $('#style_name')?.addEventListener('blur', tryLoadByStyleName);
-  $('#style_name')?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); tryLoadByStyleName(); } });
-
-  // ---------- Save (POST) ----------
-  const saveBtn = $('#saveBtn');
-  function toggleSave(){ if (saveBtn) saveBtn.disabled = !($('#style_name')?.value.trim()); }
-  $('#style_name')?.addEventListener('input', toggleSave); toggleSave();
-
-  saveBtn?.addEventListener('click', async () => {
-    const labor = Array.from(document.querySelectorAll('[data-labor-row]')).map(row => ({
-      name: row.querySelector('label')?.textContent.trim() || '',
-      cost_type: /hour/i.test(row.querySelector('label')?.textContent || '') ? 'hourly' : 'flat_rate',
-      rate: +(row.querySelector('[data-labor-rate]')?.value || 0),
-      qty_or_hours: +(row.querySelector('[data-labor-qoh]')?.value || 0)
-    }));
-
-    const payload = {
-      style: {
-        style_name:   $('#style_name')?.value.trim()   || '',
-        vendor_style: $('#vendor_style')?.value.trim() || '',
-        base_item_number: $('#base_item_number')?.value.trim() || '',
-        variant_code:     $('#variant_code')?.value.trim()     || '',
-        gender: $('#gender')?.value || '',
-        garment_type: $('#garment_type')?.value?.trim() || '',
-        size_range:   $('#size_range')?.value?.trim()   || '',
-      },
-      fabric: {
-        vendor: ($('[data-fabric-vendor]')?.value || '').trim(),
-        name:   ($('[data-fabric-name]')?.value   || '').trim(),
-        cost_per_yard: +( ($('[data-fabric-cost]')?.value) || 0 ),
-        yards:         +( ($('[data-fabric-yds]')?.value)  || 0 ),
-        primary: true
-      },
-      notion: {
-        vendor: ($('[data-notion-vendor]')?.value || '').trim(),
-        name:   ($('[data-notion-name]')?.value   || '').trim(),
-        cost_per_unit: +( ($('[data-notion-cost]')?.value) || 0 ),
-        qty:           +( ($('[data-notion-qty]')?.value)  || 0 )
-      },
-      labor
-    };
-
-    if (!payload.style.style_name) { alert('Enter a Style Name before saving.'); return; }
-
-    const res = await fetch('/api/style/save', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
-    });
-    const out = await res.json().catch(()=>({}));
-    if (res.ok && out.ok) {
-      alert(out.new ? 'Created new style!' : 'Updated style.');
-    } else {
-      alert('Save failed: ' + (out.error || res.statusText));
-    }
-  });
-
-  // Small demo add actions (can be expanded to true multi-rows later)
-  $('#addFabric')?.addEventListener('click', ()=>alert('Multiple fabrics can be added in the next pass.'));
-  $('#addNotion')?.addEventListener('click', ()=>alert('Multiple notions can be added in the next pass.'));
-  $('#add_color')?.addEventListener('click', ()=>{
-    const v=$('#color_input')?.value.trim(); if(!v) return;
-    const o=document.createElement('option'); o.text=v; $('#color_list')?.add(o); $('#color_input').value='';
-  });
-  $('#add_var')?.addEventListener('click', ()=>{
-    const v=$('#var_input')?.value.trim(); if(!v) return;
-    const o=document.createElement('option'); o.text=v; $('#var_list')?.add(o); $('#var_input').value='';
-  });
-});
-</script>
 
 {% endblock %}
 

@@ -113,6 +113,7 @@ class Style(db.Model):
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    colors = db.relationship('StyleColor', back_populates='style', cascade='all, delete-orphan')
     
     def get_total_fabric_cost(self):
         total = 0
@@ -180,6 +181,28 @@ class StyleNotion(db.Model):
     
     style = db.relationship('Style', backref='style_notions')
     notion = db.relationship('Notion')
+
+class Color(db.Model):
+    __tablename__ = 'colors'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    color_code = db.Column(db.String(50))  # Optional: for hex codes or reference codes
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Color {self.name}>'
+    
+# Create junction table for Style-Color relationship
+class StyleColor(db.Model):
+    __tablename__ = 'style_colors'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    style_id = db.Column(db.Integer, db.ForeignKey('styles.id'), nullable=False)
+    color_id = db.Column(db.Integer, db.ForeignKey('colors.id'), nullable=False)
+    
+    style = db.relationship('Style', back_populates='colors')
+    color = db.relationship('Color')
 
 class StyleLabor(db.Model):
     __tablename__ = 'style_labor'
