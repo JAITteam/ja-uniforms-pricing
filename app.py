@@ -779,6 +779,10 @@ def master_costs_editable():
                         </td>
                     </tr>
         """
+    html += """
+            </tbody>
+        </table>
+    """
     # Add to master_costs_editable() function, after notion vendors section:
 
     html += """
