@@ -250,9 +250,14 @@ def create_complete_sample():
     
     # Create cleaning costs
     cleaning_costs = [
-        CleaningCost(garment_type='SS TOP/SS DRESS', fixed_cost=1.60, avg_minutes=5),
         CleaningCost(garment_type='APRON', fixed_cost=0.96, avg_minutes=3),
         CleaningCost(garment_type='VEST', fixed_cost=1.28, avg_minutes=4),
+        CleaningCost(garment_type='SS TOP/SS DRESS', fixed_cost=1.60, avg_minutes=5),
+        CleaningCost(garment_type='LS TOP/LS DRESS', fixed_cost=2.24, avg_minutes=7),
+        CleaningCost(garment_type='SHORTS/SKIRTS', fixed_cost=1.28, avg_minutes=4),
+        CleaningCost(garment_type='PANTS', fixed_cost=1.60, avg_minutes=5),
+        CleaningCost(garment_type='SS JACKET/LINED SS DRESS', fixed_cost=3.20, avg_minutes=10),
+        CleaningCost(garment_type='LS JACKET/LINED LS DRESS', fixed_cost=3.84, avg_minutes=12),
     ]
     db.session.add_all(cleaning_costs)
     

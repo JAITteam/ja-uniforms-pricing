@@ -44,7 +44,72 @@ def test_db():
         return "<h1>Database connected successfully!</h1><p>All tables created!</p><a href='/create-complete-data'>Create Complete Sample Data</a>"
     except Exception as e:
         return f"<h1>Database error:</h1><p>{str(e)}</p>"
+@app.route('/fix-cleaning-costs')
+def fix_cleaning_costs():
+    """Add missing cleaning cost records"""
+    
+    all_cleaning_costs = [
+        {'garment_type': 'APRON', 'avg_minutes': 3, 'fixed_cost': 0.96},
+        {'garment_type': 'VEST', 'avg_minutes': 4, 'fixed_cost': 1.28},
+        {'garment_type': 'SS TOP/SS DRESS', 'avg_minutes': 5, 'fixed_cost': 1.60},
+        {'garment_type': 'LS TOP/LS DRESS', 'avg_minutes': 7, 'fixed_cost': 2.24},
+        {'garment_type': 'SHORTS/SKIRTS', 'avg_minutes': 4, 'fixed_cost': 1.28},
+        {'garment_type': 'PANTS', 'avg_minutes': 5, 'fixed_cost': 1.60},
+        {'garment_type': 'SS JACKET/LINED SS DRESS', 'avg_minutes': 10, 'fixed_cost': 3.20},
+        {'garment_type': 'LS JACKET/LINED LS DRESS', 'avg_minutes': 12, 'fixed_cost': 3.84},
+    ]
+    
+    added = 0
+    for item in all_cleaning_costs:
+        existing = CleaningCost.query.filter_by(garment_type=item['garment_type']).first()
+        if not existing:
+            cc = CleaningCost(
+                garment_type=item['garment_type'],
+                avg_minutes=item['avg_minutes'],
+                fixed_cost=item['fixed_cost']
+            )
+            db.session.add(cc)
+            added += 1
+    
+    db.session.commit()
+    return f"<h1>Added {added} missing cleaning costs!</h1><a href='/master-costs'>View Master Costs</a>"
 
+@app.route('/debug-cleaning')
+def debug_cleaning():
+    """Debug cleaning costs"""
+    cleaning_costs = CleaningCost.query.all()
+    
+    html = "<h1>Cleaning Costs in Database</h1>"
+    html += f"<p>Total records: {len(cleaning_costs)}</p>"
+    html += "<table border='1' cellpadding='10'>"
+    html += "<tr><th>ID</th><th>Garment Type</th><th>Minutes</th><th>Cost</th></tr>"
+    
+    for cc in cleaning_costs:
+        html += f"<tr><td>{cc.id}</td><td>{cc.garment_type}</td><td>{cc.avg_minutes}</td><td>${cc.fixed_cost}</td></tr>"
+    
+    html += "</table>"
+    
+    # Test the API for each garment type
+    html += "<h2>API Test Results</h2>"
+    test_types = [
+        'APRON', 'VEST', 'PANTS', 'SHORTS/SKIRTS',
+        'SS TOP/SS DRESS', 'LS TOP/LS DRESS',
+        'SS JACKET/LINED SS DRESS', 'LS JACKET/LINED LS DRESS'
+    ]
+    
+    html += "<table border='1' cellpadding='10'>"
+    html += "<tr><th>Garment Type</th><th>API Result</th></tr>"
+    
+    for gt in test_types:
+        cc = CleaningCost.query.filter_by(garment_type=gt).first()
+        if cc:
+            html += f"<tr><td>{gt}</td><td style='color:green'>Found: ${cc.fixed_cost}</td></tr>"
+        else:
+            html += f"<tr><td>{gt}</td><td style='color:red'>NOT FOUND</td></tr>"
+    
+    html += "</table>"
+    html += "<br><a href='/fix-cleaning-costs'>Fix Missing Records</a>"
+    return html
 @app.route('/create-complete-data')
 def create_complete_data():
     try:
@@ -1389,10 +1454,14 @@ def handle_cleaning(cleaning_id):
         db.session.delete(cleaning)
         db.session.commit()
         return jsonify({'success': True})
-
-@app.get("/api/cleaning-cost/<garment_type>")
-def get_cleaning_cost(garment_type):
+    
+@app.get("/api/cleaning-cost")
+def get_cleaning_cost():
     """Get cleaning cost for a garment type"""
+    garment_type = request.args.get('type', '').strip()
+    if not garment_type:
+        return jsonify({"error": "type parameter required"}), 400
+    
     cc = CleaningCost.query.filter_by(garment_type=garment_type).first()
     if cc:
         return jsonify({

@@ -68,27 +68,40 @@ document.addEventListener('DOMContentLoaded', () => {
       recalcMaterials();
     }
   });
-
+ 
   // Garment type - auto-fill cleaning cost
-  $('#garment_type')?.addEventListener('change', async function() {
-    const garmentType = this.value;
-    if (!garmentType) {
+  // Garment type - auto-fill cleaning cost
+$('#garment_type')?.addEventListener('change', async function() {
+  const garmentType = this.value;
+  
+  if (!garmentType) {
+    $('#cleaning_cost').value = '';
+    recalcLabor();
+    return;
+  }
+  
+  try {
+    const url = `/api/cleaning-cost?type=${encodeURIComponent(garmentType)}`;
+    const res = await fetch(url);
+    
+    if (res.ok) {
+      const data = await res.json();
+      const cleaningInput = $('#cleaning_cost');
+      if (cleaningInput && data.fixed_cost !== undefined) {
+        cleaningInput.value = parseFloat(data.fixed_cost).toFixed(2);
+        recalcLabor();
+      }
+    } else {
+      console.error('API returned error status:', res.status);
       $('#cleaning_cost').value = '';
       recalcLabor();
-      return;
     }
-    
-    try {
-      const res = await fetch(`/api/cleaning-cost/${encodeURIComponent(garmentType)}`);
-      if (res.ok) {
-        const data = await res.json();
-        $('#cleaning_cost').value = data.fixed_cost || '';
-      }
-    } catch (e) {
-      console.error('Failed to fetch cleaning cost:', e);
-    }
+  } catch (e) {
+    console.error('Failed to fetch cleaning cost:', e);
+    $('#cleaning_cost').value = '';
     recalcLabor();
-  });
+  }
+});
 
   // Calculations
   function recalcMaterials(){
