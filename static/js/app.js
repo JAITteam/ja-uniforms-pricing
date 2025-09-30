@@ -7,6 +7,31 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load colors on page load
   loadColors();
 
+  // Capture dropdown options once at page load for dynamic row creation
+  const fabricVendorOptions = Array.from($('[data-fabric-vendor-id]').options).map(opt => ({
+    value: opt.value,
+    text: opt.text
+  }));
+
+  const notionVendorOptions = Array.from($('[data-notion-vendor-id]').options).map(opt => ({
+    value: opt.value,
+    text: opt.text
+  }));
+
+  const fabricOptions = Array.from($('[data-fabric-id]').options).map(opt => ({
+    value: opt.value,
+    text: opt.text,
+    cost: opt.dataset.cost || '',
+    vendor: opt.dataset.vendor || ''
+  }));
+
+  const notionOptions = Array.from($('[data-notion-id]').options).map(opt => ({
+    value: opt.value,
+    text: opt.text,
+    cost: opt.dataset.cost || '',
+    vendor: opt.dataset.vendor || ''
+  }));
+
   // Auto Vendor Style
   function buildVendorStyle(){
     const base=$('#base_item_number')?.value.trim() || '';
@@ -152,18 +177,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const url = `/api/style/by-vendor-style?vendor_style=${encodeURIComponent(vendorStyle)}`;
     const res = await fetch(url);
     
-    // Read JSON even if status is 404
     const data = await res.json().catch(() => ({}));
     
     if (!data.found) {
-      // Style doesn't exist
       const createNew = confirm(
         `Style "${vendorStyle}" not found in the system.\n\n` +
         `Would you like to create it as a new style?`
       );
       
       if (createNew) {
-        // User wants to create - clear everything except vendor style
         set('#base_item_number', '');
         set('#variant_code', '');
         set('#style_name', '');
@@ -173,13 +195,11 @@ document.addEventListener('DOMContentLoaded', () => {
         $('#style_name')?.focus();
         if ($('#saveBtn')) $('#saveBtn').disabled = false;
       } else {
-        // User doesn't want to create - go back to dashboard
         window.location.href = '/';
       }
       return;
     }
 
-    // Style exists - load all data
     const s = data.style || {};
     set('#base_item_number', s.base_item_number);
     set('#variant_code', s.variant_code);
@@ -240,7 +260,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (data.cleaning) set('#cleaning_cost', data.cleaning.cost);
 
-    // Load colors if they exist
     if (data.colors && data.colors.length > 0) {
       const colorList = $('#color_list');
       if (colorList) {
@@ -324,7 +343,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // Collect colors
     const colors = [];
     const colorList = $('#color_list');
     if (colorList) {
@@ -374,20 +392,23 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#addFabric')?.addEventListener('click', () => {
     const newRow = document.createElement('div');
     newRow.className = 'kv';
+    
+    const vendorOptionsHtml = fabricVendorOptions.map(opt => 
+      `<option value="${opt.value}">${opt.text}</option>`
+    ).join('');
+    
+    const fabricOptionsHtml = fabricOptions.map(opt => 
+      `<option value="${opt.value}" data-cost="${opt.cost}" data-vendor="${opt.vendor}">${opt.text}</option>`
+    ).join('');
+    
     newRow.innerHTML = `
       <label>Vendor</label>
       <select class="form-select md" data-fabric-vendor-id>
-        <option value="">Select Vendor</option>
-        {% for v in fabric_vendors %}
-        <option value="{{ v.id }}">{{ v.name }}</option>
-        {% endfor %}
+        ${vendorOptionsHtml}
       </select>
       <label>Fabric</label>
       <select class="form-select md" data-fabric-id>
-        <option value="">Select Fabric</option>
-        {% for f in fabrics %}
-        <option value="{{ f.id }}" data-cost="{{ f.cost_per_yard }}" data-vendor="{{ f.fabric_vendor_id }}">{{ f.name }}</option>
-        {% endfor %}
+        ${fabricOptionsHtml}
       </select>
       <label>Cost/yd</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-fabric-cost readonly>
       <label>Yards</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-fabric-yds>
@@ -420,20 +441,23 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#addNotion')?.addEventListener('click', () => {
     const newRow = document.createElement('div');
     newRow.className = 'kv';
+    
+    const vendorOptionsHtml = notionVendorOptions.map(opt => 
+      `<option value="${opt.value}">${opt.text}</option>`
+    ).join('');
+    
+    const notionOptionsHtml = notionOptions.map(opt => 
+      `<option value="${opt.value}" data-cost="${opt.cost}" data-vendor="${opt.vendor}">${opt.text}</option>`
+    ).join('');
+    
     newRow.innerHTML = `
       <label>Vendor</label>
       <select class="form-select md" data-notion-vendor-id>
-        <option value="">Select Vendor</option>
-        {% for v in notion_vendors %}
-        <option value="{{ v.id }}">{{ v.name }}</option>
-        {% endfor %}
+        ${vendorOptionsHtml}
       </select>
       <label>Notion</label>
       <select class="form-select md" data-notion-id>
-        <option value="">Select Notion</option>
-        {% for n in notions %}
-        <option value="{{ n.id }}" data-cost="{{ n.cost_per_unit }}" data-vendor="{{ n.notion_vendor_id }}">{{ n.name }}</option>
-        {% endfor %}
+        ${notionOptionsHtml}
       </select>
       <label>Cost</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-notion-cost readonly>
       <label>Qty</label><input class="form-control qty text-end" type="number" step="1" value="" data-notion-qty>
@@ -492,7 +516,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const colorName = selectedOption.text;
     const colorId = selectedOption.value;
     
-    // Check if already in list
     const colorList = $('#color_list');
     const existing = Array.from(colorList.options).find(opt => opt.value === colorId);
     if (existing) {
@@ -500,7 +523,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
-    // Add to list
     const option = document.createElement('option');
     option.text = colorName;
     option.value = colorId;
@@ -519,7 +541,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     try {
-      // Create color in database
       const res = await fetch('/api/colors', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
@@ -529,26 +550,22 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await res.json();
       
       if (data.success) {
-        // Add to dropdown
         const dropdown = $('#color_dropdown');
         const opt = document.createElement('option');
         opt.value = data.id;
         opt.textContent = data.name;
         dropdown.appendChild(opt);
         
-        // Check if already in selected list
         const colorList = $('#color_list');
         const existing = Array.from(colorList.options).find(o => o.value === data.id.toString());
         
         if (!existing) {
-          // Add to selected list
           const listOpt = document.createElement('option');
           listOpt.text = data.name;
           listOpt.value = data.id;
           colorList.add(listOpt);
         }
         
-        // Clear input
         input.value = '';
         
         if (data.existed) {
