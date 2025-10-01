@@ -168,8 +168,15 @@ $('#garment_type')?.addEventListener('change', async function() {
     const retail= total ? (total/(1-(m/100))) : 0; 
     if ($('#retail_price')) $('#retail_price').value = retail ? fmt(retail) : '';
     const sp=+($('#suggested_price')?.value||0);
-    const sugg = sp ? ((sp-total)/sp)*100 : 0; 
-    if ($('#suggested_margin')) $('#suggested_margin').value = sp ? (sugg.toFixed(0)+'%') : '';
+    //const sugg = sp ? ((sp-total)/sp)*100 : 0; 
+    if (sp > 0 && total > 0) {
+      const sugg = Math.max(0, Math.min(95, ((sp - total) / sp) * 100));
+      $('#suggested_margin').value = sugg.toFixed(0);
+    } else {
+      $('#suggested_margin').value = '';
+    }
+    //if ($('#suggested_margin')) $('#suggested_margin').value = sp ? (sugg.toFixed(0)+'%') : '';
+    //if ($('#suggested_margin')) $('#suggested_margin').value = sp && total > 0 ? sugg.toFixed(0) : '';
   }
   
   // Bidirectional: Change suggested price → calculate margin
@@ -245,7 +252,12 @@ $('#garment_type')?.addEventListener('change', async function() {
     set('#gender', s.gender || 'MENS');
     set('#garment_type', s.garment_type);
     set('#size_range', s.size_range);
+    set('#margin', s.margin || 60);  // NEW
+    set('#label_cost', s.label_cost || 0.20);  // NEW
+    set('#shipping_cost', s.shipping_cost || 0.00);  // NEW
+    set('#suggested_price', s.suggested_price || '');  // NEW
 
+    // Clear existing dynamic rows
     document.querySelectorAll('[data-fabric-id]').forEach((el, i) => {
       if (i > 0) el.closest('.kv').remove();
     });
@@ -253,6 +265,7 @@ $('#garment_type')?.addEventListener('change', async function() {
       if (i > 0) el.closest('.kv').remove();
     });
 
+    // Load fabrics
     const fabrics = data.fabrics || [];
     fabrics.forEach((f, index) => {
       if (index === 0) {
@@ -271,6 +284,7 @@ $('#garment_type')?.addEventListener('change', async function() {
       }
     });
 
+    // Load notions
     const notions = data.notions || [];
     notions.forEach((n, index) => {
       if (index === 0) {
@@ -289,6 +303,7 @@ $('#garment_type')?.addEventListener('change', async function() {
       }
     });
 
+    // Load labor
     const ops = data.labor || [];
     document.querySelectorAll('[data-labor-row]').forEach((row, i) => {
       const l = ops[i] || {};
@@ -296,8 +311,10 @@ $('#garment_type')?.addEventListener('change', async function() {
       if (qInput && l.qty_or_hours) qInput.value = l.qty_or_hours;
     });
 
+    // Load cleaning
     if (data.cleaning) set('#cleaning_cost', data.cleaning.cost);
 
+    // Load colors - NEW
     if (data.colors && data.colors.length > 0) {
       const colorList = $('#color_list');
       if (colorList) {
@@ -401,6 +418,10 @@ $('#garment_type')?.addEventListener('change', async function() {
         gender: $('#gender')?.value || 'MENS',
         garment_type: $('#garment_type')?.value?.trim() || '',
         size_range: $('#size_range')?.value?.trim() || 'XS-4XL',
+        margin: parseFloat($('#margin')?.value) || 60.0,  // NEW
+        label_cost: parseFloat($('#label_cost')?.value) || 0.20,  // NEW
+        shipping_cost: parseFloat($('#shipping_cost')?.value) || 0.00,  // NEW
+        suggested_price: parseFloat($('#suggested_price')?.value) || null,  // NEW
       },
       fabrics: fabrics,
       notions: notions,

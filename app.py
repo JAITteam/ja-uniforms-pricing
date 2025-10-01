@@ -167,6 +167,133 @@ def test_complete_lookup():
         return "<h1>No style found!</h1><a href='/create-complete-data'>Create Sample Data First</a>"
 
 # ===== ADMIN ROUTES (Future expansion) =====
+@app.route('/migrate-db')
+def migrate_db():
+    """One-time migration to add new columns to styles table"""
+    try:
+        from sqlalchemy import text, inspect
+        
+        inspector = inspect(db.engine)
+        existing_columns = [col['name'] for col in inspector.get_columns('styles')]
+        
+        migrations_run = []
+        migrations_skipped = []
+        
+        # Add shipping_cost if it doesn't exist
+        if 'shipping_cost' not in existing_columns:
+            db.session.execute(text('ALTER TABLE styles ADD COLUMN shipping_cost FLOAT DEFAULT 0.00'))
+            migrations_run.append('Added shipping_cost column')
+        else:
+            migrations_skipped.append('shipping_cost already exists')
+        
+        # Add suggested_price if it doesn't exist
+        if 'suggested_price' not in existing_columns:
+            db.session.execute(text('ALTER TABLE styles ADD COLUMN suggested_price FLOAT'))
+            migrations_run.append('Added suggested_price column')
+        else:
+            migrations_skipped.append('suggested_price already exists')
+        
+        db.session.commit()
+        
+        html = f"""
+        <div style="max-width: 800px; margin: 50px auto; padding: 20px; font-family: Arial;">
+            <h1>Database Migration Complete</h1>
+            
+            <div style="background: #d4edda; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <h3>✓ Migrations Run Successfully:</h3>
+                <ul>
+        """
+        
+        if migrations_run:
+            for migration in migrations_run:
+                html += f"<li>{migration}</li>"
+        else:
+            html += "<li>No new migrations needed</li>"
+        
+        html += "</ul></div>"
+        
+        if migrations_skipped:
+            html += """
+            <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <h3>⊙ Already Up to Date:</h3>
+                <ul>
+            """
+            for skipped in migrations_skipped:
+                html += f"<li>{skipped}</li>"
+            html += "</ul></div>"
+        
+        html += """
+            <div style="margin-top: 30px;">
+                <a href="/admin-panel" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Go to Admin Panel</a>
+                <a href="/style/new" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-left: 10px;">Test Style Form</a>
+            </div>
+            
+            <div style="margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
+                <p><strong>Note:</strong> This migration only needs to be run once. You can delete the /migrate-db route after running it.</p>
+            </div>
+        </div>
+        """
+        
+        return html
+        
+    except Exception as e:
+        db.session.rollback()
+        return f"""
+        <div style="max-width: 800px; margin: 50px auto; padding: 20px; font-family: Arial;">
+            <h1>Migration Error</h1>
+            <div style="background: #f8d7da; padding: 15px; border-radius: 5px; color: #721c24;">
+                <p><strong>Error:</strong> {str(e)}</p>
+            </div>
+            <p>This might mean:</p>
+            <ul>
+                <li>The columns already exist (which is fine!)</li>
+                <li>There's a database connection issue</li>
+                <li>The database user doesn't have ALTER TABLE permissions</li>
+            </ul>
+            <a href="/admin-panel" style="background: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Back to Admin</a>
+        </div>
+        """
+@app.route('/verify-db')
+def verify_db():
+    """Check database schema"""
+    from sqlalchemy import inspect
+    
+    inspector = inspect(db.engine)
+    columns = inspector.get_columns('styles')
+    
+    html = """
+    <div style="max-width: 800px; margin: 50px auto; padding: 20px; font-family: Arial;">
+        <h1>Database Schema Verification</h1>
+        <h2>Styles Table Columns:</h2>
+        <table border="1" cellpadding="10" style="border-collapse: collapse; width: 100%;">
+            <tr>
+                <th>Column Name</th>
+                <th>Type</th>
+                <th>Nullable</th>
+                <th>Default</th>
+            </tr>
+    """
+    
+    for col in columns:
+        html += f"""
+            <tr>
+                <td><strong>{col['name']}</strong></td>
+                <td>{col['type']}</td>
+                <td>{'Yes' if col['nullable'] else 'No'}</td>
+                <td>{col['default'] or 'None'}</td>
+            </tr>
+        """
+    
+    html += """
+        </table>
+        <div style="margin-top: 20px;">
+            <a href="/admin-panel" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Back to Admin</a>
+        </div>
+    </div>
+    """
+    
+    return html
+
 @app.route('/import-colors')
 def import_colors():
     """One-time import of colors from Excel file"""
@@ -1668,7 +1795,7 @@ def api_style_by_vendor_style():
     if not style:
         return jsonify({"found": False}), 404
 
-    # Get ALL fabrics (not just first)
+    # Get ALL fabrics
     fabric_rows = (
         db.session.query(StyleFabric, Fabric)
         .join(Fabric, StyleFabric.fabric_id == Fabric.id)
@@ -1688,7 +1815,7 @@ def api_style_by_vendor_style():
             "yards": float(sf.yards_required or 0),
         })
 
-    # Get ALL notions (not just first)
+    # Get ALL notions
     notion_rows = (
         db.session.query(StyleNotion, Notion)
         .join(Notion, StyleNotion.notion_id == Notion.id)
@@ -1743,6 +1870,21 @@ def api_style_by_vendor_style():
                 "cost": float(cc.fixed_cost or 0),
             }
 
+    # Colors - NEW SECTION
+    colors_payload = []
+    color_rows = (
+        db.session.query(StyleColor, Color)
+        .join(Color, StyleColor.color_id == Color.id)
+        .filter(StyleColor.style_id == style.id)
+        .order_by(Color.name.asc())
+        .all()
+    )
+    for sc, color in color_rows:
+        colors_payload.append({
+            "color_id": color.id,
+            "name": color.name
+        })
+
     return jsonify({
         "found": True,
         "style": {
@@ -1753,18 +1895,23 @@ def api_style_by_vendor_style():
             "gender": style.gender,
             "garment_type": style.garment_type,
             "size_range": style.size_range,
+            "margin": float(style.base_margin_percent or 60.0),  # NEW
+            "label_cost": float(style.avg_label_cost or 0.20),  # NEW
+            "shipping_cost": float(style.shipping_cost or 0.00),  # NEW
+            "suggested_price": float(style.suggested_price or 0) if style.suggested_price else None,  # NEW
         },
-        "fabrics": fabrics_payload,  # Changed to array
-        "notions": notions_payload,  # Changed to array
+        "fabrics": fabrics_payload,
+        "notions": notions_payload,
         "labor": labor_payload,
         "cleaning": cleaning_payload,
-    }), 200
+        "colors": colors_payload,  # NEW
+}), 200
+
 
 @app.post("/api/style/save")
 def api_style_save():
     """
-    Upsert a Style and replace its BOM & Labor with the payload from the UI.
-    Clears existing junction rows, then inserts new ones. Idempotent.
+    Upsert a Style and replace its BOM, Labor, and Colors with the payload from the UI.
     """
     data = request.get_json(silent=True) or {}
     s = data.get("style") or {}
@@ -1787,28 +1934,32 @@ def api_style_save():
         style.gender = (s.get("gender") or None)
         style.garment_type = (s.get("garment_type") or None)
         style.size_range = (s.get("size_range") or None)
+        style.base_margin_percent = float(s.get("margin") or 60.0)
+        style.avg_label_cost = float(s.get("label_cost") or 0.20)
+        style.shipping_cost = float(s.get("shipping_cost") or 0.00)  # NEW
+        style.suggested_price = float(s.get("suggested_price") or 0) if s.get("suggested_price") else None  # NEW
+        
         db.session.add(style)
-        db.session.flush()  # style.id ready
+        db.session.flush()
 
         # Wipe existing junctions
         StyleFabric.query.filter_by(style_id=style.id).delete()
         StyleNotion.query.filter_by(style_id=style.id).delete()
         StyleLabor.query.filter_by(style_id=style.id).delete()
+        StyleColor.query.filter_by(style_id=style.id).delete()  # NEW
         db.session.flush()
 
-        # Fabrics (array)
+        # Fabrics
         for f in data.get("fabrics") or []:
             if f.get("name"):
                 fabric_name = (f["name"] or "").strip()
                 vendor_name = (f.get("vendor") or "").strip()
                 
-                # Find fabric by name
                 fabric = Fabric.query.filter(
                     func.lower(Fabric.name) == fabric_name.lower()
                 ).first()
                 
                 if not fabric:
-                    # Find or create vendor
                     vendor = None
                     if vendor_name:
                         vendor = FabricVendor.query.filter(
@@ -1838,19 +1989,17 @@ def api_style_save():
                 )
                 db.session.add(sf)
 
-        # Notions (array)
+        # Notions
         for n in data.get("notions") or []:
             if n.get("name"):
                 notion_name = (n["name"] or "").strip()
                 vendor_name = (n.get("vendor") or "").strip()
                 
-                # Find notion by name
                 notion = Notion.query.filter(
                     func.lower(Notion.name) == notion_name.lower()
                 ).first()
                 
                 if not notion:
-                    # Find or create vendor
                     vendor = None
                     if vendor_name:
                         vendor = NotionVendor.query.filter(
@@ -1880,7 +2029,7 @@ def api_style_save():
                 )
                 db.session.add(sn)
 
-        # Labor (array)
+        # Labor
         for l in data.get("labor") or []:
             if not l.get("name"):
                 continue
@@ -1890,11 +2039,10 @@ def api_style_save():
             ).first()
             
             if not op:
-                continue  # Skip if labor operation doesn't exist in master list
+                continue
             
             qty_or_hours = float(l.get("qty_or_hours") or 0)
             
-            # Determine if it's hours or quantity based on cost_type
             if op.cost_type == 'hourly':
                 sl = StyleLabor(
                     style_id=style.id,
@@ -1910,6 +2058,19 @@ def api_style_save():
                     quantity=int(qty_or_hours) if qty_or_hours else 1
                 )
             db.session.add(sl)
+
+        # Colors - NEW SECTION
+        for color_data in data.get("colors") or []:
+            color_id = color_data.get("color_id")
+            if color_id:
+                # Verify color exists
+                color = Color.query.get(color_id)
+                if color:
+                    style_color = StyleColor(
+                        style_id=style.id,
+                        color_id=color_id
+                    )
+                    db.session.add(style_color)
 
         db.session.commit()
         return jsonify({"ok": True, "new": is_new, "style_id": style.id}), 200

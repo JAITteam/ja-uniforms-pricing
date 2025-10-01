@@ -110,6 +110,8 @@ class Style(db.Model):
     size_range = db.Column(db.String(50))        # "XS-4XL"
     base_margin_percent = db.Column(db.Float, default=60.0)
     avg_label_cost = db.Column(db.Float, default=0.20)
+    shipping_cost = db.Column(db.Float, default=0.00)  # ADD THIS
+    suggested_price = db.Column(db.Float)  # ADD THIS
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
