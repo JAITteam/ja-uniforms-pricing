@@ -8,8 +8,7 @@ Internal web application for uniform pricing and cost management.
 3. Run app: `python app.py`
 
 ## Team
-- Developer 1: [Your Name]
-- Developer 2: [Friend's Name]
+- Developer 1: JAITTEAM
 
 ## Status
 🚧 In Development
