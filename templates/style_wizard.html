@@ -76,7 +76,10 @@
         <option value="{{ f.id }}" data-cost="{{ f.cost_per_yard }}" data-vendor="{{ f.fabric_vendor_id }}">{{ f.name }}</option>
         {% endfor %}
       </select>
-      
+      <label style="display: flex; align-items: center; gap: 5px; white-space: nowrap;">
+          <input type="checkbox" data-fabric-sublimation style="width: auto; margin: 0;">
+          Sub.
+      </label>
       <label>Cost/yd</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-fabric-cost readonly>
       <label>Yards</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-fabric-yds>
       <label>Total</label><input class="form-control w-110 text-end" value="" disabled data-fabric-total>
@@ -111,7 +114,8 @@
 
     <div class="kv">
       <span class="text-muted">Avg. Label(s) Cost</span>
-      <input class="form-control w-110 text-end" id="label_cost" type="number" step="0.01" value="0.20">
+      <!--<input class="form-control w-110 text-end" id="label_cost" type="number" step="0.01" value="0.20">-->
+      <input class="form-control w-110 text-end" id="label_cost" type="number" step="0.01" value="0.20" readonly title="Edit in Master Costs">
     </div>
 
     <div class="sumline"><span class="text-muted">TOTAL MATERIALS COST</span><strong id="sumMaterials">$0.00</strong></div>
@@ -230,7 +234,8 @@
         </div>
         <div class="kv mt-2">
           <span class="text-muted">Shipping Cost</span>
-          <input id="shipping_cost" class="form-control w-110 text-end" type="number" step="0.01" value="0.00">
+          <!--<input id="shipping_cost" class="form-control w-110 text-end" type="number" step="0.01" value="0.00"> -->
+          <input id="shipping_cost" class="form-control w-110 text-end" type="number" step="0.01" value="0.00" readonly title="Edit in Master Costs">
         </div>
       </div>
     </div>

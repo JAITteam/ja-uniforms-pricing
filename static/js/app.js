@@ -52,8 +52,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const opt = this.options[this.selectedIndex];
     if (opt.value) {
       const row = this.closest('.kv');
-      row.querySelector('[data-fabric-cost]').value = opt.dataset.cost || '';
+      const baseCost = parseFloat(opt.dataset.cost || 0);
+      const sublimationCheckbox = row.querySelector('[data-fabric-sublimation]');
+      const sublimationCost = sublimationCheckbox?.checked ? 6.00 : 0;
+    
+      row.querySelector('[data-fabric-cost]').value = (baseCost + sublimationCost).toFixed(2);
       row.querySelector('[data-fabric-vendor-id]').value = opt.dataset.vendor || '';
+      recalcMaterials();
+    }
+  });
+  
+  // Handle sublimation checkbox on the first fabric row
+  document.querySelector('[data-fabric-sublimation]')?.addEventListener('change', function() {
+    const row = this.closest('.kv');
+    const fabricSelect = row.querySelector('[data-fabric-id]');
+    const costInput = row.querySelector('[data-fabric-cost]');
+  
+    if (fabricSelect && fabricSelect.value && costInput) {
+      const opt = fabricSelect.options[fabricSelect.selectedIndex];
+      const baseCost = parseFloat(opt.dataset.cost || 0);
+      const sublimationCost = this.checked ? 6.00 : 0;
+      costInput.value = (baseCost + sublimationCost).toFixed(2);
       recalcMaterials();
     }
   });
@@ -70,38 +89,37 @@ document.addEventListener('DOMContentLoaded', () => {
   });
  
   // Garment type - auto-fill cleaning cost
-  // Garment type - auto-fill cleaning cost
-$('#garment_type')?.addEventListener('change', async function() {
-  const garmentType = this.value;
-  
-  if (!garmentType) {
-    $('#cleaning_cost').value = '';
-    recalcLabor();
-    return;
-  }
-  
-  try {
-    const url = `/api/cleaning-cost?type=${encodeURIComponent(garmentType)}`;
-    const res = await fetch(url);
+  $('#garment_type')?.addEventListener('change', async function() {
+    const garmentType = this.value;
     
-    if (res.ok) {
-      const data = await res.json();
-      const cleaningInput = $('#cleaning_cost');
-      if (cleaningInput && data.fixed_cost !== undefined) {
-        cleaningInput.value = parseFloat(data.fixed_cost).toFixed(2);
+    if (!garmentType) {
+      $('#cleaning_cost').value = '';
+      recalcLabor();
+      return;
+    }
+    
+    try {
+      const url = `/api/cleaning-cost?type=${encodeURIComponent(garmentType)}`;
+      const res = await fetch(url);
+      
+      if (res.ok) {
+        const data = await res.json();
+        const cleaningInput = $('#cleaning_cost');
+        if (cleaningInput && data.fixed_cost !== undefined) {
+          cleaningInput.value = parseFloat(data.fixed_cost).toFixed(2);
+          recalcLabor();
+        }
+      } else {
+        console.error('API returned error status:', res.status);
+        $('#cleaning_cost').value = '';
         recalcLabor();
       }
-    } else {
-      console.error('API returned error status:', res.status);
+    } catch (e) {
+      console.error('Failed to fetch cleaning cost:', e);
       $('#cleaning_cost').value = '';
       recalcLabor();
     }
-  } catch (e) {
-    console.error('Failed to fetch cleaning cost:', e);
-    $('#cleaning_cost').value = '';
-    recalcLabor();
-  }
-});
+  });
 
   // Calculations
   function recalcMaterials(){
@@ -168,15 +186,12 @@ $('#garment_type')?.addEventListener('change', async function() {
     const retail= total ? (total/(1-(m/100))) : 0; 
     if ($('#retail_price')) $('#retail_price').value = retail ? fmt(retail) : '';
     const sp=+($('#suggested_price')?.value||0);
-    //const sugg = sp ? ((sp-total)/sp)*100 : 0; 
     if (sp > 0 && total > 0) {
       const sugg = Math.max(0, Math.min(95, ((sp - total) / sp) * 100));
       $('#suggested_margin').value = sugg.toFixed(0);
     } else {
       $('#suggested_margin').value = '';
     }
-    //if ($('#suggested_margin')) $('#suggested_margin').value = sp ? (sugg.toFixed(0)+'%') : '';
-    //if ($('#suggested_margin')) $('#suggested_margin').value = sp && total > 0 ? sugg.toFixed(0) : '';
   }
   
   // Bidirectional: Change suggested price → calculate margin
@@ -189,10 +204,8 @@ $('#garment_type')?.addEventListener('change', async function() {
       $('#suggested_margin').value = Math.max(0, Math.min(95, margin)).toFixed(0);
     }
   });
-
   
   // Bidirectional: Change margin → calculate suggested price
-  
   $('#suggested_margin')?.addEventListener('input', function() {
     const margin = parseFloat(this.value) || 0;
     const total = parseFloat((($('#snap_total')?.textContent)||'').replace('$',''))||0;
@@ -207,7 +220,6 @@ $('#garment_type')?.addEventListener('change', async function() {
     .forEach(i=> i?.addEventListener('input',recalcMaterials));
   document.querySelectorAll('[data-labor-rate],[data-labor-qoh],#cleaning_cost')
     .forEach(i=> i?.addEventListener('input',recalcLabor));
-  // KEEP ONLY THIS:
   $('#margin')?.addEventListener('input', recalcTotals);
 
   $('#vendor_style')?.addEventListener('blur', tryLoadByVendorStyle);
@@ -252,10 +264,10 @@ $('#garment_type')?.addEventListener('change', async function() {
     set('#gender', s.gender || 'MENS');
     set('#garment_type', s.garment_type);
     set('#size_range', s.size_range);
-    set('#margin', s.margin || 60);  // NEW
-    set('#label_cost', s.label_cost || 0.20);  // NEW
-    set('#shipping_cost', s.shipping_cost || 0.00);  // NEW
-    set('#suggested_price', s.suggested_price || '');  // NEW
+    set('#margin', s.margin || 60);
+    set('#label_cost', s.label_cost || 0.20);
+    set('#shipping_cost', s.shipping_cost || 0.00);
+    set('#suggested_price', s.suggested_price || '');
 
     // Clear existing dynamic rows
     document.querySelectorAll('[data-fabric-id]').forEach((el, i) => {
@@ -273,6 +285,8 @@ $('#garment_type')?.addEventListener('change', async function() {
         $('[data-fabric-cost]').value = f.cost_per_yard;
         $('[data-fabric-yds]').value = f.yards;
         if (f.vendor_id) $('[data-fabric-vendor-id]').value = f.vendor_id;
+        const sublimationCheckbox = document.querySelector('[data-fabric-sublimation]');
+        if (sublimationCheckbox) sublimationCheckbox.checked = f.sublimation || false;
       } else {
         $('#addFabric').click();
         const allFabricSelects = document.querySelectorAll('[data-fabric-id]');
@@ -281,6 +295,8 @@ $('#garment_type')?.addEventListener('change', async function() {
         newRow.querySelector('[data-fabric-cost]').value = f.cost_per_yard;
         newRow.querySelector('[data-fabric-yds]').value = f.yards;
         if (f.vendor_id) newRow.querySelector('[data-fabric-vendor-id]').value = f.vendor_id;
+        const sublimationCheckbox = newRow.querySelector('[data-fabric-sublimation]');
+        if (sublimationCheckbox) sublimationCheckbox.checked = f.sublimation || false;
       }
     });
 
@@ -314,7 +330,7 @@ $('#garment_type')?.addEventListener('change', async function() {
     // Load cleaning
     if (data.cleaning) set('#cleaning_cost', data.cleaning.cost);
 
-    // Load colors - NEW
+    // Load colors
     if (data.colors && data.colors.length > 0) {
       const colorList = $('#color_list');
       if (colorList) {
@@ -370,13 +386,15 @@ $('#garment_type')?.addEventListener('change', async function() {
         const opt = select.options[select.selectedIndex];
         const vendorSelect = row.querySelector('[data-fabric-vendor-id]');
         const vendorOpt = vendorSelect?.options[vendorSelect.selectedIndex];
-        
+        const sublimationCheckbox = row.querySelector('[data-fabric-sublimation]');
+    
         fabrics.push({
           vendor: vendorOpt?.text || '',
           name: opt.text,
           cost_per_yard: +(row.querySelector('[data-fabric-cost]')?.value || 0),
           yards: +(row.querySelector('[data-fabric-yds]')?.value || 0),
-          primary: fabrics.length === 0
+          primary: fabrics.length === 0,
+          sublimation: sublimationCheckbox?.checked || false
         });
       }
     });
@@ -418,10 +436,10 @@ $('#garment_type')?.addEventListener('change', async function() {
         gender: $('#gender')?.value || 'MENS',
         garment_type: $('#garment_type')?.value?.trim() || '',
         size_range: $('#size_range')?.value?.trim() || 'XS-4XL',
-        margin: parseFloat($('#margin')?.value) || 60.0,  // NEW
-        label_cost: parseFloat($('#label_cost')?.value) || 0.20,  // NEW
-        shipping_cost: parseFloat($('#shipping_cost')?.value) || 0.00,  // NEW
-        suggested_price: parseFloat($('#suggested_price')?.value) || null,  // NEW
+        margin: parseFloat($('#margin')?.value) || 60.0,
+        label_cost: parseFloat($('#label_cost')?.value) || 0.20,
+        shipping_cost: parseFloat($('#shipping_cost')?.value) || 0.00,
+        suggested_price: parseFloat($('#suggested_price')?.value) || null,
       },
       fabrics: fabrics,
       notions: notions,
@@ -469,6 +487,10 @@ $('#garment_type')?.addEventListener('change', async function() {
       <select class="form-select md" data-fabric-id>
         ${fabricOptionsHtml}
       </select>
+      <label style="display: flex; align-items: center; gap: 5px; white-space: nowrap;">
+        <input type="checkbox" data-fabric-sublimation style="width: auto; margin: 0;">
+        Sub.
+      </label>
       <label>Cost/yd</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-fabric-cost readonly>
       <label>Yards</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-fabric-yds>
       <label>Total</label><input class="form-control w-110 text-end" value="" disabled data-fabric-total>
@@ -482,12 +504,31 @@ $('#garment_type')?.addEventListener('change', async function() {
     fabricSelect?.addEventListener('change', function() {
       const opt = this.options[this.selectedIndex];
       if (opt.value) {
-        newRow.querySelector('[data-fabric-cost]').value = opt.dataset.cost || '';
+        const baseCost = parseFloat(opt.dataset.cost || 0);
+        const sublimationCheckbox = newRow.querySelector('[data-fabric-sublimation]');
+        const sublimationCost = sublimationCheckbox?.checked ? 6.00 : 0;
+    
+        newRow.querySelector('[data-fabric-cost]').value = (baseCost + sublimationCost).toFixed(2);
         newRow.querySelector('[data-fabric-vendor-id]').value = opt.dataset.vendor || '';
         recalcMaterials();
       }
     });
-    
+
+    // Sublimation checkbox handler for dynamically added rows
+    const sublimationCheckbox = newRow.querySelector('[data-fabric-sublimation]');
+    sublimationCheckbox?.addEventListener('change', function() {
+      const fabricSelect = newRow.querySelector('[data-fabric-id]');
+      const costInput = newRow.querySelector('[data-fabric-cost]');
+      
+      if (fabricSelect && fabricSelect.value && costInput) {
+        const opt = fabricSelect.options[fabricSelect.selectedIndex];
+        const baseCost = parseFloat(opt.dataset.cost || 0);
+        const sublimationCost = this.checked ? 6.00 : 0;
+        costInput.value = (baseCost + sublimationCost).toFixed(2);
+        recalcMaterials();
+      }
+    });
+
     newRow.querySelector('[data-fabric-yds]')?.addEventListener('input', recalcMaterials);
     
     const removeBtn = newRow.querySelector('[data-remove-btn]');
@@ -663,9 +704,12 @@ $('#garment_type')?.addEventListener('change', async function() {
   const urlParams = new URLSearchParams(window.location.search);
   const vendorStyleParam = urlParams.get('vendor_style');
   if (vendorStyleParam) {
-    $('#vendor_style').value = vendorStyleParam;
-    setTimeout(() => {
-      tryLoadByVendorStyle();
-    }, 100);
+    const vendorStyleInput = $('#vendor_style');
+    if (vendorStyleInput) {
+      vendorStyleInput.dataset.touched = '1';
+      vendorStyleInput.value = vendorStyleParam;
+    }
+    
+    tryLoadByVendorStyle();
   }
 });

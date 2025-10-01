@@ -167,6 +167,7 @@ class StyleFabric(db.Model):
     fabric_id = db.Column(db.Integer, db.ForeignKey('fabrics.id'), nullable=False)
     yards_required = db.Column(db.Float, nullable=False)
     is_primary = db.Column(db.Boolean, default=False)
+    is_sublimation = db.Column(db.Boolean, default=False)  # ADD THIS
     notes = db.Column(db.String(200))
     
     style = db.relationship('Style', backref='style_fabrics')

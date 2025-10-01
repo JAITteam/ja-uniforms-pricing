@@ -294,6 +294,25 @@ def verify_db():
     
     return html
 
+@app.route('/migrate-sublimation')
+def migrate_sublimation():
+    """Add sublimation column to style_fabrics"""
+    try:
+        from sqlalchemy import text, inspect
+        
+        inspector = inspect(db.engine)
+        columns = [col['name'] for col in inspector.get_columns('style_fabrics')]
+        
+        if 'is_sublimation' not in columns:
+            db.session.execute(text('ALTER TABLE style_fabrics ADD COLUMN is_sublimation BOOLEAN DEFAULT 0'))
+            db.session.commit()
+            return "<h1>✓ Added is_sublimation column</h1><a href='/style/new'>Test Style Form</a>"
+        else:
+            return "<h1>Column already exists</h1><a href='/style/new'>Go to Style Form</a>"
+    except Exception as e:
+        db.session.rollback()
+        return f"<h1>Error:</h1><p>{str(e)}</p>"
+
 @app.route('/import-colors')
 def import_colors():
     """One-time import of colors from Excel file"""
@@ -1795,7 +1814,7 @@ def api_style_by_vendor_style():
     if not style:
         return jsonify({"found": False}), 404
 
-    # Get ALL fabrics
+    # Get ALL fabrics - UPDATE THIS SECTION
     fabric_rows = (
         db.session.query(StyleFabric, Fabric)
         .join(Fabric, StyleFabric.fabric_id == Fabric.id)
@@ -1813,6 +1832,7 @@ def api_style_by_vendor_style():
             "fabric_id": f.id,
             "cost_per_yard": float(f.cost_per_yard or 0),
             "yards": float(sf.yards_required or 0),
+            "sublimation": bool(sf.is_sublimation or False),  # ADD THIS LINE
         })
 
     # Get ALL notions
@@ -1985,7 +2005,8 @@ def api_style_save():
                     style_id=style.id,
                     fabric_id=fabric.id,
                     yards_required=float(f.get("yards") or 0),
-                    is_primary=bool(f.get("primary") or False)
+                    is_primary=bool(f.get("primary") or False),
+                    is_sublimation=bool(f.get("sublimation") or False)  # ADD THIS LIne
                 )
                 db.session.add(sf)
 
