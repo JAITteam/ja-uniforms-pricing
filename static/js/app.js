@@ -171,12 +171,37 @@ $('#garment_type')?.addEventListener('change', async function() {
     const sugg = sp ? ((sp-total)/sp)*100 : 0; 
     if ($('#suggested_margin')) $('#suggested_margin').value = sp ? (sugg.toFixed(0)+'%') : '';
   }
+  
+  // Bidirectional: Change suggested price → calculate margin
+  $('#suggested_price')?.addEventListener('input', function() {
+    const sp = parseFloat(this.value) || 0;
+    const total = parseFloat((($('#snap_total')?.textContent)||'').replace('$',''))||0;
+  
+    if (sp > 0 && total > 0) {
+      const margin = ((sp - total) / sp) * 100;
+      $('#suggested_margin').value = Math.max(0, Math.min(95, margin)).toFixed(0);
+    }
+  });
+
+  
+  // Bidirectional: Change margin → calculate suggested price
+  
+  $('#suggested_margin')?.addEventListener('input', function() {
+    const margin = parseFloat(this.value) || 0;
+    const total = parseFloat((($('#snap_total')?.textContent)||'').replace('$',''))||0;
+  
+    if (margin > 0 && total > 0) {
+      const sp = total / (1 - (margin / 100));
+      $('#suggested_price').value = sp.toFixed(2);
+    }
+  });
 
   document.querySelectorAll('[data-fabric-cost],[data-fabric-yds],[data-notion-cost],[data-notion-qty],#label_cost,#shipping_cost')
     .forEach(i=> i?.addEventListener('input',recalcMaterials));
   document.querySelectorAll('[data-labor-rate],[data-labor-qoh],#cleaning_cost')
     .forEach(i=> i?.addEventListener('input',recalcLabor));
-  ['#margin','#suggested_price'].forEach(sel=> $(sel)?.addEventListener('input',recalcTotals));
+  // KEEP ONLY THIS:
+  $('#margin')?.addEventListener('input', recalcTotals);
 
   $('#vendor_style')?.addEventListener('blur', tryLoadByVendorStyle);
   $('#vendor_style')?.addEventListener('keydown', e => { 
