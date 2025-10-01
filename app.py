@@ -1056,16 +1056,7 @@ def master_costs_editable():
             const notionVendorOptions = '{notion_vendor_options}';
             
             // Standard garment types for cleaning costs
-            const garmentTypes = [
-                'APRON',
-                'VEST',
-                'SS TOP/SS DRESS',
-                'LS TOP/LS DRESS',
-                'SHORTS/SKIRTS',
-                'PANTS',
-                'SS JACKET/LINED SS DRESS',
-                'LS JACKET/LINED LS DRESS'
-            ];
+            
             
             function openModal(type, id = null) {{
                 currentEditType = type;
@@ -1176,15 +1167,13 @@ def master_costs_editable():
                             <input type="number" id="cost_per_piece" step="0.01" placeholder="e.g., 0.15">
                         </div>
                     `;
+
                 }} else if (type === 'cleaning') {{
-                    const garmentOptions = garmentTypes.map(g => `<option value="${{g}}">${{g}}</option>`).join('');
                     formHtml = `
                         <div class="form-group">
                             <label>Garment Type *</label>
-                            <select id="garment_type" required>
-                                <option value="">Select Garment Type</option>
-                                ${{garmentOptions}}
-                            </select>
+                            <input type="text" id="garment_type" required placeholder="e.g., SS TOP/SS DRESS" style="text-transform: uppercase;">
+                            <small style="color: #666;">Enter any garment type description</small>
                         </div>
                         <div class="form-group">
                             <label>Average Minutes *</label>
