@@ -214,14 +214,26 @@
         </div>
     </div>
 </div>
+
           <div class="col-lg-4">
-            <div class="kv">
-              <span class="chip">Variable</span>
-              <input id="var_input" class="form-control sm" value="">
-              <button class="btn btn-soft btn-sm btn-pill" id="add_var">Add</button>
+            <div class="mb-2">
+              <label class="form-label fw-bold">Variables</label>
+              <div class="input-group mb-2">
+                <select id="variable_dropdown" class="form-select">
+                  <option value="">Select Variable</option>
+                </select>
+                <button class="btn btn-primary" type="button" onclick="addSelectedVariable()">Add</button>
+              </div>
+              <div class="input-group">
+                <input id="new_variable_input" class="form-control" placeholder="Or type new variable...">
+                <button class="btn btn-success" type="button" onclick="addNewVariable()">Create & Add</button>
+              </div>
             </div>
-            <select multiple class="form-select" style="height:150px" id="var_list"></select>
+            <select multiple class="form-select" style="height:150px" id="variable_list"></select>
+            <button class="btn btn-sm btn-danger mt-1" onclick="removeSelectedVariables()">Remove Selected</button>
           </div>
+
+        
           <div class="col-lg-4">
             <div class="kv">
               <span class="text-muted">RETAIL SALES PRICE @</span>

@@ -1105,6 +1105,40 @@ def master_costs_editable():
                 </tbody>
             </table>
             
+            <!-- VARIABLES SECTION - ADD THIS ENTIRE BLOCK HERE -->
+            <h2>Variables</h2>
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="variableSearch" placeholder="Search variables..." style="width: 300px; padding: 8px; margin-bottom: 10px;">
+            </div>
+            <button class="btn btn-success add-row-btn" onclick="openModal('variable')">+ Add Variable</button>
+            <table class="vendors">
+                <thead>
+                    <tr>
+                        <th>Variable Name</th>
+                        <th style="width: 120px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="variableTableBody">
+    """
+
+    variables = Variable.query.order_by(Variable.name).all()
+    for variable in variables:
+        html += f"""
+                    <tr class="variable-row">
+                        <td>{variable.name}</td>
+                        <td>
+                            <div class="actions">
+                                <button class="btn btn-primary btn-small" onclick="editVariable({variable.id})">Edit</button>
+                                <button class="btn btn-danger btn-small" onclick="deleteVariable({variable.id})">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+        """
+    
+    html += f"""
+                </tbody>
+            </table>
+            
             <div class="back-button">
                 <a href="/admin-panel" class="btn btn-secondary">Back to Admin</a>
             </div>
@@ -1266,8 +1300,10 @@ def master_costs_editable():
                     `;
                 }} else if (type === 'color') {{
                     formHtml = '<div class="form-group"><label>Color Name *</label><input type="text" id="name" required placeholder="e.g., ADMIRAL BLUE" style="text-transform: uppercase;"></div>';
+                }} else if (type === 'variable') {{
+                    formHtml = '<div class="form-group"><label>Variable Name *</label><input type="text" id="name" required placeholder="e.g., TALL" style="text-transform: uppercase;"></div>';
                 }}
-                
+
                 modalBody.innerHTML = formHtml;
                 
                 // If editing, load current values
@@ -1416,7 +1452,26 @@ def master_costs_editable():
                     row.style.display = colorName.includes(searchTerm) ? '' : 'none';
                 }});
             }});
- 
+
+            // Variable functions - ADD THIS ENTIRE BLOCK HERE
+            function editVariable(id) {{ openModal('variable', id); }}
+            function deleteVariable(id) {{
+                if (confirm('Delete this variable? This may affect existing styles.')) {{
+                    deleteItem('variable', id);
+                }}
+            }}
+            
+            // Variable search filter
+            document.getElementById('variableSearch')?.addEventListener('input', function() {{
+                const searchTerm = this.value.toLowerCase();
+                const rows = document.querySelectorAll('.variable-row');
+                
+                rows.forEach(row => {{
+                    const variableName = row.cells[0].textContent.toLowerCase();
+                    row.style.display = variableName.includes(searchTerm) ? '' : 'none';
+                }});
+            }});
+
             function deleteItem(type, id) {{
                 fetch(`/api/${{type}}s/${{id}}`, {{
                     method: 'DELETE'
@@ -1891,6 +1946,50 @@ def api_style_by_name():
         "cleaning": cleaning_payload,
     }), 200
 
+# VARIABLE ENDPOINTS
+@app.route('/api/variables', methods=['GET', 'POST'])
+def handle_variables():
+    if request.method == 'GET':
+        variables = Variable.query.order_by(Variable.name).all()
+        return jsonify([{'id': v.id, 'name': v.name} for v in variables])
+    
+    elif request.method == 'POST':
+        data = request.json
+        variable_name = data.get('name', '').strip().upper()
+        
+        if not variable_name:
+            return jsonify({'error': 'Variable name required'}), 400
+        
+        # Check if exists
+        existing = Variable.query.filter(func.lower(Variable.name) == variable_name.lower()).first()
+        if existing:
+            return jsonify({'success': True, 'id': existing.id, 'name': existing.name, 'existed': True})
+        
+        # Create new
+        variable = Variable(name=variable_name)
+        db.session.add(variable)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'id': variable.id, 'name': variable.name, 'existed': False})
+
+@app.route('/api/variables/<int:variable_id>', methods=['GET', 'PUT', 'DELETE'])
+def handle_variable(variable_id):
+    variable = Variable.query.get_or_404(variable_id)
+    
+    if request.method == 'GET':
+        return jsonify({'id': variable.id, 'name': variable.name})
+    
+    elif request.method == 'PUT':
+        data = request.json
+        variable.name = data.get('name', variable.name).strip().upper()
+        db.session.commit()
+        return jsonify({'success': True})
+    
+    elif request.method == 'DELETE':
+        db.session.delete(variable)
+        db.session.commit()
+        return jsonify({'success': True})
+
 @app.get("/api/style/by-vendor-style")
 def api_style_by_vendor_style():
     """Load style by vendor_style code"""
@@ -1992,6 +2091,21 @@ def api_style_by_vendor_style():
             "color_id": color.id,
             "name": color.name
         })
+    
+    # Variables - NEW SECTION - ADD THIS ENTIRE BLOCK
+    variables_payload = []
+    variable_rows = (
+        db.session.query(StyleVariable, Variable)
+        .join(Variable, StyleVariable.variable_id == Variable.id)
+        .filter(StyleVariable.style_id == style.id)
+        .order_by(Variable.name.asc())
+        .all()
+    )
+    for sv, variable in variable_rows:
+        variables_payload.append({
+            "variable_id": variable.id,
+            "name": variable.name
+        })
 
     return jsonify({
         "found": True,
@@ -2013,7 +2127,8 @@ def api_style_by_vendor_style():
         "notions": notions_payload,
         "labor": labor_payload,
         "cleaning": cleaning_payload,
-        "colors": colors_payload,  # NEW
+        "colors": colors_payload,
+        "variables": variables_payload,  # NEW
 }), 200
 
 
@@ -2056,6 +2171,7 @@ def api_style_save():
         StyleNotion.query.filter_by(style_id=style.id).delete()
         StyleLabor.query.filter_by(style_id=style.id).delete()
         StyleColor.query.filter_by(style_id=style.id).delete()  # NEW
+        StyleVariable.query.filter_by(style_id=style.id).delete() 
         db.session.flush()
 
         # Fabrics
@@ -2181,6 +2297,18 @@ def api_style_save():
                         color_id=color_id
                     )
                     db.session.add(style_color)
+
+        # Variables - NEW SECTION - ADD THIS ENTIRE BLOCK
+        for variable_data in data.get("variables") or []:
+            variable_id = variable_data.get("variable_id")
+            if variable_id:
+                variable = Variable.query.get(variable_id)
+                if variable:
+                    style_variable = StyleVariable(
+                        style_id=style.id,
+                        variable_id=variable_id
+                    )
+                    db.session.add(style_variable)
 
         db.session.commit()
         return jsonify({"ok": True, "new": is_new, "style_id": style.id}), 200

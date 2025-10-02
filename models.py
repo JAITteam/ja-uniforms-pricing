@@ -198,6 +198,26 @@ class Color(db.Model):
     
     def __repr__(self):
         return f'<Color {self.name}>'
+
+class Variable(db.Model):
+    __tablename__ = 'variables'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Variable {self.name}>'
+
+class StyleVariable(db.Model):
+    __tablename__ = 'style_variables'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    style_id = db.Column(db.Integer, db.ForeignKey('styles.id'), nullable=False)
+    variable_id = db.Column(db.Integer, db.ForeignKey('variables.id'), nullable=False)
+    
+    style = db.relationship('Style')
+    variable = db.relationship('Variable')
     
 # Create junction table for Style-Color relationship
 class StyleColor(db.Model):

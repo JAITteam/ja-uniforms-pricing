@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load colors on page load
   loadColors();
+  loadVariables(); 
 
   // Capture dropdown options once at page load for dynamic row creation
   const fabricVendorOptions = Array.from($('[data-fabric-vendor-id]').options).map(opt => ({
@@ -344,6 +345,20 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+    // Load variables - ADD THIS ENTIRE BLOCK
+    if (data.variables && data.variables.length > 0) {
+      const variableList = $('#variable_list');
+      if (variableList) {
+        variableList.innerHTML = '';
+        data.variables.forEach(variable => {
+          const option = document.createElement('option');
+          option.value = variable.variable_id;
+          option.text = variable.name;
+          variableList.add(option);
+        });
+      }
+    }
+
     // Load images - ADD THIS
     if (data.style && data.style.id) {
       await loadStyleImages(data.style.id);
@@ -432,6 +447,18 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    // Collect variables - ADD THIS ENTIRE BLOCK
+    const variables = [];
+    const variableList = $('#variable_list');
+    if (variableList) {
+      Array.from(variableList.options).forEach(opt => {
+        variables.push({
+          variable_id: opt.value,
+          name: opt.text
+        });
+      });
+    }
+
     const payload = {
       style: {
         style_name: styleName,
@@ -449,7 +476,8 @@ document.addEventListener('DOMContentLoaded', () => {
       fabrics: fabrics,
       notions: notions,
       labor: labor,
-      colors: colors
+      colors: colors,
+      variables: variables
     };
 
     try {
@@ -696,6 +724,112 @@ document.addEventListener('DOMContentLoaded', () => {
     const selected = Array.from(colorList.selectedOptions);
     if (selected.length === 0) {
       alert('Please select colors to remove');
+      return;
+    }
+    
+    selected.forEach(opt => opt.remove());
+  };
+
+
+  // VARIABLE MANAGEMENT FUNCTIONS - ADD THIS ENTIRE BLOCK HERE
+  async function loadVariables() {
+    try {
+      const res = await fetch('/api/variables');
+      const variables = await res.json();
+      
+      const dropdown = $('#variable_dropdown');
+      if (dropdown) {
+        dropdown.innerHTML = '<option value="">Select Variable</option>';
+        variables.forEach(variable => {
+          const opt = document.createElement('option');
+          opt.value = variable.id;
+          opt.textContent = variable.name;
+          dropdown.appendChild(opt);
+        });
+      }
+    } catch (e) {
+      console.error('Failed to load variables:', e);
+    }
+  }
+
+  window.addSelectedVariable = function() {
+    const dropdown = $('#variable_dropdown');
+    if (!dropdown || !dropdown.value) return;
+    
+    const selectedOption = dropdown.options[dropdown.selectedIndex];
+    const variableName = selectedOption.text;
+    const variableId = selectedOption.value;
+    
+    const variableList = $('#variable_list');
+    const existing = Array.from(variableList.options).find(opt => opt.value === variableId);
+    if (existing) {
+      alert('Variable already added');
+      return;
+    }
+    
+    const option = document.createElement('option');
+    option.text = variableName;
+    option.value = variableId;
+    variableList.add(option);
+    
+    dropdown.value = '';
+  };
+
+  window.addNewVariable = async function() {
+    const input = $('#new_variable_input');
+    const variableName = input.value.trim().toUpperCase();
+    
+    if (!variableName) {
+      alert('Please enter a variable name');
+      return;
+    }
+    
+    try {
+      const res = await fetch('/api/variables', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: variableName})
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        const dropdown = $('#variable_dropdown');
+        const opt = document.createElement('option');
+        opt.value = data.id;
+        opt.textContent = data.name;
+        dropdown.appendChild(opt);
+        
+        const variableList = $('#variable_list');
+        const existing = Array.from(variableList.options).find(o => o.value === data.id.toString());
+        
+        if (!existing) {
+          const listOpt = document.createElement('option');
+          listOpt.text = data.name;
+          listOpt.value = data.id;
+          variableList.add(listOpt);
+        }
+        
+        input.value = '';
+        
+        if (data.existed) {
+          alert('Variable already existed in master list - added to selection');
+        } else {
+          alert('New variable created and added!');
+        }
+      }
+    } catch (e) {
+      alert('Failed to create variable: ' + e.message);
+    }
+  };
+
+  window.removeSelectedVariables = function() {
+    const variableList = $('#variable_list');
+    if (!variableList) return;
+    
+    const selected = Array.from(variableList.selectedOptions);
+    if (selected.length === 0) {
+      alert('Please select variables to remove');
       return;
     }
     
