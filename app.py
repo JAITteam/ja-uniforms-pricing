@@ -1989,6 +1989,26 @@ def handle_variable(variable_id):
         db.session.delete(variable)
         db.session.commit()
         return jsonify({'success': True})
+    
+@app.route('/api/styles/search', methods=['GET'])
+def search_styles():
+    """Search styles by vendor_style or style_name"""
+    query = request.args.get('q', '').strip()
+    if not query or len(query) < 2:
+        return jsonify([])
+    
+    # Search in both vendor_style and style_name
+    styles = Style.query.filter(
+        db.or_(
+            Style.vendor_style.ilike(f'%{query}%'),
+            Style.style_name.ilike(f'%{query}%')
+        )
+    ).order_by(Style.vendor_style).limit(20).all()
+    
+    return jsonify([{
+        'vendor_style': s.vendor_style,
+        'style_name': s.style_name
+    } for s in styles])
 
 @app.get("/api/style/by-vendor-style")
 def api_style_by_vendor_style():

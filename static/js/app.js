@@ -38,15 +38,54 @@ document.addEventListener('DOMContentLoaded', () => {
     const base=$('#base_item_number')?.value.trim() || '';
     const variant=$('#variant_code')?.value.trim() || '';
     const fabric=$('#fabric_code')?.value.trim() || '';
-    const parts=[]; if(base)parts.push(base);
-    if(variant && variant.toUpperCase()!=='BASE') parts.push(variant);
-    if(fabric && fabric.toUpperCase()!=='F6') parts.push(fabric);
-    const auto=parts.join('-'); const input=$('#vendor_style');
-    if(input && !input.dataset.touched) input.value=auto;
-    setText('#snap_vendor_style', (input?.value || auto || '(vendor style)'));
+    // Always concatenate all parts that exist
+    const parts = [];
+    if (base) parts.push(base);
+    if (variant) parts.push(variant);
+    if (fabric) parts.push(fabric);
+    
+    const auto = parts.join('-');
+    const input = $('#vendor_style');
+    
+    // Always update vendor style with concatenation
+    if (input) {
+      input.value = auto;
+      input.dataset.touched = '0'; // Reset touched flag
+    }
+    
+    // Update snapshot
+    setText('#snap_vendor_style', auto || '(vendor style)');
   }
-  ['#base_item_number','#variant_code','#fabric_code'].forEach(sel=> $(sel)?.addEventListener('input',buildVendorStyle));
-  $('#vendor_style')?.addEventListener('input',e=> e.target.dataset.touched='1');
+
+  // Bidirectional: Parse vendor style back to components
+  function parseVendorStyle() {
+    const vendorStyle = $('#vendor_style')?.value.trim() || '';
+    if (!vendorStyle) return;
+    
+    const parts = vendorStyle.split('-');
+    
+    if (parts.length >= 1 && parts[0]) {
+      $('#base_item_number').value = parts[0];
+    }
+    if (parts.length >= 2 && parts[1]) {
+      $('#variant_code').value = parts[1];
+    }
+    if (parts.length >= 3 && parts[2]) {
+      $('#fabric_code').value = parts[2];
+    }
+    
+    // Update snapshot
+    setText('#snap_vendor_style', vendorStyle);
+  }
+  // Auto-build vendor style when components change
+  ['#base_item_number','#variant_code','#fabric_code'].forEach(sel=> 
+    $(sel)?.addEventListener('input', buildVendorStyle)
+  );
+
+  // Parse vendor style back to components when manually edited
+  $('#vendor_style')?.addEventListener('blur', function() {
+    parseVendorStyle();
+  });
 
   // Fabric dropdown - auto-fill cost when selected (first row only)
   $('[data-fabric-id]')?.addEventListener('change', function() {
@@ -265,6 +304,58 @@ document.addEventListener('DOMContentLoaded', () => {
     .forEach(i=> i?.addEventListener('input',recalcLabor));
   $('#margin')?.addEventListener('input', recalcTotals);
 
+  // ADD VALIDATION FUNCTIONS HERE - START
+  function validateFirstFabricRow() {
+    const firstVendor = document.querySelector('[data-fabric-vendor-id]')?.value;
+    const firstFabric = document.querySelector('[data-fabric-id]')?.value;
+    const firstYards = document.querySelector('[data-fabric-yds]')?.value;
+    
+    const addBtn = $('#addFabric');
+    if (addBtn) {
+      if (firstVendor && firstFabric && firstYards) {
+        addBtn.style.opacity = '1';
+        addBtn.style.pointerEvents = 'auto';
+        addBtn.style.cursor = 'pointer';
+      } else {
+        addBtn.style.opacity = '0.5';
+        addBtn.style.pointerEvents = 'none';
+        addBtn.style.cursor = 'not-allowed';
+      }
+    }
+  }
+
+  function validateFirstNotionRow() {
+    const firstVendor = document.querySelector('[data-notion-vendor-id]')?.value;
+    const firstNotion = document.querySelector('[data-notion-id]')?.value;
+    const firstQty = document.querySelector('[data-notion-qty]')?.value;
+    
+    const addBtn = $('#addNotion');
+    if (addBtn) {
+      if (firstVendor && firstNotion && firstQty) {
+        addBtn.style.opacity = '1';
+        addBtn.style.pointerEvents = 'auto';
+        addBtn.style.cursor = 'pointer';
+      } else {
+        addBtn.style.opacity = '0.5';
+        addBtn.style.pointerEvents = 'none';
+        addBtn.style.cursor = 'not-allowed';
+      }
+    }
+  }
+
+  // Validate fabric row on input
+  document.querySelector('[data-fabric-vendor-id]')?.addEventListener('change', validateFirstFabricRow);
+  document.querySelector('[data-fabric-id]')?.addEventListener('change', validateFirstFabricRow);
+  document.querySelector('[data-fabric-yds]')?.addEventListener('input', validateFirstFabricRow);
+
+  // Validate notion row on input
+  document.querySelector('[data-notion-vendor-id]')?.addEventListener('change', validateFirstNotionRow);
+  document.querySelector('[data-notion-id]')?.addEventListener('change', validateFirstNotionRow);
+  document.querySelector('[data-notion-qty]')?.addEventListener('input', validateFirstNotionRow);
+
+  
+  // ADD VALIDATION FUNCTIONS HERE - END
+
   $('#vendor_style')?.addEventListener('blur', tryLoadByVendorStyle);
   $('#vendor_style')?.addEventListener('keydown', e => { 
     if (e.key === 'Enter') { e.preventDefault(); tryLoadByVendorStyle(); } 
@@ -311,6 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
     set('#label_cost', s.label_cost || 0.20);
     set('#shipping_cost', s.shipping_cost || 0.00);
     set('#suggested_price', s.suggested_price || '');
+    setText('#snap_vendor_style', s.vendor_style || $('#vendor_style')?.value || '(vendor style)');
 
     // Clear existing dynamic rows
     document.querySelectorAll('[data-fabric-id]').forEach((el, i) => {
@@ -420,6 +512,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     recalcMaterials();
     recalcLabor();
+    // Run validation on page load
+    validateFirstFabricRow();
+    validateFirstNotionRow();
     if ($('#saveBtn')) $('#saveBtn').disabled = false;
   }
 
@@ -559,6 +654,15 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
   $('#addFabric')?.addEventListener('click', () => {
+    // Validate first row before allowing new row
+    const firstVendor = document.querySelector('[data-fabric-vendor-id]')?.value;
+    const firstFabric = document.querySelector('[data-fabric-id]')?.value;
+    const firstYards = document.querySelector('[data-fabric-yds]')?.value;
+    
+    if (!firstVendor || !firstFabric || !firstYards) {
+      alert('Please complete the first fabric row (Vendor, Fabric, and Yards) before adding another.');
+      return;
+    }
     const newRow = document.createElement('div');
     newRow.className = 'kv';
     
@@ -651,6 +755,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   $('#addNotion')?.addEventListener('click', () => {
+    // Validate first row before allowing new row
+    const firstVendor = document.querySelector('[data-notion-vendor-id]')?.value;
+    const firstNotion = document.querySelector('[data-notion-id]')?.value;
+    const firstQty = document.querySelector('[data-notion-qty]')?.value;
+    
+    if (!firstVendor || !firstNotion || !firstQty) {
+      alert('Please complete the first notion row (Vendor, Notion, and Qty) before adding another.');
+      return;
+    }
     const newRow = document.createElement('div');
     newRow.className = 'kv';
     
@@ -1022,4 +1135,78 @@ window.deleteImage = async function(imageId) {
     
     tryLoadByVendorStyle();
   }
+
+
+  // STYLE SEARCH FUNCTIONALITY - ADD THIS ENTIRE BLOCK HERE
+  const styleSearch = $('#styleSearch');
+  const searchResults = $('#searchResults');
+  let searchTimeout;
+
+  styleSearch?.addEventListener('input', function() {
+    const query = this.value.trim();
+    
+    clearTimeout(searchTimeout);
+    
+    if (query.length < 2) {
+      searchResults.style.display = 'none';
+      return;
+    }
+    
+    searchTimeout = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/styles/search?q=${encodeURIComponent(query)}`);
+        const styles = await res.json();
+        
+        if (styles.length === 0) {
+          searchResults.innerHTML = '<div style="padding: 10px; color: #999;">No styles found</div>';
+          searchResults.style.display = 'block';
+          return;
+        }
+        
+        searchResults.innerHTML = styles.map(s => `
+          <div class="search-result-item" data-vendor-style="${s.vendor_style}" style="padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;">
+            <div style="font-weight: 600; color: #333;">${s.vendor_style}</div>
+            <div style="font-size: 12px; color: #666;">${s.style_name}</div>
+          </div>
+        `).join('');
+        
+        searchResults.style.display = 'block';
+        
+        document.querySelectorAll('.search-result-item').forEach(item => {
+          item.addEventListener('click', function() {
+            const vendorStyle = this.dataset.vendorStyle;
+            $('#vendor_style').value = vendorStyle;
+            styleSearch.value = '';
+            searchResults.style.display = 'none';
+            tryLoadByVendorStyle();
+          });
+          
+          item.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#f0f0f0';
+          });
+          
+          item.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = 'white';
+          });
+        });
+        
+      } catch (e) {
+        console.error('Search failed:', e);
+      }
+    }, 300);
+  });
+
+  document.addEventListener('click', function(e) {
+    if (e.target !== styleSearch && e.target !== searchResults) {
+      searchResults.style.display = 'none';
+    }
+  });
+
+  styleSearch?.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      this.value = '';
+      searchResults.style.display = 'none';
+    }
+  });
+
 });
