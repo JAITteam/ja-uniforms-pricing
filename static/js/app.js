@@ -344,6 +344,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+    // Load images - ADD THIS
+    if (data.style && data.style.id) {
+      await loadStyleImages(data.style.id);
+    }
+
     recalcMaterials();
     recalcLabor();
     if ($('#saveBtn')) $('#saveBtn').disabled = false;
@@ -458,13 +463,18 @@ document.addEventListener('DOMContentLoaded', () => {
       
       if (res.ok && out.ok) {
         alert(out.new ? 'Created new style!' : 'Updated style.');
+        // Set current style ID and load images
+        if (out.style_id) {
+          currentStyleId = out.style_id;
+          await loadStyleImages(out.style_id);
+        }
       } else {
         alert('Save failed: ' + (out.error || res.statusText));
-      }
-    } catch (error) {
-      alert('Save failed: ' + error.message);
     }
-  });
+  } catch (error) {
+    alert('Save failed: ' + error.message);
+  }
+});
 
   $('#addFabric')?.addEventListener('click', () => {
     const newRow = document.createElement('div');
@@ -691,6 +701,78 @@ document.addEventListener('DOMContentLoaded', () => {
     
     selected.forEach(opt => opt.remove());
   };
+
+  // IMAGE MANAGEMENT - ADD THIS ENTIRE BLOCK HERE
+  let currentStyleId = null;
+
+  async function loadStyleImages(styleId) {
+    currentStyleId = styleId;
+    const res = await fetch(`/api/style/${styleId}/images`);
+    const images = await res.json();
+    
+    const gallery = $('#imageGallery');
+    if (!gallery) return;
+    
+    gallery.innerHTML = '';
+    
+    if (images.length === 0) {
+      gallery.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #999;">No images yet</div>';
+      return;
+    }
+    
+    images.forEach(img => {
+      const imgDiv = document.createElement('div');
+      imgDiv.style.position = 'relative';
+      imgDiv.innerHTML = `
+        <img src="${img.url}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 4px; border: 2px solid #ddd;">
+        <button onclick="deleteImage(${img.id})" style="position: absolute; top: 2px; right: 2px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-weight: bold;">×</button>
+        ${img.is_primary ? '<span style="position: absolute; bottom: 2px; left: 2px; background: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold;">Primary</span>' : ''}
+      `;
+      gallery.appendChild(imgDiv);
+    });
+  }
+
+$('#imageUpload')?.addEventListener('change', async function(e) {
+  const file = e.target.files[0];
+  if (!file || !currentStyleId) {
+    alert('Please save the style first before uploading images');
+    e.target.value = '';
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append('image', file);
+  
+  const res = await fetch(`/api/style/${currentStyleId}/upload-image`, {
+    method: 'POST',
+    body: formData
+  });
+  
+  if (res.ok) {
+    await loadStyleImages(currentStyleId);
+    e.target.value = '';
+  } else {
+    const error = await res.json();
+    alert('Failed to upload image: ' + (error.error || 'Unknown error'));
+  }
+});
+
+window.deleteImage = async function(imageId) {
+  if (!confirm('Delete this image?')) return;
+  
+  const res = await fetch(`/api/style-image/${imageId}`, {
+    method: 'DELETE'
+  });
+  
+  if (res.ok) {
+    await loadStyleImages(currentStyleId);
+  } else {
+    alert('Failed to delete image');
+  }
+};
+  
+
+
 
   $('#add_var')?.addEventListener('click', ()=>{
     const v=$('#var_input')?.value.trim(); 

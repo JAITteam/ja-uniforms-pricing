@@ -47,10 +47,16 @@
       </div>
       <div class="col-lg-4">
         <div class="p-2">
-          <div class="sketch d-flex align-items-center justify-content-center">
-            <span class="text-muted">Style sketch / image</span>
+          <h6 class="mb-2">Style Images</h6>
+          <div id="imageGallery" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; min-height: 200px; border: 2px dashed #ddd; padding: 10px; border-radius: 4px; background: #fafafa;">
+            <div class="d-flex align-items-center justify-content-center text-muted" style="grid-column: 1 / -1;"></div>
+              <small>No images yet</small>
           </div>
         </div>
+        <input type="file" id="imageUpload" accept="image/png,image/jpeg,image/jpg,image/gif" style="display: none;">
+        <button type="button" class="btn btn-secondary btn-sm btn-pill mt-2 w-100" onclick="document.getElementById('imageUpload').click()">
+          + Add Image
+        </button>
       </div>
     </div>
   </div>

@@ -7,9 +7,22 @@ from database import db
 from flask import Flask, render_template, redirect, url_for, request, flash, send_from_directory
 from config import Config
 from database import db
+import os
+from werkzeug.utils import secure_filename
+
+
+
 # Initialize Flask app
 app = Flask(__name__)
 app.config.from_object(Config)
+
+
+UPLOAD_FOLDER = 'static/img'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 # Initialize database with app
 db.init_app(app)
@@ -167,6 +180,68 @@ def test_complete_lookup():
         return "<h1>No style found!</h1><a href='/create-complete-data'>Create Sample Data First</a>"
 
 # ===== ADMIN ROUTES (Future expansion) =====
+@app.route('/api/style/<int:style_id>/upload-image', methods=['POST'])
+def upload_style_image(style_id):
+    style = Style.query.get_or_404(style_id)
+    
+    if 'image' not in request.files:
+        return jsonify({'error': 'No file'}), 400
+    
+    file = request.files['image']
+    
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    if file and allowed_file(file.filename):
+        filename = secure_filename(f"{style_id}_{datetime.now().timestamp()}_{file.filename}")
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        # Check if this should be primary (first image)
+        is_primary = StyleImage.query.filter_by(style_id=style_id).count() == 0
+        
+        img = StyleImage(
+            style_id=style_id,
+            filename=filename,
+            is_primary=is_primary
+        )
+        db.session.add(img)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'id': img.id,
+            'filename': filename,
+            'url': f'/static/img/{filename}'
+        })
+    
+    return jsonify({'error': 'Invalid file type'}), 400
+
+@app.route('/api/style-image/<int:image_id>', methods=['DELETE'])
+def delete_style_image(image_id):
+    img = StyleImage.query.get_or_404(image_id)
+    
+    # Delete file
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
+    if os.path.exists(filepath):
+        os.remove(filepath)
+    
+    db.session.delete(img)
+    db.session.commit()
+    
+    return jsonify({'success': True})
+
+@app.route('/api/style/<int:style_id>/images', methods=['GET'])
+def get_style_images(style_id):
+    images = StyleImage.query.filter_by(style_id=style_id).order_by(StyleImage.is_primary.desc()).all()
+    return jsonify([{
+        'id': img.id,
+        'url': f'/static/img/{img.filename}',
+        'is_primary': img.is_primary
+    } for img in images])
+
+
+
 @app.route('/migrate-db')
 def migrate_db():
     """One-time migration to add new columns to styles table"""
@@ -999,6 +1074,9 @@ def master_costs_editable():
     html += """
             <!-- COLORS SECTION -->
             <h2>Colors</h2>
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="colorSearch" placeholder="Search colors..." style="width: 300px; padding: 8px; margin-bottom: 10px;">
+            </div>
             <button class="btn btn-success add-row-btn" onclick="openModal('color')">+ Add Color</button>
             <table class="vendors">
                 <thead>
@@ -1007,13 +1085,13 @@ def master_costs_editable():
                         <th style="width: 120px;">Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="colorTableBody">
     """
 
     colors = Color.query.order_by(Color.name).all()
     for color in colors:
         html += f"""
-                    <tr>
+                    <tr class="color-row">
                         <td>{color.name}</td>
                         <td>
                             <div class="actions">
@@ -1327,7 +1405,18 @@ def master_costs_editable():
                     deleteItem('color', id);
                 }}
             }}
-            
+
+            // Color search filter - ADD THIS ENTIRE BLOCK HERE
+            document.getElementById('colorSearch')?.addEventListener('input', function() {{
+                const searchTerm = this.value.toLowerCase();
+                const rows = document.querySelectorAll('.color-row');
+                
+                rows.forEach(row => {{
+                    const colorName = row.cells[0].textContent.toLowerCase();
+                    row.style.display = colorName.includes(searchTerm) ? '' : 'none';
+                }});
+            }});
+ 
             function deleteItem(type, id) {{
                 fetch(`/api/${{type}}s/${{id}}`, {{
                     method: 'DELETE'
@@ -1907,6 +1996,7 @@ def api_style_by_vendor_style():
     return jsonify({
         "found": True,
         "style": {
+            "id": style.id,
             "vendor_style": style.vendor_style,
             "base_item_number": style.base_item_number,
             "variant_code": style.variant_code,

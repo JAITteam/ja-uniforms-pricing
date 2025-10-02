@@ -210,6 +210,17 @@ class StyleColor(db.Model):
     style = db.relationship('Style', back_populates='colors')
     color = db.relationship('Color')
 
+class StyleImage(db.Model):
+    __tablename__ = 'style_images'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    style_id = db.Column(db.Integer, db.ForeignKey('styles.id'), nullable=False)
+    filename = db.Column(db.String(255), nullable=False)
+    is_primary = db.Column(db.Boolean, default=False)
+    upload_date = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    style = db.relationship('Style', backref='images')
+
 class StyleLabor(db.Model):
     __tablename__ = 'style_labor'
     
