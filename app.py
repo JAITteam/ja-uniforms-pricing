@@ -1186,6 +1186,8 @@ def master_costs_editable():
                             <small style="color: #666;">Will be calculated: Minutes × $0.32</small>
                         </div>
                     `;
+                }} else if (type === 'color') {{
+                    formHtml = '<div class="form-group"><label>Color Name *</label><input type="text" id="name" required placeholder="e.g., ADMIRAL BLUE" style="text-transform: uppercase;"></div>';
                 }}
                 
                 modalBody.innerHTML = formHtml;
@@ -1313,8 +1315,16 @@ def master_costs_editable():
             // Cleaning functions
             function editCleaning(id) {{ openModal('cleaning', id); }}
             function deleteCleaning(id) {{
-                if (confirm('Delete this cleaning cost?')) {{
+                if (confirm('Delete this cleaning cost? This may affect existing styles')) {{
                     deleteItem('cleaning', id);
+                }}
+            }}
+
+            // Color functions - ADD THESE LINES
+            function editColor(id) {{ openModal('color', id); }}
+            function deleteColor(id) {{
+                if (confirm('Delete this color? This may affect existing styles.')) {{
+                    deleteItem('color', id);
                 }}
             }}
             
