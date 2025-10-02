@@ -78,6 +78,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Filter fabrics by vendor 
+  document.querySelector('[data-fabric-vendor-id]')?.addEventListener('change', function() {
+    const vendorId = this.value;
+    const fabricSelect = document.querySelector('[data-fabric-id]');
+    
+    if (!fabricSelect) return;
+    
+    Array.from(fabricSelect.options).forEach(option => {
+      if (option.value === '') {
+        option.style.display = '';
+      } else if (!vendorId) {
+        option.style.display = '';
+      } else {
+        option.style.display = option.dataset.vendor === vendorId ? '' : 'none';
+      }
+    });
+    
+    fabricSelect.value = '';
+    document.querySelector('[data-fabric-cost]').value = '';
+  });
+
   // Notion dropdown - auto-fill cost when selected (first row only)
   $('[data-notion-id]')?.addEventListener('change', function() {
     const opt = this.options[this.selectedIndex];
@@ -87,6 +108,27 @@ document.addEventListener('DOMContentLoaded', () => {
       row.querySelector('[data-notion-vendor-id]').value = opt.dataset.vendor || '';
       recalcMaterials();
     }
+  });
+
+  // Filter notions by vendor - ADD HERE (around line 110)
+  document.querySelector('[data-notion-vendor-id]')?.addEventListener('change', function() {
+    const vendorId = this.value;
+    const notionSelect = document.querySelector('[data-notion-id]');
+    
+    if (!notionSelect) return;
+    
+    Array.from(notionSelect.options).forEach(option => {
+      if (option.value === '') {
+        option.style.display = '';
+      } else if (!vendorId) {
+        option.style.display = '';
+      } else {
+        option.style.display = option.dataset.vendor === vendorId ? '' : 'none';
+      }
+    });
+    
+    notionSelect.value = '';
+    document.querySelector('[data-notion-cost]').value = '';
   });
  
   // Garment type - auto-fill cleaning cost
@@ -283,21 +325,33 @@ document.addEventListener('DOMContentLoaded', () => {
     fabrics.forEach((f, index) => {
       if (index === 0) {
         $('[data-fabric-id]').value = f.fabric_id;
-        $('[data-fabric-cost]').value = f.cost_per_yard;
-        $('[data-fabric-yds]').value = f.yards;
         if (f.vendor_id) $('[data-fabric-vendor-id]').value = f.vendor_id;
+        $('[data-fabric-yds]').value = f.yards;
+        
+        // Set sublimation checkbox first
         const sublimationCheckbox = document.querySelector('[data-fabric-sublimation]');
         if (sublimationCheckbox) sublimationCheckbox.checked = f.sublimation || false;
+        
+        // Calculate cost including sublimation
+        const baseCost = parseFloat(f.cost_per_yard || 0);
+        const sublimationCost = (sublimationCheckbox && sublimationCheckbox.checked) ? 6.00 : 0;
+        $('[data-fabric-cost]').value = (baseCost + sublimationCost).toFixed(2);
       } else {
         $('#addFabric').click();
         const allFabricSelects = document.querySelectorAll('[data-fabric-id]');
         const newRow = allFabricSelects[allFabricSelects.length - 1].closest('.kv');
         newRow.querySelector('[data-fabric-id]').value = f.fabric_id;
-        newRow.querySelector('[data-fabric-cost]').value = f.cost_per_yard;
-        newRow.querySelector('[data-fabric-yds]').value = f.yards;
         if (f.vendor_id) newRow.querySelector('[data-fabric-vendor-id]').value = f.vendor_id;
+        newRow.querySelector('[data-fabric-yds]').value = f.yards;
+        
+        // Set sublimation checkbox first
         const sublimationCheckbox = newRow.querySelector('[data-fabric-sublimation]');
         if (sublimationCheckbox) sublimationCheckbox.checked = f.sublimation || false;
+        
+        // Calculate cost including sublimation
+        const baseCost = parseFloat(f.cost_per_yard || 0);
+        const sublimationCost = (sublimationCheckbox && sublimationCheckbox.checked) ? 6.00 : 0;
+        newRow.querySelector('[data-fabric-cost]').value = (baseCost + sublimationCost).toFixed(2);
       }
     });
 
@@ -552,6 +606,26 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
+    // Add vendor filter for dynamic fabric row - ADD HERE
+    const fabricVendorSelect = newRow.querySelector('[data-fabric-vendor-id]');
+    fabricVendorSelect?.addEventListener('change', function() {
+      const vendorId = this.value;
+      const fabricSelect = newRow.querySelector('[data-fabric-id]');
+      
+      Array.from(fabricSelect.options).forEach(option => {
+        if (option.value === '') {
+          option.style.display = '';
+        } else if (!vendorId) {
+          option.style.display = '';
+        } else {
+          option.style.display = option.dataset.vendor === vendorId ? '' : 'none';
+        }
+      });
+      
+      fabricSelect.value = '';
+      newRow.querySelector('[data-fabric-cost]').value = '';
+    });
+
     // Sublimation checkbox handler for dynamically added rows
     const sublimationCheckbox = newRow.querySelector('[data-fabric-sublimation]');
     sublimationCheckbox?.addEventListener('change', function() {
@@ -614,6 +688,26 @@ document.addEventListener('DOMContentLoaded', () => {
         newRow.querySelector('[data-notion-vendor-id]').value = opt.dataset.vendor || '';
         recalcMaterials();
       }
+    });
+
+    // Add vendor filter for dynamic notion row - ADD HERE
+    const notionVendorSelect = newRow.querySelector('[data-notion-vendor-id]');
+    notionVendorSelect?.addEventListener('change', function() {
+      const vendorId = this.value;
+      const notionSelect = newRow.querySelector('[data-notion-id]');
+      
+      Array.from(notionSelect.options).forEach(option => {
+        if (option.value === '') {
+          option.style.display = '';
+        } else if (!vendorId) {
+          option.style.display = '';
+        } else {
+          option.style.display = option.dataset.vendor === vendorId ? '' : 'none';
+        }
+      });
+      
+      notionSelect.value = '';
+      newRow.querySelector('[data-notion-cost]').value = '';
     });
     
     newRow.querySelector('[data-notion-qty]')?.addEventListener('input', recalcMaterials);
