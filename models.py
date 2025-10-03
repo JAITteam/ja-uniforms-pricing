@@ -270,6 +270,18 @@ class StyleLabor(db.Model):
     style = db.relationship('Style', backref='style_labor')
     labor_operation = db.relationship('LaborOperation')
 
+class GlobalSetting(db.Model):
+    __tablename__ = 'global_settings'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    setting_key = db.Column(db.String(50), unique=True, nullable=False)
+    setting_value = db.Column(db.Float, nullable=False)
+    description = db.Column(db.String(200))
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<GlobalSetting {self.setting_key}={self.setting_value}>'
+
 # ===== SAMPLE DATA FUNCTION =====
 def create_complete_sample():
     """Create complete sample data with all your business requirements"""

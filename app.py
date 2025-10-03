@@ -12,7 +12,7 @@ from models import (
     Style, Fabric, FabricVendor, Notion, NotionVendor, 
     LaborOperation, CleaningCost, StyleFabric, StyleNotion, 
     StyleLabor, Color, StyleColor, Variable, StyleVariable,
-    SizeRange
+    SizeRange, GlobalSetting
 )
 
 
@@ -448,6 +448,38 @@ def handle_size_range(size_range_id):
         db.session.delete(size_range)
         db.session.commit()
         return jsonify({'success': True})
+    
+
+# GLOBAL SETTINGS ENDPOINTS
+@app.route('/api/global-settings', methods=['GET'])
+def get_global_settings():
+    settings = GlobalSetting.query.all()
+    return jsonify([{
+        'id': s.id,
+        'setting_key': s.setting_key,
+        'setting_value': float(s.setting_value),
+        'description': s.description
+    } for s in settings])
+
+@app.route('/api/global-settings/<int:setting_id>', methods=['GET', 'PUT'])
+def handle_global_setting(setting_id):
+    setting = GlobalSetting.query.get_or_404(setting_id)
+    
+    if request.method == 'GET':
+        return jsonify({
+            'id': setting.id,
+            'setting_key': setting.setting_key,
+            'setting_value': float(setting.setting_value),
+            'description': setting.description
+        })
+    
+    elif request.method == 'PUT':
+        data = request.json
+        setting.setting_value = float(data.get('setting_value', setting.setting_value))
+        setting.description = data.get('description', setting.description)
+        db.session.commit()
+        return jsonify({'success': True})
+    
 
 @app.route('/import-colors')
 def import_colors():
@@ -1241,6 +1273,41 @@ def master_costs_editable():
     html += f"""
                 </tbody>
             </table>
+
+            <!-- GLOBAL SETTINGS SECTION - ADD HERE -->
+            <h2>Global Settings</h2>
+            <p style="color: #666; margin-bottom: 15px;">Default values applied to all new styles</p>
+            <table class="vendors">
+                <thead>
+                    <tr>
+                        <th>Setting</th>
+                        <th>Value</th>
+                        <th>Description</th>
+                        <th style="width: 120px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+    """
+
+    global_settings = GlobalSetting.query.all()
+    for setting in global_settings:
+        display_name = setting.setting_key.replace('_', ' ').title()
+        html += f"""
+                    <tr>
+                        <td><strong>{display_name}</strong></td>
+                        <td>${setting.setting_value:.2f}</td>
+                        <td>{setting.description or ''}</td>
+                        <td>
+                            <div class="actions">
+                                <button class="btn btn-primary btn-small" onclick="editGlobalSetting({setting.id})">Edit</button>
+                            </div>
+                        </td>
+                    </tr>
+        """
+    
+    html += f"""
+                </tbody>
+            </table>
             <div class="back-button">
                 <a href="/admin-panel" class="btn btn-secondary">Back to Admin</a>
             </div>
@@ -1427,6 +1494,17 @@ def master_costs_editable():
                             <textarea id="description" rows="2" placeholder="Notes about this size range"></textarea>
                         </div>
                     `;
+                }} else if (type === 'global_setting') {{
+                    formHtml = `
+                        <div class="form-group">
+                            <label>Setting Value *</label>
+                            <input type="number" id="setting_value" step="0.01" required placeholder="e.g., 0.20">
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="description" rows="2" placeholder="Description of this setting"></textarea>
+                        </div>
+                    `;
                 }}
 
                 modalBody.innerHTML = formHtml;
@@ -1605,6 +1683,8 @@ def master_costs_editable():
                     deleteItem('size_range', id);
                 }}
             }}
+            // Global Setting function - ADD THIS LINE
+            function editGlobalSetting(id) {{ openModal('global_setting', id); }}
 
             // Size Range search filter
             document.getElementById('sizeRangeSearch')?.addEventListener('input', function() {{
@@ -1939,6 +2019,10 @@ def style_wizard():
     if button: labor_ops.append(button)
     garment_types = [cc.garment_type for cc in CleaningCost.query.order_by(CleaningCost.garment_type).all()]
     size_ranges = SizeRange.query.order_by(SizeRange.name).all()
+    label_cost_setting = GlobalSetting.query.filter_by(setting_key='avg_label_cost').first()
+    shipping_cost_setting = GlobalSetting.query.filter_by(setting_key='shipping_cost').first()
+    default_label_cost = label_cost_setting.setting_value if label_cost_setting else 0.20
+    default_shipping_cost = shipping_cost_setting.setting_value if shipping_cost_setting else 0.00
     
     return render_template("style_wizard.html", 
                           fabric_vendors=fabric_vendors,
@@ -1947,7 +2031,9 @@ def style_wizard():
                           notions=notions,
                           labor_ops=labor_ops,
                           garment_types=garment_types,
-                          size_ranges=size_ranges)
+                          size_ranges=size_ranges,
+                          default_label_cost=default_label_cost,
+                          default_shipping_cost=default_shipping_cost)
 
 @app.route("/import-step1", methods=["GET","POST"])
 def import_step1():
@@ -2276,6 +2362,9 @@ def api_style_by_vendor_style():
             "variable_id": variable.id,
             "name": variable.name
         })
+    # Load from global settings instead of style record
+    label_setting = GlobalSetting.query.filter_by(setting_key='avg_label_cost').first()
+    shipping_setting = GlobalSetting.query.filter_by(setting_key='shipping_cost').first()
 
     return jsonify({
         "found": True,
@@ -2289,8 +2378,8 @@ def api_style_by_vendor_style():
             "garment_type": style.garment_type,
             "size_range": style.size_range,
             "margin": float(style.base_margin_percent or 60.0),  # NEW
-            "label_cost": float(style.avg_label_cost or 0.20),  # NEW
-            "shipping_cost": float(style.shipping_cost or 0.00),  # NEW
+            "label_cost": float(label_setting.setting_value) if label_setting else 0.20,
+            "shipping_cost": float(shipping_setting.setting_value) if shipping_setting else 0.00,
             "suggested_price": float(style.suggested_price or 0) if style.suggested_price else None,  # NEW
             "notes": style.notes or '', 
         },
@@ -2331,8 +2420,6 @@ def api_style_save():
         style.size_range = (s.get("size_range") or None)
         style.notes = (s.get("notes") or None)  # Add notes field too
         style.base_margin_percent = float(s.get("margin") or 60.0)
-        style.avg_label_cost = float(s.get("label_cost") or 0.20)
-        style.shipping_cost = float(s.get("shipping_cost") or 0.00)  # NEW
         style.suggested_price = float(s.get("suggested_price") or 0) if s.get("suggested_price") else None  # NEW
         
         db.session.add(style)
