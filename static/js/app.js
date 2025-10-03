@@ -262,8 +262,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const ship=+( $('#shipping_cost')?.value || 0 );
     const total=mat+lab+labels+ship;
     setText('#snap_total', fmt(total));
+
     if ($('#total_reg')) $('#total_reg').value = total ? fmt(total) : '';
-    if ($('#total_ext')) $('#total_ext').value = total ? fmt(total*1.15) : '';
+    // Get dynamic markup from selected size range
+    const sizeRangeSelect = $('#size_range_id');
+    let extendedMarkup = 1.15; // default 15%
+    if (sizeRangeSelect && sizeRangeSelect.value) {
+      const selectedOption = sizeRangeSelect.options[sizeRangeSelect.selectedIndex];
+      const markupPercent = parseFloat(selectedOption.dataset.markup || 15);
+      extendedMarkup = 1 + (markupPercent / 100);
+    }
+    if ($('#total_ext')) $('#total_ext').value = total ? fmt(total * extendedMarkup) : '';
+
     const m=Math.max(0,Math.min(95,+($('#margin')?.value||60)));
     const retail= total ? (total/(1-(m/100))) : 0; 
     if ($('#retail_price')) $('#retail_price').value = retail ? fmt(retail) : '';
@@ -274,6 +284,27 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       $('#suggested_margin').value = '';
     }
+  }
+
+  function updateSizeRangeDisplay() {
+    const sizeRangeSelect = $('#size_range_id');
+    if (!sizeRangeSelect || !sizeRangeSelect.value) {
+      $('#regular_sizes_display').value = '';
+      $('#extended_sizes_display').value = '';
+      $('#extended_label').textContent = 'Extended Sizes (+15%)';
+      return;
+    }
+    
+    const selectedOption = sizeRangeSelect.options[sizeRangeSelect.selectedIndex];
+    const regularSizes = selectedOption.dataset.regular || '';
+    const extendedSizes = selectedOption.dataset.extended || '';
+    const markup = selectedOption.dataset.markup || '15';
+    
+    $('#regular_sizes_display').value = regularSizes;
+    $('#extended_sizes_display').value = extendedSizes || 'N/A';
+    $('#extended_label').textContent = `Extended Sizes (+${markup}%)`;
+    
+    recalcTotals();
   }
   
   // Bidirectional: Change suggested price → calculate margin
@@ -303,6 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-labor-rate],[data-labor-qoh],#cleaning_cost')
     .forEach(i=> i?.addEventListener('input',recalcLabor));
   $('#margin')?.addEventListener('input', recalcTotals);
+  $('#size_range_id')?.addEventListener('change', updateSizeRangeDisplay);
 
   // ADD VALIDATION FUNCTIONS HERE - START
   function validateFirstFabricRow() {
@@ -397,12 +429,23 @@ document.addEventListener('DOMContentLoaded', () => {
     set('#style_name', s.style_name);
     set('#gender', s.gender || 'MENS');
     set('#garment_type', s.garment_type);
-    set('#size_range', s.size_range);
+    //set('#size_range', s.size_range);
     set('#margin', s.margin || 60);
     set('#label_cost', s.label_cost || 0.20);
     set('#shipping_cost', s.shipping_cost || 0.00);
     set('#suggested_price', s.suggested_price || '');
+    set('#notes', s.notes || '');
     setText('#snap_vendor_style', s.vendor_style || $('#vendor_style')?.value || '(vendor style)');
+    // Find and select the size range option by name
+    const sizeRangeSelect = $('#size_range_id');
+    if (sizeRangeSelect && s.size_range) {
+      Array.from(sizeRangeSelect.options).forEach(option => {
+        if (option.dataset.name === s.size_range) {
+          option.selected = true;
+        }
+      });
+    }
+updateSizeRangeDisplay();
 
     // Clear existing dynamic rows
     document.querySelectorAll('[data-fabric-id]').forEach((el, i) => {
@@ -616,11 +659,12 @@ document.addEventListener('DOMContentLoaded', () => {
         variant_code: $('#variant_code')?.value.trim() || '',
         gender: $('#gender')?.value || 'MENS',
         garment_type: $('#garment_type')?.value?.trim() || '',
-        size_range: $('#size_range')?.value?.trim() || 'XS-4XL',
+        size_range: $('#size_range_id')?.options[$('#size_range_id')?.selectedIndex]?.dataset.name || '',
         margin: parseFloat($('#margin')?.value) || 60.0,
         label_cost: parseFloat($('#label_cost')?.value) || 0.20,
         shipping_cost: parseFloat($('#shipping_cost')?.value) || 0.00,
         suggested_price: parseFloat($('#suggested_price')?.value) || null,
+        notes: $('#notes')?.value || '',
       },
       fabrics: fabrics,
       notions: notions,

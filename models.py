@@ -96,6 +96,20 @@ class SizeVariant(db.Model):
     size_category = db.Column(db.String(20), nullable=False)  # "regular", "extended"
     price_multiplier = db.Column(db.Float, default=1.0)  # 1.0 for regular, 1.15 for extended
 
+class SizeRange(db.Model):
+    __tablename__ = 'size_ranges'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False, unique=True)
+    regular_sizes = db.Column(db.String(100), nullable=False)
+    extended_sizes = db.Column(db.String(100))
+    extended_markup_percent = db.Column(db.Float, default=15.0)
+    description = db.Column(db.String(200))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<SizeRange {self.name}>'
+
 # ===== MAIN STYLE TABLE =====
 class Style(db.Model):
     __tablename__ = 'styles'

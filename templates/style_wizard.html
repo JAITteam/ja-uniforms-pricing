@@ -22,7 +22,7 @@
   <!-- LEFT: main editor -->
   <div class="col-lg-8">
 
-    <!-- BASICS -->
+    <!-- BASICS -->Shipping Cost
     <div class="panel">
   <div class="ph">BASIC INFO</div>
   <div class="pb">
@@ -169,21 +169,35 @@
     <div class="sumline"><span class="text-muted">TOTAL LABOR COST</span><strong id="sumLabor">$0.00</strong></div>
   </div>
 </div>
+
     <!-- TOTAL COST -->
     <div class="panel">
       <div class="ph">TOTAL COST</div>
       <div class="pb">
         <div class="kv">
           <span class="text-muted">Size Range</span>
-          <select class="form-select sm" id="size_range">
-            <option>XS-4XL</option><option>XS-XL</option><option>2XL-4XL</option>
+          <select class="form-select md" id="size_range_id">
+            <option value="">Select Size Range</option>
+            {% for sr in size_ranges %}
+            <option value="{{ sr.id }}" 
+                    data-name="{{ sr.name }}"
+                    data-regular="{{ sr.regular_sizes }}" 
+                    data-extended="{{ sr.extended_sizes }}"
+                    data-markup="{{ sr.extended_markup_percent }}">
+              {{ sr.name }}
+            </option>
+            {% endfor %}
           </select>
-          <span class="chip">Regular Sizes</span><input class="form-control xs text-center" value="XS-XL" disabled>
-          <span class="text-muted">Total Cost Price for Reg. Sizes</span><input class="form-control w-110 text-end" id="total_reg" disabled>
+          <span class="chip">Regular Sizes</span>
+          <input class="form-control sm text-center" id="regular_sizes_display" value="" disabled>
+          <span class="text-muted">Total Cost Price for Reg. Sizes</span>
+          <input class="form-control w-110 text-end" id="total_reg" disabled>
         </div>
         <div class="kv mt-2">
-          <span class="chip">Extended Sizes (+15%)</span><input class="form-control xs text-center" value="2XL-4XL" disabled>
-          <span class="text-muted">Total Cost Price for Ex. Sizes</span><input class="form-control w-110 text-end" id="total_ext" disabled>
+          <span class="chip" id="extended_label">Extended Sizes (+15%)</span>
+          <input class="form-control sm text-center" id="extended_sizes_display" value="" disabled>
+          <span class="text-muted">Total Cost Price for Ex. Sizes</span>
+          <input class="form-control w-110 text-end" id="total_ext" disabled>
         </div>
       </div>
     </div>
@@ -262,6 +276,11 @@
           <span class="text-muted">Shipping Cost</span>
           <!--<input id="shipping_cost" class="form-control w-110 text-end" type="number" step="0.01" value="0.00"> -->
           <input id="shipping_cost" class="form-control w-110 text-end" type="number" step="0.01" value="0.00" readonly title="Edit in Master Costs">
+        </div>
+        <!-- NOTES FIELD - ADD THIS -->
+        <div style="margin-top: 20px;">
+          <label class="form-label"><strong>Notes</strong></label>
+          <textarea id="notes" class="form-control" rows="6" placeholder="Additional notes, special instructions, or details about this style..."></textarea>
         </div>
       </div>
     </div>

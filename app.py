@@ -2,13 +2,18 @@ import pandas as pd
 from flask import Config, Flask, request, redirect, url_for
 from flask import jsonify, request
 from sqlalchemy import func
-from models import Style
 from database import db
 from flask import Flask, render_template, redirect, url_for, request, flash, send_from_directory
 from config import Config
 from database import db
 import os
 from werkzeug.utils import secure_filename
+from models import (
+    Style, Fabric, FabricVendor, Notion, NotionVendor, 
+    LaborOperation, CleaningCost, StyleFabric, StyleNotion, 
+    StyleLabor, Color, StyleColor, Variable, StyleVariable,
+    SizeRange
+)
 
 
 
@@ -387,6 +392,62 @@ def migrate_sublimation():
     except Exception as e:
         db.session.rollback()
         return f"<h1>Error:</h1><p>{str(e)}</p>"
+    
+# SIZE RANGE ENDPOINTS
+@app.route('/api/size-ranges', methods=['GET', 'POST'])
+def handle_size_ranges():
+    if request.method == 'GET':
+        size_ranges = SizeRange.query.order_by(SizeRange.name).all()
+        return jsonify([{
+            'id': sr.id,
+            'name': sr.name,
+            'regular_sizes': sr.regular_sizes,
+            'extended_sizes': sr.extended_sizes,
+            'extended_markup_percent': float(sr.extended_markup_percent),
+            'description': sr.description
+        } for sr in size_ranges])
+    
+    elif request.method == 'POST':
+        data = request.json
+        size_range = SizeRange(
+            name=data.get('name', '').strip().upper(),
+            regular_sizes=data.get('regular_sizes', '').strip(),
+            extended_sizes=data.get('extended_sizes', '').strip(),
+            extended_markup_percent=float(data.get('extended_markup_percent', 15.0)),
+            description=data.get('description', '').strip()
+        )
+        db.session.add(size_range)
+        db.session.commit()
+        return jsonify({'success': True, 'id': size_range.id})
+
+@app.route('/api/size-ranges/<int:size_range_id>', methods=['GET', 'PUT', 'DELETE'])
+def handle_size_range(size_range_id):
+    size_range = SizeRange.query.get_or_404(size_range_id)
+    
+    if request.method == 'GET':
+        return jsonify({
+            'id': size_range.id,
+            'name': size_range.name,
+            'regular_sizes': size_range.regular_sizes,
+            'extended_sizes': size_range.extended_sizes,
+            'extended_markup_percent': float(size_range.extended_markup_percent),
+            'description': size_range.description
+        })
+    
+    elif request.method == 'PUT':
+        data = request.json
+        size_range.name = data.get('name', size_range.name).strip().upper()
+        size_range.regular_sizes = data.get('regular_sizes', size_range.regular_sizes).strip()
+        size_range.extended_sizes = data.get('extended_sizes', size_range.extended_sizes).strip()
+        size_range.extended_markup_percent = float(data.get('extended_markup_percent', size_range.extended_markup_percent))
+        size_range.description = data.get('description', size_range.description).strip()
+        db.session.commit()
+        return jsonify({'success': True})
+    
+    elif request.method == 'DELETE':
+        db.session.delete(size_range)
+        db.session.commit()
+        return jsonify({'success': True})
 
 @app.route('/import-colors')
 def import_colors():
@@ -1137,8 +1198,49 @@ def master_costs_editable():
     
     html += f"""
                 </tbody>
+            </table>  
+
+            <!-- SIZE RANGES SECTION - INSERT HERE -->
+            <h2>Size Ranges</h2>
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="sizeRangeSearch" placeholder="Search size ranges..." style="width: 300px; padding: 8px; margin-bottom: 10px;">
+            </div>
+            <button class="btn btn-success add-row-btn" onclick="openModal('size_range')">+ Add Size Range</button>
+            <table class="vendors">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Regular Sizes</th>
+                        <th>Extended Sizes</th>
+                        <th>Markup %</th>
+                        <th>Description</th>
+                        <th style="width: 120px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="sizeRangeTableBody">
+    """
+
+    size_ranges = SizeRange.query.order_by(SizeRange.name).all()
+    for sr in size_ranges:
+        html += f"""
+                    <tr class="size-range-row">
+                        <td><strong>{sr.name}</strong></td>
+                        <td>{sr.regular_sizes}</td>
+                        <td>{sr.extended_sizes or 'N/A'}</td>
+                        <td>{sr.extended_markup_percent}%</td>
+                        <td>{sr.description or ''}</td>
+                        <td>
+                            <div class="actions">
+                                <button class="btn btn-primary btn-small" onclick="editSizeRange({sr.id})">Edit</button>
+                                <button class="btn btn-danger btn-small" onclick="deleteSizeRange({sr.id})">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+        """
+    
+    html += f"""
+                </tbody>
             </table>
-            
             <div class="back-button">
                 <a href="/admin-panel" class="btn btn-secondary">Back to Admin</a>
             </div>
@@ -1302,6 +1404,29 @@ def master_costs_editable():
                     formHtml = '<div class="form-group"><label>Color Name *</label><input type="text" id="name" required placeholder="e.g., ADMIRAL BLUE" style="text-transform: uppercase;"></div>';
                 }} else if (type === 'variable') {{
                     formHtml = '<div class="form-group"><label>Variable Name *</label><input type="text" id="name" required placeholder="e.g., TALL" style="text-transform: uppercase;"></div>';
+                }} else if (type === 'size_range') {{
+                    formHtml = `
+                        <div class="form-group">
+                            <label>Size Range Name * (e.g., XS-6XL, 00-30)</label>
+                            <input type="text" id="name" required placeholder="e.g., XS-6XL" style="text-transform: uppercase;">
+                        </div>
+                        <div class="form-group">
+                            <label>Regular Sizes * (e.g., XS-XL, 00-18)</label>
+                            <input type="text" id="regular_sizes" required placeholder="e.g., XS-XL">
+                        </div>
+                        <div class="form-group">
+                            <label>Extended Sizes (e.g., 2XL-6XL, 20-30)</label>
+                            <input type="text" id="extended_sizes" placeholder="e.g., 2XL-6XL">
+                        </div>
+                        <div class="form-group">
+                            <label>Extended Markup % *</label>
+                            <input type="number" id="extended_markup_percent" required value="15" step="0.1" min="0" max="100">
+                        </div>
+                        <div class="form-group">
+                            <label>Description (optional)</label>
+                            <textarea id="description" rows="2" placeholder="Notes about this size range"></textarea>
+                        </div>
+                    `;
                 }}
 
                 modalBody.innerHTML = formHtml;
@@ -1353,7 +1478,8 @@ def master_costs_editable():
             
             function saveItem() {{
                 const data = {{}};
-                const inputs = document.querySelectorAll('#modalBody input, #modalBody select');
+                const inputs = document.querySelectorAll('#modalBody input, #modalBody select, #modalBody textarea');
+
                 
                 inputs.forEach(input => {{
                     if (input.value) {{
@@ -1472,8 +1598,30 @@ def master_costs_editable():
                 }});
             }});
 
+            // Size Range functions - ADD THIS ENTIRE BLOCK
+            function editSizeRange(id) {{ openModal('size_range', id); }}
+            function deleteSizeRange(id) {{
+                if (confirm('Delete this size range? This may affect existing styles.')) {{
+                    deleteItem('size_range', id);
+                }}
+            }}
+
+            // Size Range search filter
+            document.getElementById('sizeRangeSearch')?.addEventListener('input', function() {{
+                const searchTerm = this.value.toLowerCase();
+                const rows = document.querySelectorAll('.size-range-row');
+                
+                rows.forEach(row => {{
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(searchTerm) ? '' : 'none';
+                }});
+            }});
+
             function deleteItem(type, id) {{
-                fetch(`/api/${{type}}s/${{id}}`, {{
+                // Convert underscore to hyphen for API endpoint
+                const endpoint = type.replace('_', '-');
+                
+                fetch(`/api/${{endpoint}}s/${{id}}`, {{
                     method: 'DELETE'
                 }})
                 .then(response => response.json())
@@ -1790,6 +1938,7 @@ def style_wizard():
     button = LaborOperation.query.filter_by(name='Button/Snap/Grommet').first()
     if button: labor_ops.append(button)
     garment_types = [cc.garment_type for cc in CleaningCost.query.order_by(CleaningCost.garment_type).all()]
+    size_ranges = SizeRange.query.order_by(SizeRange.name).all()
     
     return render_template("style_wizard.html", 
                           fabric_vendors=fabric_vendors,
@@ -1797,7 +1946,8 @@ def style_wizard():
                           fabrics=fabrics,
                           notions=notions,
                           labor_ops=labor_ops,
-                          garment_types=garment_types)
+                          garment_types=garment_types,
+                          size_ranges=size_ranges)
 
 @app.route("/import-step1", methods=["GET","POST"])
 def import_step1():
@@ -2142,6 +2292,7 @@ def api_style_by_vendor_style():
             "label_cost": float(style.avg_label_cost or 0.20),  # NEW
             "shipping_cost": float(style.shipping_cost or 0.00),  # NEW
             "suggested_price": float(style.suggested_price or 0) if style.suggested_price else None,  # NEW
+            "notes": style.notes or '', 
         },
         "fabrics": fabrics_payload,
         "notions": notions_payload,
@@ -2178,6 +2329,7 @@ def api_style_save():
         style.gender = (s.get("gender") or None)
         style.garment_type = (s.get("garment_type") or None)
         style.size_range = (s.get("size_range") or None)
+        style.notes = (s.get("notes") or None)  # Add notes field too
         style.base_margin_percent = float(s.get("margin") or 60.0)
         style.avg_label_cost = float(s.get("label_cost") or 0.20)
         style.shipping_cost = float(s.get("shipping_cost") or 0.00)  # NEW
