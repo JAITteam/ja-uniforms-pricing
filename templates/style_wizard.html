@@ -35,7 +35,8 @@
         <div class="kv">
           <label>Base Item #</label><input id="base_item_number" class="form-control xs" placeholder="21324" value="">
           <label>Variant Code #</label><input id="variant_code" class="form-control xs" placeholder="3202" value="">
-          <label>Fabric Code #</label><input id="fabric_code" class="form-control xs" placeholder="F6" value="">
+          <!--<label>Fabric Code #</label><input id="fabric_code" class="form-control xs" placeholder="F6" value="">-->
+          <label>Fabric Code #</label><input id="fabric_code" class="form-control xs" placeholder="Auto" value="" readonly style="background-color: #f0f0f0; cursor: not-allowed;">
         </div>
         <div class="kv">
           <!--<label>Vendor Style</label><input id="vendor_style" class="form-control lg" placeholder="auto" value="">-->
@@ -87,7 +88,7 @@
       <select class="form-select md" data-fabric-id>
         <option value="">Select Fabric</option>
         {% for f in fabrics %}
-        <option value="{{ f.id }}" data-cost="{{ f.cost_per_yard }}" data-vendor="{{ f.fabric_vendor_id }}">{{ f.name }}</option>
+        <option value="{{ f.id }}" data-cost="{{ f.cost_per_yard }}" data-vendor="{{ f.fabric_vendor_id }}" data-fabric-code="{{ f.fabric_code or '' }}">{{ f.name }}</option>
         {% endfor %}
       </select>
       <label style="display: flex; align-items: center; gap: 5px; white-space: nowrap;">
@@ -297,7 +298,6 @@
         </div>
         <div class="sumline"><span class="text-muted">Materials</span><strong id="snap_mat">$0.00</strong></div>
         <div class="sumline"><span class="text-muted">Labor</span><strong id="snap_lab">$0.00</strong></div>
-        <div class="sumline"><span class="text-muted">Labels</span><strong id="snap_lbl">$0.20</strong></div>
         <div class="sumline"><span class="text-muted">Shipping</span><strong id="snap_ship">$0.00</strong></div>
         <hr>
         <div class="sumline"><span class="text-muted">TOTAL COST</span><strong id="snap_total">$0.00</strong></div>

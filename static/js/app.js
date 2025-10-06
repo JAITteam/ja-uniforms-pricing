@@ -23,7 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
     value: opt.value,
     text: opt.text,
     cost: opt.dataset.cost || '',
-    vendor: opt.dataset.vendor || ''
+    vendor: opt.dataset.vendor || '',
+    fabricCode: opt.dataset.fabricCode || ''
   }));
 
   const notionOptions = Array.from($('[data-notion-id]').options).map(opt => ({
@@ -37,24 +38,41 @@ document.addEventListener('DOMContentLoaded', () => {
   function buildVendorStyle(){
     const base=$('#base_item_number')?.value.trim() || '';
     const variant=$('#variant_code')?.value.trim() || '';
-    const fabric=$('#fabric_code')?.value.trim() || '';
-    // Always concatenate all parts that exist
+    
+    // Get fabric code from first fabric row
+    const firstFabricSelect = document.querySelector('[data-fabric-id]');
+    let fabricCode = '';
+    if (firstFabricSelect && firstFabricSelect.value) {
+      const selectedOption = firstFabricSelect.options[firstFabricSelect.selectedIndex];
+      fabricCode = selectedOption.dataset.fabricCode || '';
+    }
+    
+    // Check sublimation checkbox on first row
+    const firstSublimationCheckbox = document.querySelector('[data-fabric-sublimation]');
+    const hasSublimation = firstSublimationCheckbox?.checked || false;
+    
+    // Build vendor style: BASE-VARIANT+FABRICCODE+P (no hyphen after variant)
     const parts = [];
     if (base) parts.push(base);
     if (variant) parts.push(variant);
-    if (fabric) parts.push(fabric);
     
-    const auto = parts.join('-');
-    const input = $('#vendor_style');
-    
-    // Always update vendor style with concatenation
-    if (input) {
-      input.value = auto;
-      input.dataset.touched = '0'; // Reset touched flag
+    let vendorStyle = parts.join('-');
+    if (fabricCode) {
+      vendorStyle += fabricCode;
+      if (hasSublimation) {
+        vendorStyle += 'P';
+      }
     }
     
-    // Update snapshot
-    setText('#snap_vendor_style', auto || '(vendor style)');
+    // Update fields
+    const input = $('#vendor_style');
+    if (input) {
+      input.value = vendorStyle;
+      input.dataset.touched = '0';
+    }
+    
+    $('#fabric_code').value = fabricCode || '';
+    setText('#snap_vendor_style', vendorStyle || '(vendor style)');
   }
 
   // Bidirectional: Parse vendor style back to components
@@ -78,9 +96,12 @@ document.addEventListener('DOMContentLoaded', () => {
     setText('#snap_vendor_style', vendorStyle);
   }
   // Auto-build vendor style when components change
-  ['#base_item_number','#variant_code','#fabric_code'].forEach(sel=> 
+  ['#base_item_number','#variant_code'].forEach(sel=> 
     $(sel)?.addEventListener('input', buildVendorStyle)
   );
+  // Watch first fabric row for vendor style changes
+  document.querySelector('[data-fabric-id]')?.addEventListener('change', buildVendorStyle);
+  document.querySelector('[data-fabric-sublimation]')?.addEventListener('change', buildVendorStyle);
 
   // Parse vendor style back to components when manually edited
   $('#vendor_style')?.addEventListener('blur', function() {
@@ -99,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
       row.querySelector('[data-fabric-cost]').value = (baseCost + sublimationCost).toFixed(2);
       row.querySelector('[data-fabric-vendor-id]').value = opt.dataset.vendor || '';
       recalcMaterials();
+      buildVendorStyle();
     }
   });
   
@@ -258,9 +280,9 @@ document.addEventListener('DOMContentLoaded', () => {
   function recalcTotals(){
     const mat=parseFloat((($('#sumMaterials')?.textContent)||'').replace('$',''))||0;
     const lab=parseFloat((($('#sumLabor')?.textContent)||'').replace('$',''))||0;
-    const labels=+( $('#label_cost')?.value || 0 );
+    //const labels=+( $('#label_cost')?.value || 0 );
     const ship=+( $('#shipping_cost')?.value || 0 );
-    const total=mat+lab+labels+ship;
+    const total=mat+lab+ship;
     setText('#snap_total', fmt(total));
 
     if ($('#total_reg')) $('#total_reg').value = total ? fmt(total) : '';
@@ -715,7 +737,7 @@ updateSizeRangeDisplay();
     ).join('');
     
     const fabricOptionsHtml = fabricOptions.map(opt => 
-      `<option value="${opt.value}" data-cost="${opt.cost}" data-vendor="${opt.vendor}">${opt.text}</option>`
+      `<option value="${opt.value}" data-cost="${opt.cost}" data-vendor="${opt.vendor}" data-fabric-code="${opt.fabricCode || ''}">${opt.text}</option>`
     ).join('');
     
     newRow.innerHTML = `

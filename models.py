@@ -134,9 +134,13 @@ class Style(db.Model):
     def get_total_fabric_cost(self):
         total = 0
         for sf in self.style_fabrics:
-            total += sf.yards_required * sf.fabric.cost_per_yard
+            base_cost = sf.yards_required * sf.fabric.cost_per_yard
+            # Add $6 sublimation upcharge if checked
+            if sf.is_sublimation:
+                base_cost += 6.00 * sf.yards_required
+            total += base_cost
         return round(total, 2)
-    
+        
     def get_total_notion_cost(self):
         total = 0
         for sn in self.style_notions:
@@ -168,7 +172,11 @@ class Style(db.Model):
         return round(total, 2)
     
     def get_total_cost(self):
-        return self.get_total_fabric_cost() + self.get_total_notion_cost() + self.get_total_labor_cost() + self.avg_label_cost
+        # Always load label cost from global settings
+        label_setting = GlobalSetting.query.filter_by(setting_key='avg_label_cost').first()
+        label_cost = label_setting.setting_value if label_setting else 0.20
+        
+        return self.get_total_fabric_cost() + self.get_total_notion_cost() + self.get_total_labor_cost() + label_cost
     
     def get_retail_price(self, size_multiplier=1.0):
         base_cost = self.get_total_cost() * size_multiplier
