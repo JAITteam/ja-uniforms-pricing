@@ -572,6 +572,7 @@ updateSizeRangeDisplay();
 
     // Load images - ADD THIS
     if (data.style && data.style.id) {
+      currentStyleId = data.style.id;
       await loadStyleImages(data.style.id);
     }
 
@@ -1109,77 +1110,289 @@ updateSizeRangeDisplay();
     selected.forEach(opt => opt.remove());
   };
 
-  // IMAGE MANAGEMENT - ADD THIS ENTIRE BLOCK HERE
-  let currentStyleId = null;
+  // ============================================
+  // IMAGE MANAGEMENT - BACKEND INTEGRATION
+  // ============================================
 
-  async function loadStyleImages(styleId) {
-    currentStyleId = styleId;
-    const res = await fetch(`/api/style/${styleId}/images`);
-    const images = await res.json();
-    
+  let currentStyleId = null;
+  let isUploading = false;
+
+  // Initialize image gallery with add button inside
+  function initializeImageGallery() {
     const gallery = $('#imageGallery');
     if (!gallery) return;
     
+    // Clear gallery first
     gallery.innerHTML = '';
     
-    if (images.length === 0) {
-      gallery.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: #999;">No images yet</div>';
+    // Create add button inside gallery
+    const addButton = document.createElement('div');
+    addButton.className = 'add-image-box';
+    addButton.id = 'addImageBox';
+    addButton.innerHTML = `
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+      </svg>
+      <span>Add Images</span>
+    `;
+    
+    addButton.onclick = () => {
+      if (!currentStyleId) {
+        alert('Please save the style first before uploading images');
+        return;
+      }
+      $('#imageUpload').click();
+    };
+    
+    gallery.appendChild(addButton);
+  }
+
+  // Load images from backend
+  async function loadStyleImages(styleId) {
+    if (!styleId) return;
+    
+    currentStyleId = styleId;
+    
+    try {
+      const res = await fetch(`/api/style/${styleId}/images`);
+      if (!res.ok) throw new Error('Failed to load images');
+      
+      const images = await res.json();
+      const gallery = $('#imageGallery');
+      
+      if (!gallery) return;
+      
+      // Remove all existing image items (keep add button)
+      const imageItems = gallery.querySelectorAll('.image-item');
+      imageItems.forEach(item => item.remove());
+      
+      // Add images after the add button
+      images.forEach(img => {
+        addImageToGallery(img.url, img.id, img.is_primary);
+      });
+      
+    } catch (e) {
+      console.error('Failed to load images:', e);
+    }
+  }
+
+  // Add image to gallery (DOM only)
+  function addImageToGallery(url, imageId, isPrimary = false) {
+    const gallery = $('#imageGallery');
+    if (!gallery) return;
+    
+    const imageItem = document.createElement('div');
+    imageItem.className = 'image-item';
+    imageItem.dataset.imageId = imageId;
+    
+    imageItem.innerHTML = `
+      <img src="${url}" alt="Style image" onclick="openImageModal('${url}')">
+      <button class="delete-btn" onclick="deleteImage(${imageId})" title="Delete image">×</button>
+      ${isPrimary ? '<span class="primary-badge">Primary</span>' : ''}
+    `;
+    
+    // Add to gallery (after add button)
+    gallery.appendChild(imageItem);
+  }
+
+  // Upload image to backend
+  async function uploadImageToBackend(file) {
+    if (!currentStyleId) {
+      alert('Please save the style first before uploading images');
+      return false;
+    }
+    
+    if (isUploading) {
+      console.log('Already uploading...');
+      return false;
+    }
+    
+    isUploading = true;
+    
+    // Show loading state
+    const gallery = $('#imageGallery');
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'image-item';
+    loadingDiv.innerHTML = '<div class="image-loading"></div>';
+    gallery.appendChild(loadingDiv);
+    
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const res = await fetch(`/api/style/${currentStyleId}/upload-image`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Upload failed');
+      }
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        // Remove loading div
+        loadingDiv.remove();
+        // Add to gallery
+        addImageToGallery(data.url, data.id, data.is_primary);
+        showNotification('Image uploaded successfully', 'success');
+        return true;
+      }
+      
+    } catch (e) {
+      console.error('Upload failed:', e);
+      loadingDiv.remove();
+      showNotification('Failed to upload image: ' + e.message, 'error');
+      return false;
+    } finally {
+      isUploading = false;
+    }
+  }
+
+  // Delete image from backend
+  window.deleteImage = async function(imageId) {
+    if (!confirm('Delete this image?')) return;
+    
+    try {
+      const res = await fetch(`/api/style-image/${imageId}`, {
+        method: 'DELETE'
+      });
+      
+      if (!res.ok) throw new Error('Failed to delete image');
+      
+      // Remove from DOM
+      const imageItem = document.querySelector(`.image-item[data-image-id="${imageId}"]`);
+      if (imageItem) imageItem.remove();
+      
+      showNotification('Image deleted', 'success');
+      
+    } catch (e) {
+      console.error('Delete failed:', e);
+      showNotification('Failed to delete image', 'error');
+    }
+  };
+
+  // Handle file input change
+  $('#imageUpload')?.addEventListener('change', async function(e) {
+    const files = e.target.files;
+    
+    if (!currentStyleId) {
+      alert('Please save the style first before uploading images');
+      e.target.value = '';
       return;
     }
     
-    images.forEach(img => {
-      const imgDiv = document.createElement('div');
-      imgDiv.style.position = 'relative';
-      imgDiv.innerHTML = `
-        <img src="${img.url}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 4px; border: 2px solid #ddd;">
-        <button onclick="deleteImage(${img.id})" style="position: absolute; top: 2px; right: 2px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-weight: bold;">×</button>
-        ${img.is_primary ? '<span style="position: absolute; bottom: 2px; left: 2px; background: #28a745; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold;">Primary</span>' : ''}
-      `;
-      gallery.appendChild(imgDiv);
+    for (let file of files) {
+      if (file.type.startsWith('image/')) {
+        await uploadImageToBackend(file);
+      }
+    }
+    
+    e.target.value = ''; // Reset input
+  });
+
+  // Enable paste functionality
+  document.addEventListener('paste', async function(e) {
+    if (!currentStyleId) return;
+    
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const blob = items[i].getAsFile();
+        await uploadImageToBackend(blob);
+        e.preventDefault();
+      }
+    }
+  });
+
+  // Enable drag and drop on gallery
+  const imageGallery = $('#imageGallery');
+  if (imageGallery) {
+    imageGallery.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      this.style.borderColor = '#3b82f6';
+      this.style.background = '#f0f7ff';
+    });
+    
+    imageGallery.addEventListener('dragleave', function(e) {
+      this.style.borderColor = '';
+      this.style.background = '';
+    });
+    
+    imageGallery.addEventListener('drop', async function(e) {
+      e.preventDefault();
+      this.style.borderColor = '';
+      this.style.background = '';
+      
+      if (!currentStyleId) {
+        alert('Please save the style first before uploading images');
+        return;
+      }
+      
+      const files = e.dataTransfer.files;
+      for (let file of files) {
+        if (file.type.startsWith('image/')) {
+          await uploadImageToBackend(file);
+        }
+      }
     });
   }
 
-$('#imageUpload')?.addEventListener('change', async function(e) {
-  const file = e.target.files[0];
-  if (!file || !currentStyleId) {
-    alert('Please save the style first before uploading images');
-    e.target.value = '';
-    return;
-  }
-  
-  const formData = new FormData();
-  formData.append('image', file);
-  
-  const res = await fetch(`/api/style/${currentStyleId}/upload-image`, {
-    method: 'POST',
-    body: formData
+  // Image zoom modal functions
+  window.openImageModal = function(src) {
+    const modal = $('#imageModal');
+    const modalImg = $('#modalImage');
+    if (modal && modalImg) {
+      modal.classList.add('active');
+      modalImg.src = src;
+    }
+  };
+
+  window.closeImageModal = function() {
+    const modal = $('#imageModal');
+    if (modal) {
+      modal.classList.remove('active');
+    }
+  };
+
+  // Close modal on click outside
+  $('#imageModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+      closeImageModal();
+    }
   });
-  
-  if (res.ok) {
-    await loadStyleImages(currentStyleId);
-    e.target.value = '';
-  } else {
-    const error = await res.json();
-    alert('Failed to upload image: ' + (error.error || 'Unknown error'));
-  }
-});
 
-window.deleteImage = async function(imageId) {
-  if (!confirm('Delete this image?')) return;
-  
-  const res = await fetch(`/api/style-image/${imageId}`, {
-    method: 'DELETE'
+  // Close modal on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      closeImageModal();
+    }
   });
-  
-  if (res.ok) {
-    await loadStyleImages(currentStyleId);
-  } else {
-    alert('Failed to delete image');
+
+  // Notification helper
+  function showNotification(message, type = 'success') {
+    let notification = $('#notification');
+    if (!notification) {
+      // Create notification if it doesn't exist
+      notification = document.createElement('div');
+      notification.id = 'notification';
+      notification.className = 'notification';
+      document.body.appendChild(notification);
+    }
+    
+    notification.textContent = message;
+    notification.className = 'notification ' + type;
+    notification.style.display = 'block';
+    
+    setTimeout(() => {
+      notification.style.display = 'none';
+    }, 3000);
   }
-};
-  
 
-
+  // Initialize gallery on page load
+  initializeImageGallery();
 
   $('#add_var')?.addEventListener('click', ()=>{
     const v=$('#var_input')?.value.trim(); 

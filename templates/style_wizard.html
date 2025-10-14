@@ -1,176 +1,209 @@
 {% extends "base.html" %}
-{% block title %}Cost Calculator (Refined PDF Layout){% endblock %}
+{% block title %}Style Cost Calculator - J.A Uniforms{% endblock %}
 {% block content %}
-
-
 
 <div class="toolbar">
   <div class="group">
-    <button id="saveBtn" class="btn btn-primary btn-sm btn-pill">Save</button>
-    <button class="btn btn-outline-secondary btn-sm btn-pill" disabled title="Wire export later">Export DTW CSV</button>
+    <button id="saveBtn" class="btn btn-primary btn-pill">
+      <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+        <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1H2z"/>
+      </svg>
+      Save Style
+    </button>
+    <button class="btn btn-outline-secondary btn-pill" disabled title="Coming soon">
+      <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+        <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+      </svg>
+      Export CSV
+    </button>
   </div>
   
   <div style="flex: 1; max-width: 400px; position: relative;">
-    <input type="text" id="styleSearch" class="form-control" placeholder="Search by vendor style or name..." autocomplete="off" style="padding-right: 30px;">
-    <div id="searchResults" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; max-height: 300px; overflow-y: auto; display: none; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+    <input type="text" id="styleSearch" class="form-control" placeholder="Search by vendor style or name..." autocomplete="off">
+    <div id="searchResults" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #e5e5e5; border-top: none; max-height: 300px; overflow-y: auto; display: none; z-index: 1000;"></div>
   </div>
   
-  <span class="text-muted small">Works with /api/style (load & save)</span>
+  <span class="chip">Works with /api/style (load & save)</span>
 </div>
 
 <div class="row g-3">
-  <!-- LEFT: main editor -->
+  <!-- LEFT: Main Editor (2 columns) -->
   <div class="col-lg-8">
 
-    <!-- BASICS -->
+    <!-- BASIC INFO PANEL -->
     <div class="panel">
-  <div class="ph">BASIC INFO</div>
-  <div class="pb">
-    <div class="row g-3">
-      <div class="col-lg-8">
-        <div class="kv">
-          <label>Vendor</label><input id="vendor" class="form-control md" value="JA uniforms">
-          <label>Vendor Code</label><input id="vendor_code" class="form-control xs" value="V100">
-        </div>
-        <div class="kv">
-          <label>Base Item #</label><input id="base_item_number" class="form-control xs" placeholder="21324" value="">
-          <label>Variant Code #</label><input id="variant_code" class="form-control xs" placeholder="3202" value="">
-          <!--<label>Fabric Code #</label><input id="fabric_code" class="form-control xs" placeholder="F6" value="">-->
-          <label>Fabric Code #</label><input id="fabric_code" class="form-control xs" placeholder="Auto" value="" readonly style="background-color: #f0f0f0; cursor: not-allowed;">
-        </div>
-        <div class="kv">
-          <!--<label>Vendor Style</label><input id="vendor_style" class="form-control lg" placeholder="auto" value="">-->
-          <label>Vendor Style</label><input id="vendor_style" class="form-control lg" placeholder="auto" value="" readonly style="background-color: #f0f0f0; cursor: not-allowed;">
-          <span class="chip">Auto or enter to load existing</span>
-        </div>
-        <div class="kv">
-          <label>Style name</label>
-          <input id="style_name" class="form-control lg" placeholder="Enter style name" value="">
-        </div>
-        <div class="kv">
-          <label>Gender</label>
-          <select id="gender" class="form-select sm">
-            <option>MENS</option><option>LADIES</option><option>UNISEX</option>
-          </select>
-        </div>
-      </div>
-      <div class="col-lg-4">
-        <div class="p-2">
-          <h6 class="mb-2">Style Images</h6>
-          <div id="imageGallery" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; min-height: 200px; border: 2px dashed #ddd; padding: 10px; border-radius: 4px; background: #fafafa;">
-            <div class="d-flex align-items-center justify-content-center text-muted" style="grid-column: 1 / -1;"></div>
-              <small>No images yet</small>
+      <div class="ph">BASIC INFO</div>
+      <div class="pb">
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <div class="kv">
+              <label>Vendor</label>
+              <input id="vendor" class="form-control md" value="JA uniforms">
+              <label>Vendor Code</label>
+              <input id="vendor_code" class="form-control xs" value="V100">
+            </div>
+            <div class="kv">
+              <label>Base Item #</label>
+              <input id="base_item_number" class="form-control xs" placeholder="21324">
+              <label>Variant Code #</label>
+              <input id="variant_code" class="form-control xs" placeholder="3202">
+              <label>Fabric Code #</label>
+              <input id="fabric_code" class="form-control xs" placeholder="Auto" readonly>
+            </div>
+            <div class="kv">
+              <label>Vendor Style</label>
+              <input id="vendor_style" class="form-control lg" placeholder="Auto or enter to load existing" readonly>
+              <span class="chip">Auto or enter to load existing</span>
+            </div>
+            <div class="kv">
+              <label>Style name</label>
+              <input id="style_name" class="form-control" placeholder="Enter style name" style="flex: 1;">
+            </div>
+            <div class="kv">
+              <label>Gender</label>
+              <select id="gender" class="form-select sm">
+                <option>MENS</option>
+                <option>LADIES</option>
+                <option>UNISEX</option>
+              </select>
+            </div>
+          </div>
+          
+          <!-- ENHANCED IMAGE SECTION -->
+          <div class="col-lg-6">
+            <div class="image-section">
+              <div id="imageGallery"></div>
+              <input type="file" id="imageUpload" accept="image/png,image/jpeg,image/jpg,image/gif" multiple style="display: none;">
+            </div>
           </div>
         </div>
-        <input type="file" id="imageUpload" accept="image/png,image/jpeg,image/jpg,image/gif" style="display: none;">
-        <button type="button" class="btn btn-secondary btn-sm btn-pill mt-2 w-100" onclick="document.getElementById('imageUpload').click()">
-          + Add Image
-        </button>
       </div>
     </div>
-  </div>
-</div>
-    <!-- MATERIALS COST -->
-<div class="panel" id="materialsPanel">
-  <div class="ph">MATERIALS COST</div>
-  <div class="pb table-like">
-    <!-- fabric row -->
-    <div class="kv">
-      <label>Vendor</label>
-      <select class="form-select md" data-fabric-vendor-id>
-        <option value="">Select Vendor</option>
-        {% for v in fabric_vendors %}
-        <option value="{{ v.id }}">{{ v.name }}</option>
-        {% endfor %}
-      </select>
-      
-      <label>Fabric</label>
-      <select class="form-select md" data-fabric-id>
-        <option value="">Select Fabric</option>
-        {% for f in fabrics %}
-        <option value="{{ f.id }}" data-cost="{{ f.cost_per_yard }}" data-vendor="{{ f.fabric_vendor_id }}" data-fabric-code="{{ f.fabric_code or '' }}">{{ f.name }}</option>
-        {% endfor %}
-      </select>
-      <label style="display: flex; align-items: center; gap: 5px; white-space: nowrap;">
-          <input type="checkbox" data-fabric-sublimation style="width: auto; margin: 0;">
-          Sub.
-      </label>
-      <label>Cost/yd</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-fabric-cost readonly>
-      <label>Yards</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-fabric-yds>
-      <label>Total</label><input class="form-control w-110 text-end" value="" disabled data-fabric-total>
+
+    <!-- MATERIALS COST PANEL -->
+    <div class="panel" id="materialsPanel">
+      <div class="ph">MATERIALS COST</div>
+      <div class="pb table-like">
+        <!-- Fabric Row -->
+        <div class="kv">
+          <label>Vendor</label>
+          <select class="form-select md" data-fabric-vendor-id>
+            <option value="">Select Vendor</option>
+            {% for v in fabric_vendors %}
+            <option value="{{ v.id }}">{{ v.name }}</option>
+            {% endfor %}
+          </select>
+          
+          <label>Fabric</label>
+          <select class="form-select md" data-fabric-id>
+            <option value="">Select Fabric</option>
+            {% for f in fabrics %}
+            <option value="{{ f.id }}" data-cost="{{ f.cost_per_yard }}" data-vendor="{{ f.fabric_vendor_id }}" data-fabric-code="{{ f.fabric_code or '' }}">{{ f.name }}</option>
+            {% endfor %}
+          </select>
+          
+          <label style="display: flex; align-items: center; gap: 5px; white-space: nowrap;">
+            <input type="checkbox" data-fabric-sublimation style="width: auto; margin: 0;">
+            Sub.
+          </label>
+          
+          <label>Avg.Cost/yd</label>
+          <input class="form-control w-110 text-end" type="number" step="0.01" data-fabric-cost readonly>
+          
+          <label>Avg.Yds</label>
+          <input class="form-control w-110 text-end" type="number" step="0.01" data-fabric-yds>
+          
+          <label>Total</label>
+          <input class="form-control w-110 text-end" disabled data-fabric-total>
+        </div>
+
+        <div class="kv">
+          <span class="linklike" id="addFabric">Fabric</span>
+        </div>
+
+        <!-- Notion Row -->
+        <div class="kv">
+          <label>Vendor</label>
+          <select class="form-select md" data-notion-vendor-id>
+            <option value="">Select Vendor</option>
+            {% for v in notion_vendors %}
+            <option value="{{ v.id }}">{{ v.name }}</option>
+            {% endfor %}
+          </select>
+          
+          <label>Notion</label>
+          <select class="form-select md" data-notion-id>
+            <option value="">Select Notion</option>
+            {% for n in notions %}
+            <option value="{{ n.id }}" data-cost="{{ n.cost_per_unit }}" data-vendor="{{ n.notion_vendor_id }}">{{ n.name }}</option>
+            {% endfor %}
+          </select>
+          
+          <label>Avg.Cost</label>
+          <input class="form-control w-110 text-end" type="number" step="0.01" data-notion-cost readonly>
+          
+          <label>Qty</label>
+          <input class="form-control qty text-end" type="number" step="1" data-notion-qty>
+          
+          <label>Total</label>
+          <input class="form-control w-110 text-end" disabled data-notion-total>
+        </div>
+
+        <div class="kv">
+          <span class="linklike" id="addNotion">Notion</span>
+        </div>
+
+        <div class="kv">
+          <span class="text-muted">Avg. Label(s) Cost</span>
+          <input class="form-control w-110 text-end" id="label_cost" type="number" step="0.01" value="{{ default_label_cost }}" readonly title="Edit in Master Costs">
+        </div>
+
+        <div class="sumline">
+          <span>TOTAL MATERIALS COST</span>
+          <strong id="sumMaterials">$0.00</strong>
+        </div>
+      </div>
     </div>
 
-    <div class="kv"><span class="linklike" id="addFabric">+ Fabric</span></div>
-
-    <!-- notion row -->
-    <div class="kv">
-      <label>Vendor</label>
-      <select class="form-select md" data-notion-vendor-id>
-        <option value="">Select Vendor</option>
-        {% for v in notion_vendors %}
-        <option value="{{ v.id }}">{{ v.name }}</option>
+    <!-- LABOR COST PANEL -->
+    <div class="panel" id="laborPanel">
+      <div class="ph">LABOR COST</div>
+      <div class="pb table-like" id="laborRows">
+        {% for labor in labor_ops %}
+        <div class="kv" data-labor-row data-labor-name="{{ labor.name }}">
+          <label>{{ labor.name }}</label>
+          <label>{% if labor.cost_type == 'hourly' %}Avg.Cost/Hr{% else %}Avg.Cost{% endif %}</label>
+          <input class="form-control w-110 text-end" type="number" step="0.01" 
+                 value="{% if labor.cost_type == 'flat_rate' %}{{ labor.fixed_cost }}{% elif labor.cost_type == 'hourly' %}{{ labor.cost_per_hour }}{% else %}{{ labor.cost_per_piece }}{% endif %}" 
+                 data-labor-rate readonly>
+          <label>{% if labor.cost_type == 'hourly' %}Hours{% else %}Qty{% endif %}</label>
+          <input class="form-control qty text-end" type="number" step="{% if labor.cost_type == 'hourly' %}0.01{% else %}1{% endif %}" data-labor-qoh>
+          <label>Total</label>
+          <input class="form-control w-110 text-end" disabled data-labor-total>
+        </div>
         {% endfor %}
-      </select>
-      
-      <label>Notion</label>
-      <select class="form-select md" data-notion-id>
-        <option value="">Select Notion</option>
-        {% for n in notions %}
-        <option value="{{ n.id }}" data-cost="{{ n.cost_per_unit }}" data-vendor="{{ n.notion_vendor_id }}">{{ n.name }}</option>
-        {% endfor %}
-      </select>
-      
-      <label>Cost</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-notion-cost readonly>
-      <label>Qty</label><input class="form-control qty text-end" type="number" step="1" value="" data-notion-qty>
-      <label>Total</label><input class="form-control w-110 text-end" value="" disabled data-notion-total>
+
+        <div class="kv">
+          <label>Cleaning & Ironing</label>
+          <select class="form-select md" id="garment_type">
+            <option value="">Select Garment Type</option>
+            {% for gt in garment_types %}
+            <option value="{{ gt }}">{{ gt }}</option>
+            {% endfor %}
+          </select>
+          <label>Total</label>
+          <input class="form-control w-110 text-end" type="number" step="0.01" id="cleaning_cost" readonly>
+        </div>
+
+        <div class="sumline">
+          <span>TOTAL LABOR COST</span>
+          <strong id="sumLabor">$0.00</strong>
+        </div>
+      </div>
     </div>
 
-    <div class="kv"><span class="linklike" id="addNotion">+ Notion</span></div>
-
-    <div class="kv">
-      <span class="text-muted">Avg. Label(s) Cost</span>
-      <input class="form-control w-110 text-end" id="label_cost" type="number" step="0.01" value="{{ default_label_cost }}" readonly title="Edit in Master Costs">
-    </div>
-
-    <div class="sumline"><span class="text-muted">TOTAL MATERIALS COST</span><strong id="sumMaterials">$0.00</strong></div>
-  </div>
-</div>
-    <!-- LABOR COST -->
-<div class="panel" id="laborPanel">
-  <div class="ph">LABOR COST</div>
-  <div class="pb table-like" id="laborRows">
-    {% for labor in labor_ops %}
-    <div class="kv" data-labor-row data-labor-name="{{ labor.name }}">
-      <label>{{ labor.name }}</label>
-      <label class="ms-2">
-        {% if labor.cost_type == 'hourly' %}Avg.Cost/Hr{% else %}Avg.Cost{% endif %}
-      </label>
-      <input class="form-control w-110 text-end" type="number" step="0.01" 
-             value="{% if labor.cost_type == 'flat_rate' %}{{ labor.fixed_cost }}{% elif labor.cost_type == 'hourly' %}{{ labor.cost_per_hour }}{% else %}{{ labor.cost_per_piece }}{% endif %}" 
-             data-labor-rate readonly>
-      <label>{% if labor.cost_type == 'hourly' %}Hours{% else %}Qty{% endif %}</label>
-      <input class="form-control qty text-end" type="number" step="{% if labor.cost_type == 'hourly' %}0.01{% else %}1{% endif %}" value="" data-labor-qoh>
-      <label>Total</label><input class="form-control w-110 text-end" value="" disabled data-labor-total>
-    </div>
-    {% endfor %}
-
-    <div class="kv">
-      <label>Cleaning & Ironing</label>
-      <select class="form-select md" id="garment_type">
-        <option value="">Select Garment Type</option>
-        {% for gt in garment_types %}
-        <option value="{{ gt }}">{{ gt }}</option>
-        {% endfor %}
-      </select>
-      <label class="ms-2">Total</label>
-      <input class="form-control w-110 text-end" type="number" step="0.01" id="cleaning_cost" value="" readonly>
-    </div>
-
-    <div class="sumline"><span class="text-muted">TOTAL LABOR COST</span><strong id="sumLabor">$0.00</strong></div>
-  </div>
-</div>
-
-    <!-- TOTAL COST -->
+    <!-- TOTAL COST PANEL -->
     <div class="panel">
       <div class="ph">TOTAL COST</div>
       <div class="pb">
@@ -189,82 +222,71 @@
             {% endfor %}
           </select>
           <span class="chip">Regular Sizes</span>
-          <input class="form-control sm text-center" id="regular_sizes_display" value="" disabled>
+          <input class="form-control sm text-center" id="regular_sizes_display" disabled>
           <span class="text-muted">Total Cost Price for Reg. Sizes</span>
           <input class="form-control w-110 text-end" id="total_reg" disabled>
         </div>
         <div class="kv mt-2">
           <span class="chip" id="extended_label">Extended Sizes (+15%)</span>
-          <input class="form-control sm text-center" id="extended_sizes_display" value="" disabled>
+          <input class="form-control sm text-center" id="extended_sizes_display" disabled>
           <span class="text-muted">Total Cost Price for Ex. Sizes</span>
           <input class="form-control w-110 text-end" id="total_ext" disabled>
         </div>
       </div>
     </div>
 
-    <!-- ADDITIONAL INFO -->
-    <!-- ADDITIONAL INFO -->
+    <!-- ADDITIONAL INFO PANEL -->
     <div class="panel">
-        <div class="ph">ADDITIONAL INFO</div>
-        <div class="pb">
-            <div class="row g-3">
-                <div class="col-lg-4">
-                    <div class="mb-2">
-                        <label class="form-label fw-bold">Colors</label>
-                        <div class="input-group mb-2">
-                            <select id="color_dropdown" class="form-select">
-                                <option value="">Select Color</option>
-                            </select>
-                            <button class="btn btn-primary" type="button" onclick="addSelectedColor()">Add</button>
-                        </div>
-                        <div class="input-group">
-                            <input id="new_color_input" class="form-control" placeholder="Or type new color...">
-                            <button class="btn btn-success" type="button" onclick="addNewColor()">Create & Add</button>
-                        </div>
-                    </div>
-                    <select multiple class="form-select" style="height:150px" id="color_list"></select>
-                    <button class="btn btn-sm btn-danger mt-1" onclick="removeSelectedColors()">Remove Selected</button>
-                </div>
-            
-            <!-- Rest of your existing Variable and Pricing sections -->
-            <div class="col-lg-4">
-                <!-- Variable section stays the same -->
+      <div class="ph">ADDITIONAL INFO</div>
+      <div class="pb">
+        <div class="row g-3 mb-3">
+          <!-- Colors Section -->
+          <div class="col-md-6">
+            <label class="form-label fw-bold" style="font-size: 0.875rem;">Color</label>
+            <div class="d-flex gap-2 mb-2">
+              <select id="color_dropdown" class="form-select" style="flex: 1;">
+                <option value="">Select Color</option>
+              </select>
+              <button class="btn btn-primary btn-sm" type="button" onclick="addSelectedColor()">Add</button>
             </div>
-            <div class="col-lg-4">
-                <!-- Pricing section stays the same -->
+            <select multiple class="form-select mb-2" style="height:120px" id="color_list"></select>
+            <button class="btn btn-sm btn-danger" onclick="removeSelectedColors()">Remove Selected</button>
+            <div class="input-group mt-2">
+              <input id="new_color_input" class="form-control form-control-sm" placeholder="Or type new color...">
+              <button class="btn btn-success btn-sm" type="button" onclick="addNewColor()">Create & Add</button>
             </div>
-        </div>
-    </div>
-</div>
-
-          <div class="col-lg-4">
-            <div class="mb-2">
-              <label class="form-label fw-bold">Variables</label>
-              <div class="input-group mb-2">
-                <select id="variable_dropdown" class="form-select">
-                  <option value="">Select Variable</option>
-                </select>
-                <button class="btn btn-primary" type="button" onclick="addSelectedVariable()">Add</button>
-              </div>
-              <div class="input-group">
-                <input id="new_variable_input" class="form-control" placeholder="Or type new variable...">
-                <button class="btn btn-success" type="button" onclick="addNewVariable()">Create & Add</button>
-              </div>
-            </div>
-            <select multiple class="form-select" style="height:150px" id="variable_list"></select>
-            <button class="btn btn-sm btn-danger mt-1" onclick="removeSelectedVariables()">Remove Selected</button>
           </div>
 
-        
-          <div class="col-lg-4">
+          <!-- Variables Section -->
+          <div class="col-md-6">
+            <label class="form-label fw-bold" style="font-size: 0.875rem;">Variable</label>
+            <div class="d-flex gap-2 mb-2">
+              <select id="variable_dropdown" class="form-select" style="flex: 1;">
+                <option value="">Select Variable</option>
+              </select>
+              <button class="btn btn-primary btn-sm" type="button" onclick="addSelectedVariable()">Add</button>
+            </div>
+            <select multiple class="form-select mb-2" style="height:120px" id="variable_list"></select>
+            <button class="btn btn-sm btn-danger" onclick="removeSelectedVariables()">Remove Selected</button>
+            <div class="input-group mt-2">
+              <input id="new_variable_input" class="form-control form-control-sm" placeholder="Or type new variable...">
+              <button class="btn btn-success btn-sm" type="button" onclick="addNewVariable()">Create & Add</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pricing Section -->
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
             <div class="kv">
               <span class="text-muted">RETAIL SALES PRICE @</span>
               <input id="margin" class="form-control w-110 text-end" type="number" step="1" value="60">
-              <span class="text-muted">%</span>
-              <span class="text-muted">=</span>
+              <span class="text-muted">% =</span>
               <input id="retail_price" class="form-control w-110 text-end" disabled>
             </div>
-            <div class="kv mt-2">
+          </div>
+          <div class="col-md-6">
+            <div class="kv">
               <span class="text-muted">SUGGESTED PRICE</span>
               <input id="suggested_price" class="form-control w-110 text-end" value="54.95" type="number" step="0.01">
               <span class="text-muted">MARGIN</span>
@@ -272,39 +294,56 @@
             </div>
           </div>
         </div>
-        <div class="kv mt-2">
+        
+        <div class="kv mb-3">
           <span class="text-muted">Shipping Cost</span>
-          <!--<input id="shipping_cost" class="form-control w-110 text-end" type="number" step="0.01" value="0.00"> -->
-          <!--<input id="shipping_cost" class="form-control w-110 text-end" type="number" step="0.01" value="0.00" readonly title="Edit in Master Costs">-->
           <input id="shipping_cost" class="form-control w-110 text-end" type="number" step="0.01" value="{{ default_shipping_cost }}" readonly title="Edit in Master Costs">
         </div>
-        <!-- NOTES FIELD - ADD THIS -->
-        <div style="margin-top: 20px;">
-          <label class="form-label"><strong>Notes</strong></label>
-          <textarea id="notes" class="form-control" rows="6" placeholder="Additional notes, special instructions, or details about this style..."></textarea>
+        
+        <div>
+          <label class="form-label fw-bold" style="font-size: 0.875rem;">Notes</label>
+          <textarea id="notes" class="form-control" rows="4" placeholder="Additional notes, special instructions, or details about this style..."></textarea>
         </div>
       </div>
     </div>
+
   </div>
 
-  <!-- RIGHT: snapshot -->
+  <!-- RIGHT: Snapshot Panel (1 column) - STICKY ON RIGHT -->
   <div class="col-lg-4">
     <div class="right-sticky panel snapshot">
       <div class="ph">SNAPSHOT</div>
       <div class="pb">
-        <div class="mb-2">
+        <div class="mb-3">
           <strong id="snap_vendor_style" class="d-block">(vendor style)</strong>
           <span id="snap_style" class="text-muted small"></span>
         </div>
-        <div class="sumline"><span class="text-muted">Materials</span><strong id="snap_mat">$0.00</strong></div>
-        <div class="sumline"><span class="text-muted">Labor</span><strong id="snap_lab">$0.00</strong></div>
-        <div class="sumline"><span class="text-muted">Shipping</span><strong id="snap_ship">$0.00</strong></div>
+        <div class="sumline">
+          <span>Materials</span>
+          <strong id="snap_mat">$0.00</strong>
+        </div>
+        <div class="sumline">
+          <span>Labor</span>
+          <strong id="snap_lab">$0.00</strong>
+        </div>
+        <div class="sumline">
+          <span>Shipping</span>
+          <strong id="snap_ship">$0.00</strong>
+        </div>
         <hr>
-        <div class="sumline"><span class="text-muted">TOTAL COST</span><strong id="snap_total">$0.00</strong></div>
+        <div class="sumline">
+          <span>TOTAL COST</span>
+          <strong id="snap_total" style="font-size: 1.5rem;">$0.00</strong>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-{% endblock %}
+<!-- Image Zoom Modal -->
+<div id="imageModal" class="image-modal">
+  <span class="close-modal" onclick="closeImageModal()">&times;</span>
+  <img id="modalImage" src="" alt="Zoomed image">
+</div>
 
+{% endblock %}

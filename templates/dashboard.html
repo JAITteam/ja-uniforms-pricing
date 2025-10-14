@@ -3,121 +3,92 @@
 {% block content %}
 
 <div class="container-fluid py-4">
-    <!-- Header Section -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <h1 class="display-5 fw-bold">J.A Uniforms Pricing Tool</h1>
-            <p class="text-muted">Manage uniform styles, pricing, and cost breakdowns</p>
+  <!-- Clean Header -->
+  <div class="hero-section">
+    <h1>J.A Uniforms Pricing Tool</h1>
+    <p>Professional cost calculation and style management system</p>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="action-card">
+        <div class="action-icon icon-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+            <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+          </svg>
         </div>
+        <h5>Create/Edit Style</h5>
+        <p>Build new styles or modify existing styles</p>
+        <a href="/style/new" class="btn btn-primary">Open Style Wizard</a>
+      </div>
     </div>
 
-    <!-- Quick Actions -->
-    <div class="row g-4 mb-4">
-        <div class="col-md-4">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body text-center p-4">
-                    <div class="mb-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="text-primary" viewBox="0 0 16 16">
-                            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                            <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
-                        </svg>
-                    </div>
-                    <h5 class="card-title">Create/Edit Style</h5>
-                    <p class="card-text text-muted small">Enter vendor style to load or create new</p>
-                    <a href="/style/new" class="btn btn-primary">Go to Form</a>
-                </div>
-            </div>
+    <div class="col-md-4">
+      <div class="action-card">
+        <div class="action-icon icon-success">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+          </svg>
         </div>
-
-        <div class="col-md-4">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body text-center p-4">
-                    <div class="mb-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="text-success" viewBox="0 0 16 16">
-                            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
-                        </svg>
-                    </div>
-                    <h5 class="card-title">View All Styles</h5>
-                    <p class="card-text text-muted small">Browse and manage existing styles</p>
-                    <a href="/view-all-styles" class="btn btn-success">Browse Styles</a>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-body text-center p-4">
-                    <div class="mb-3">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="text-warning" viewBox="0 0 16 16">
-                            <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/>
-                        </svg>
-                    </div>
-                    <h5 class="card-title">Master Costs</h5>
-                    <p class="card-text text-muted small">Manage fabrics, notions, and labor</p>
-                    <a href="/master-costs" class="btn btn-warning text-dark">Manage Costs</a>
-                </div>
-            </div>
-        </div>
+        <h5>Browse All Styles</h5>
+        <p>View, search, and manage your complete catalog of styles</p>
+        <a href="/view-all-styles" class="btn btn-success">View Catalog</a>
+      </div>
     </div>
 
-    <!-- Search Section -->
-    <div class="row mb-4">
-        <div class="col-lg-8 mx-auto">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body p-4">
-                    <h4 class="card-title mb-3">Quick Style Lookup</h4>
-                    <form action="/search" method="POST">
-                        <div class="input-group input-group-lg">
-                            <input 
-                                type="text" 
-                                class="form-control" 
-                                name="vendor_style" 
-                                placeholder="Enter style code (e.g., 21324-3202)"
-                                required>
-                            <button class="btn btn-primary px-5" type="submit">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 8px;">
-                                    <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
-                                </svg>
-                                Search
-                            </button>
-                        </div>
-                        <div class="form-text mt-2">
-                            Try searching: <a href="#" onclick="document.querySelector('input[name=vendor_style]').value='21324-3202'; return false;" class="text-decoration-none">21324-3202</a>
-                        </div>
-                    </form>
-                </div>
-            </div>
+    <div class="col-md-4">
+      <div class="action-card">
+        <div class="action-icon icon-warning">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/>
+          </svg>
         </div>
+        <h5>Master Costs</h5>
+        <p>Manage fabrics, notions, labor rates, and pricing settings</p>
+        <a href="/master-costs" class="btn btn-warning text-dark">Manage Settings</a>
+      </div>
     </div>
+  </div>
 
-    <!-- Info Cards -->
-    <div class="row g-4">
-        <div class="col-md-6">
-            <div class="card border-0 bg-light">
-                <div class="card-body">
-                    <h5 class="card-title">Getting Started</h5>
-                    <ul class="mb-0">
-                        <li>Use the <strong>Style Wizard</strong> to create new uniform pricing</li>
-                        <li>Update <strong>Master Costs</strong> to affect all styles</li>
-                        <li>Search by vendor style code to view or edit existing items</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-6">
-            <div class="card border-0 bg-light">
-                <div class="card-body">
-                    <h5 class="card-title">Need Help?</h5>
-                    <p class="mb-2">Contact your system administrator for:</p>
-                    <ul class="mb-0">
-                        <li>Adding new fabrics or notions to the master list</li>
-                        <li>Importing bulk style data</li>
-                        <li>Generating pricing reports</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+  <!-- Info Cards -->
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div class="info-card">
+        <h5>
+          <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+            <path d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533L8.93 6.588zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+          </svg>
+          Getting Started
+        </h5>
+        <ul>
+          <li>Use the <strong>Style Wizard</strong> to create new uniform pricing calculations</li>
+          <li>Update <strong>Master Costs</strong> to automatically adjust all style prices</li>
+          <li>Search by vendor code to instantly view or edit existing styles</li>
+          <li>Export data to CSV for integration with your order system</li>
+        </ul>
+      </div>
     </div>
+    <div class="col-md-6">
+      <div class="info-card">
+        <h5>
+          <svg width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+            <path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286zm1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94z"/>
+          </svg>
+          Need Help?
+        </h5>
+        <ul>
+          <li><strong>Add materials:</strong> Go to Master Costs to add fabrics, notions, or vendors</li>
+          <li><strong>Bulk imports:</strong> Use the Import Excel feature for multiple styles</li>
+          <li><strong>Pricing reports:</strong> Export styles to analyze margins and costs</li>
+          <li><strong>Support:</strong> Contact your administrator for technical assistance</li>
+        </ul>
+      </div>
+    </div>
+  </div>
 </div>
 
 {% endblock %}

@@ -6,6 +6,7 @@ from database import db
 from flask import Flask, render_template, redirect, url_for, request, flash, send_from_directory
 from config import Config
 from database import db
+from datetime import datetime
 import os
 from werkzeug.utils import secure_filename
 from models import (
@@ -187,65 +188,103 @@ def test_complete_lookup():
 # ===== ADMIN ROUTES (Future expansion) =====
 @app.route('/api/style/<int:style_id>/upload-image', methods=['POST'])
 def upload_style_image(style_id):
+    """Upload an image for a style"""
+    # Check if style exists
     style = Style.query.get_or_404(style_id)
     
+    # Check if file is in request
     if 'image' not in request.files:
-        return jsonify({'error': 'No file'}), 400
+        return jsonify({'error': 'No file provided'}), 400
     
     file = request.files['image']
     
+    # Check if filename is empty
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
     
+    # Validate and save file
     if file and allowed_file(file.filename):
-        filename = secure_filename(f"{style_id}_{datetime.now().timestamp()}_{file.filename}")
+        # Create unique filename with timestamp
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        original_filename = secure_filename(file.filename)
+        filename = f"style_{style_id}_{timestamp}_{original_filename}"
+        
+        # Ensure upload directory exists
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        
+        # Save file to disk
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         
-        # Check if this should be primary (first image)
+        # Check if this should be the primary image (first image for this style)
         is_primary = StyleImage.query.filter_by(style_id=style_id).count() == 0
         
-        img = StyleImage(
+        # Create database record
+        new_image = StyleImage(
             style_id=style_id,
             filename=filename,
-            is_primary=is_primary
+            is_primary=is_primary,
+            upload_date=datetime.utcnow()
         )
-        db.session.add(img)
+        
+        db.session.add(new_image)
         db.session.commit()
         
         return jsonify({
             'success': True,
-            'id': img.id,
+            'id': new_image.id,
             'filename': filename,
-            'url': f'/static/img/{filename}'
-        })
+            'url': f'/static/img/{filename}',
+            'is_primary': is_primary
+        }), 200
     
-    return jsonify({'error': 'Invalid file type'}), 400
-
-@app.route('/api/style-image/<int:image_id>', methods=['DELETE'])
-def delete_style_image(image_id):
-    img = StyleImage.query.get_or_404(image_id)
-    
-    # Delete file
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
-    if os.path.exists(filepath):
-        os.remove(filepath)
-    
-    db.session.delete(img)
-    db.session.commit()
-    
-    return jsonify({'success': True})
+    return jsonify({'error': 'Invalid file type. Allowed: png, jpg, jpeg, gif'}), 400
 
 @app.route('/api/style/<int:style_id>/images', methods=['GET'])
 def get_style_images(style_id):
-    images = StyleImage.query.filter_by(style_id=style_id).order_by(StyleImage.is_primary.desc()).all()
+    """Get all images for a style"""
+    # Check if style exists
+    style = Style.query.get_or_404(style_id)
+    
+    # Get all images for this style, ordered by primary first, then by upload date
+    images = StyleImage.query.filter_by(
+        style_id=style_id
+    ).order_by(
+        StyleImage.is_primary.desc(),
+        StyleImage.upload_date.asc()
+    ).all()
+    
+    # Return image data as JSON
     return jsonify([{
         'id': img.id,
         'url': f'/static/img/{img.filename}',
-        'is_primary': img.is_primary
-    } for img in images])
+        'filename': img.filename,
+        'is_primary': img.is_primary,
+        'upload_date': img.upload_date.isoformat() if img.upload_date else None
+    } for img in images]), 200
 
 
+@app.route('/api/style-image/<int:image_id>', methods=['DELETE'])
+def delete_style_image(image_id):
+    """Delete a style image"""
+    # Find the image record
+    img = StyleImage.query.get_or_404(image_id)
+    
+    # Delete physical file from disk
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
+    
+    if os.path.exists(filepath):
+        try:
+            os.remove(filepath)
+        except Exception as e:
+            print(f"Error deleting file: {e}")
+            # Continue anyway to remove from database
+    
+    # Delete database record
+    db.session.delete(img)
+    db.session.commit()
+    
+    return jsonify({'success': True}), 200
 
 @app.route('/migrate-db')
 def migrate_db():
