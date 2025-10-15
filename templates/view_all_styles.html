@@ -3,461 +3,1005 @@
 
 {% block content %}
 <style>
-  .stats-bar {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
-  }
-  
-  .stat-card {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 1rem;
-    text-align: center;
-  }
-  
-  .stat-number {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: var(--primary);
-  }
-  
-  .stat-label {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-    margin-top: 0.25rem;
-  }
-  
-  .action-bar {
+/* ============================================
+   MODERN STYLES TABLE - CLEAN DESIGN
+   ============================================ */
+
+* { box-sizing: border-box; }
+
+.page-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: #f8fafc;
+    min-height: 100vh;
+}
+
+/* Header Section */
+.page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.page-header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+}
+
+.header-actions {
+    display: flex;
     gap: 1rem;
-    flex-wrap: wrap;
-  }
-  
-  .action-buttons {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-  
-  .bulk-actions {
-    display: none;
-    gap: 0.5rem;
+}
+
+.btn {
+    padding: 0.625rem 1.25rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
     align-items: center;
-  }
-  
-  .bulk-actions.active {
-    display: flex;
-  }
-  
-  .table-container {
+    gap: 0.5rem;
+    text-decoration: none;
+    font-size: 0.875rem;
+}
+
+.btn-primary {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-secondary {
     background: white;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    color: #475569;
+    border: 1px solid #cbd5e1;
+}
+
+.btn-secondary:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+}
+
+/* Stats Cards */
+.stats-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border-left: 4px solid #3b82f6;
+    transition: all 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.stat-card h3 {
+    font-size: 2rem;
+    margin: 0;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.stat-card p {
+    margin: 0.5rem 0 0 0;
+    color: #64748b;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* Filters Section */
+.filters-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.filters-grid {
+    display: grid;
+    grid-template-columns: 2fr 200px 200px;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.625rem 1rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-select {
+    width: 100%;
+    padding: 0.625rem 2.5rem 0.625rem 1rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    background: white;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke=%22%23475569%22%3E%3Cpath stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%222%22 d=%22M19 9l-7 7-7-7%22%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 1.25rem;
     overflow: hidden;
-  }
-  
-  .styles-table {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Quick Filters */
+.quick-filters-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    margin-bottom: 0.5rem;
+}
+
+.quick-filters {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-chip {
+    padding: 0.5rem 1rem;
+    border: 1px solid #cbd5e1;
+    background: white;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.filter-chip:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+.filter-chip.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+/* Bulk Actions Bar */
+.bulk-actions {
+    display: none;
+    background: #dbeafe;
+    border: 2px solid #3b82f6;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    align-items: center;
+    gap: 1rem;
+}
+
+.bulk-actions.active {
+    display: flex;
+}
+
+.bulk-actions-label {
+    font-weight: 600;
+    color: #1e40af;
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+}
+
+/* Modern Table */
+.table-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+
+.modern-table {
     width: 100%;
     border-collapse: collapse;
-  }
-  
-  .styles-table thead {
-    background: var(--gray-50);
-  }
-  
-  .styles-table th {
+}
+
+.modern-table thead {
+    background: #f8fafc;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.modern-table th {
     padding: 1rem;
     text-align: left;
     font-weight: 600;
-    font-size: 0.875rem;
-    color: var(--text-primary);
-    border-bottom: 2px solid var(--border);
-  }
-  
-  .styles-table td {
-    padding: 1rem;
-    border-bottom: 1px solid var(--gray-100);
-    font-size: 0.875rem;
-  }
-  
-  .styles-table tbody tr:hover {
-    background: var(--gray-50);
-  }
-  
-  .action-btn-group {
-    display: flex;
-    gap: 0.25rem;
-  }
-  
-  .action-btn {
-    padding: 0.375rem 0.75rem;
     font-size: 0.75rem;
-    border-radius: var(--radius);
-    border: 1px solid;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #475569;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    transition: background 0.2s;
+}
+
+.modern-table th:hover {
+    background: #f1f5f9;
+}
+
+.modern-table th.sortable::after {
+    content: ' ↕';
+    opacity: 0.3;
+    font-size: 0.7rem;
+}
+
+.modern-table th.sort-asc::after {
+    content: ' ↑';
+    opacity: 1;
+    color: #3b82f6;
+}
+
+.modern-table th.sort-desc::after {
+    content: ' ↓';
+    opacity: 1;
+    color: #3b82f6;
+}
+
+.modern-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.875rem;
+    color: #475569;
+}
+
+.modern-table tbody tr {
+    transition: all 0.2s;
+}
+
+.modern-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+/* Margin Color Coding - SUBTLE */
+.modern-table tbody tr.margin-high {
+    background: #f0fdf4 !important;
+    border-left: 3px solid #22c55e;
+}
+
+.modern-table tbody tr.margin-medium {
+    background: #fffbeb !important;
+    border-left: 3px solid #f59e0b;
+}
+
+.modern-table tbody tr.margin-low {
+    background: #fef2f2 !important;
+    border-left: 3px solid #ef4444;
+}
+
+.modern-table tbody tr.margin-high:hover {
+    background: #dcfce7 !important;
+}
+
+.modern-table tbody tr.margin-medium:hover {
+    background: #fef3c7 !important;
+}
+
+.modern-table tbody tr.margin-low:hover {
+    background: #fee2e2 !important;
+}
+
+/* Image Thumbnail */
+.style-thumbnail {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 2px solid #e2e8f0;
     cursor: pointer;
     transition: all 0.2s;
-  }
-  
-  .action-btn.view {
-    background: white;
-    border-color: var(--primary);
-    color: var(--primary);
-  }
-  
-  .action-btn.view:hover {
-    background: var(--primary);
-    color: white;
-  }
-  
-  .action-btn.edit {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: white;
-  }
-  
-  .action-btn.edit:hover {
-    background: #1e40af;
-  }
-  
-  .action-btn.duplicate {
-    background: white;
-    border-color: #10b981;
-    color: #10b981;
-  }
-  
-  .action-btn.duplicate:hover {
-    background: #10b981;
-    color: white;
-  }
-  
-  .action-btn.delete {
-    background: white;
-    border-color: #ef4444;
-    color: #ef4444;
-  }
-  
-  .action-btn.delete:hover {
-    background: #ef4444;
-    color: white;
-  }
-  
-  .checkbox-cell {
-    width: 40px;
-    text-align: center;
-  }
-  
-  input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-  }
-  
-  .gender-badge {
+    background: #f8fafc;
+}
+
+.style-thumbnail:hover {
+    transform: scale(1.1);
+    border-color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.no-image {
+    width: 50px;
+    height: 50px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    border: 2px dashed #cbd5e1;
+}
+
+/* Status Badge */
+.status-badge {
     display: inline-block;
     padding: 0.25rem 0.75rem;
     border-radius: 12px;
     font-size: 0.75rem;
     font-weight: 600;
-    background: var(--gray-100);
-    color: var(--text-secondary);
-  }
+}
+
+.status-active {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-inactive {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* Favorite Star - OUTLINE TO FILLED */
+.favorite-star {
+    cursor: pointer;
+    color: #cbd5e1;
+    fill: none;
+    transition: all 0.2s;
+}
+
+.favorite-star.active {
+    color: #fbbf24;
+    fill: #fbbf24;
+}
+
+.favorite-star:hover {
+    transform: scale(1.1);
+    color: #f59e0b;
+}
+
+.favorite-star:hover.active {
+    fill: #f59e0b;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+}
+
+.action-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.action-btn.edit:hover {
+    background: #ddd6fe;
+}
+
+.action-btn.edit svg {
+    stroke: #7c3aed;
+}
+
+.action-btn.copy:hover {
+    background: #d1fae5;
+}
+
+.action-btn.copy svg {
+    stroke: #059669;
+}
+
+.action-btn.delete:hover {
+    background: #fee2e2;
+}
+
+.action-btn.delete svg {
+    stroke: #dc2626;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    background: white;
+    border-top: 1px solid #e2e8f0;
+}
+
+.pagination-info {
+    color: #64748b;
+    font-size: 0.875rem;
+}
+
+.pagination-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.page-btn {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #cbd5e1;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    min-width: 36px;
+}
+
+.page-btn:hover:not(:disabled) {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+.page-btn.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.items-per-page {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #64748b;
+}
+
+.items-per-page select {
+    padding: 0.5rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+}
 </style>
 
-<div class="container-fluid" style="max-width: 1600px; padding: 2rem;">
-  
-  <!-- Header -->
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-    <div>
-      <h1 style="margin: 0;">All Uniform Styles</h1>
-      <p style="color: var(--text-secondary); margin: 0.25rem 0 0 0;">Total: {{ total_styles }} styles</p>
+<div class="page-container">
+    <!-- Header -->
+    <div class="page-header">
+        <h1>📊 All Styles</h1>
+        <div class="header-actions">
+            <a href="/style/new" class="btn btn-primary">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                New Style
+            </a>
+            <button class="btn btn-secondary" onclick="exportAllToExcel()">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                Export Excel
+            </a>
+            <a href="/admin-panel" class="btn btn-secondary">← Back</a>
+        </div>
     </div>
-    <button class="btn btn-secondary" onclick="window.location.href='/'">
-      ← Back to Dashboard
-    </button>
-  </div>
-  
-  <!-- Stats Bar -->
-  <div class="stats-bar">
-    <div class="stat-card">
-      <div class="stat-number">{{ total_styles }}</div>
-      <div class="stat-label">Total Styles</div>
+
+    <!-- Stats Cards -->
+    <div class="stats-cards">
+        <div class="stat-card">
+            <h3>{{ total_styles }}</h3>
+            <p>Total Styles</p>
+        </div>
+        <div class="stat-card">
+            <h3>${{ "%.2f"|format(avg_cost) }}</h3>
+            <p>Average Cost</p>
+        </div>
+        <div class="stat-card">
+            <h3>${{ "%.2f"|format(total_value) }}</h3>
+            <p>Total Inventory Value</p>
+        </div>
     </div>
-    <div class="stat-card">
-      <div class="stat-number">${{ "%.2f"|format(avg_cost) }}</div>
-      <div class="stat-label">Avg Cost Per Style</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-number">${{ "%.2f"|format(total_value) }}</div>
-      <div class="stat-label">Total Inventory Value</div>
-    </div>
-  </div>
-  
-  <!-- Action Bar -->
-  <div class="action-bar">
-    <div class="action-buttons">
-      <button class="btn btn-primary" onclick="window.location.href='/style/new'">
-        ➕ Create New Style
-      </button>
-      <button class="btn btn-success" onclick="exportAllToExcel()">
-        📊 Export All to Excel
-      </button>
-      <button class="btn btn-secondary" onclick="window.location.href='/import-excel'">
-        📥 Import Excel
-      </button>
-    </div>
-    
-    <!-- Bulk Actions (hidden by default) -->
-    <div class="bulk-actions" id="bulkActions">
-      <span id="selectedCount">0 selected</span>
-      <button class="btn btn-danger btn-sm" onclick="bulkDelete()">
-        🗑️ Delete Selected
-      </button>
-      <button class="btn btn-secondary btn-sm" onclick="clearSelection()">
-        Clear Selection
-      </button>
-    </div>
-  </div>
-  
-  <!-- Search & Filters -->
-  <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem;">
-    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1rem;">
-      <div>
-        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Search</label>
-        <input type="text" class="form-control" id="searchInput" placeholder="Search vendor style, name, or any field..." onkeyup="filterTable()">
-      </div>
-      <div>
-        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Gender</label>
-        <select class="form-control" id="genderFilter" onchange="filterTable()">
-          <option value="">All Genders</option>
-          <option value="MENS">Mens</option>
-          <option value="LADIES">Ladies</option>
-          <option value="UNISEX">Unisex</option>
-        </select>
-      </div>
-      <div>
-        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Cost Range</label>
-        <select class="form-control" id="costFilter" onchange="filterTable()">
-          <option value="">All Costs</option>
-          <option value="0-25">$0 - $25</option>
-          <option value="25-50">$25 - $50</option>
-          <option value="50-100">$50 - $100</option>
-          <option value="100+">$100+</option>
-        </select>
-      </div>
-    </div>
-    <button class="btn btn-secondary btn-sm" style="margin-top: 1rem;" onclick="clearFilters()">
-      Clear All Filters
-    </button>
-  </div>
-  
-  <!-- Table -->
-  <div class="table-container">
-    <table class="styles-table" id="stylesTable">
-      <thead>
-        <tr>
-          <th class="checkbox-cell">
-            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
-          </th>
-          <th>Vendor Style</th>
-          <th>Style Name</th>
-          <th>Gender</th>
-          <th>Total Cost</th>
-          <th>Retail Price</th>
-          <th>Margin %</th>
-          <th style="text-align: center;">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for style in styles %}
-        <tr data-style-id="{{ style.id }}" data-gender="{{ style.gender or '' }}" data-cost="{{ style.get_total_cost() }}">
-          <td class="checkbox-cell">
-            <input type="checkbox" class="style-checkbox" value="{{ style.id }}" onchange="updateBulkActions()">
-          </td>
-          <td><strong>{{ style.vendor_style or 'N/A' }}</strong></td>
-          <td>{{ style.style_name }}</td>
-          <td><span class="gender-badge">{{ style.gender or 'N/A' }}</span></td>
-          <td>${{ "%.2f"|format(style.get_total_cost()) }}</td>
-          <td>${{ "%.2f"|format(style.get_retail_price()) }}</td>
-          <td>{{ "%.0f"|format(style.base_margin_percent) }}%</td>
-          <td>
-            <div class="action-btn-group" style="justify-content: center;">
-              <button class="action-btn view" onclick="viewStyle('{{ style.vendor_style }}')">
-                👁️
-              </button>
-              <button class="action-btn edit" data-vendor-style="{{ style.vendor_style }}" onclick="editStyle(this.dataset.vendorStyle)">
-                Edit
-              </button>
-              <button class="action-btn duplicate" data-style-id="{{ style.id }}" onclick="duplicateStyle(this.dataset.styleId)">
-                Copy
-              </button>
-              <button class="action-btn delete" data-style-id="{{ style.id }}" data-vendor-style="{{ style.vendor_style }}" onclick="deleteStyle(this.dataset.styleId, this.dataset.vendorStyle)">
-                Delete
-              </button>
+
+    <!-- Filters Section -->
+    <div class="filters-section">
+        <div class="filters-grid">
+            <div>
+                <input type="text" id="searchInput" class="form-control" placeholder="🔍 Search vendor style, name, fabric, or vendor..." onkeyup="filterTable()">
             </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  
+            <div>
+                <select id="genderFilter" class="form-select" onchange="filterTable()">
+                    <option value="">All Genders</option>
+                    <option value="MENS">MENS</option>
+                    <option value="LADIES">LADIES</option>
+                    <option value="UNISEX">UNISEX</option>
+                </select>
+            </div>
+            <div>
+                <select id="costFilter" class="form-select" onchange="filterTable()">
+                    <option value="">All Costs</option>
+                    <option value="0-50">$0 - $50</option>
+                    <option value="50-100">$50 - $100</option>
+                    <option value="100+">$100+</option>
+                </select>
+            </div>
+        </div>
+
+        <div>
+            <div class="quick-filters-label">Quick Filters</div>
+            <div class="quick-filters">
+                <button class="filter-chip active" onclick="quickFilter('all', event)">All</button>
+                <button class="filter-chip" onclick="quickFilter('high-margin', event)">High Margin (65%+)</button>
+                <button class="filter-chip" onclick="quickFilter('low-margin', event)">Low Margin (<50%)</button>
+                <button class="filter-chip" onclick="quickFilter('favorites', event)">⭐ Favorites</button>
+                <button class="filter-chip" onclick="quickFilter('recent', event)">🆕 Modified Today</button>
+                <button class="filter-chip" onclick="quickFilter('week', event)">This Week</button>
+                <button class="btn-secondary" onclick="clearFilters()" style="margin-left: auto;">Clear All</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Actions -->
+    <div class="bulk-actions" id="bulkActions">
+        <span class="bulk-actions-label" id="selectedCount">0 selected</span>
+        <button class="btn btn-danger" onclick="bulkDelete()">Delete Selected</button>
+        <button class="btn btn-secondary" onclick="clearSelection()">Clear Selection</button>
+    </div>
+
+    <!-- Table Container -->
+    <div class="table-container">
+        <table class="modern-table" id="stylesTable">
+            <thead>
+                <tr>
+                    <th style="width: 40px;">
+                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                    </th>
+                    <th class="sortable" onclick="sortTable('vendor_style')">Vendor Style</th>
+                    <th class="sortable" onclick="sortTable('style_name')">Style Name</th>
+                    <th class="sortable" onclick="sortTable('gender')">Gender</th>
+                    <th class="sortable" onclick="sortTable('cost')">Total Cost</th>
+                    <th class="sortable" onclick="sortTable('margin')">Margin %</th>
+                    <th class="sortable" onclick="sortTable('updated_at')">Last Modified</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                {% for style in styles %}
+                <tr class="{% if style.base_margin_percent >= 65 %}margin-high{% elif style.base_margin_percent >= 50 %}margin-medium{% else %}margin-low{% endif %}"
+                    data-vendor-style="{{ style.vendor_style|lower }}"
+                    data-style-name="{{ style.style_name|lower }}"
+                    data-gender="{{ style.gender }}"
+                    data-cost="{{ style.get_total_cost() }}"
+                    data-margin="{{ style.base_margin_percent }}"
+                    data-updated="{{ style.updated_at.isoformat() if style.updated_at else '' }}"
+                    data-favorite="{{ 'true' if style.is_favorite else 'false' }}">
+                    
+                    <td>
+                        <input type="checkbox" class="style-checkbox" value="{{ style.id }}" onchange="updateBulkActions()">
+                    </td>
+                    
+
+                    <td style="display: flex; align-items: center; gap: 0.5rem;">
+                        <svg class="favorite-star {% if style.is_favorite %}active{% endif %}" 
+                            data-style-id="{{ style.id }}"
+                            onclick="toggleFavorite(this.dataset.styleId, this)"
+                            width="18" 
+                            height="18" 
+                            viewBox="0 0 24 24" 
+                            style="cursor: pointer; flex-shrink: 0;">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" 
+                                stroke="currentColor" 
+                                stroke-width="2" 
+                                stroke-linecap="round" 
+                                stroke-linejoin="round"></path>
+                        </svg>
+                        <strong>{{ style.vendor_style }}</strong>
+                    </td>
+                                        <td>{{ style.style_name }}</td>
+                    <td>{{ style.gender }}</td>
+                    <td><strong>${{ "%.2f"|format(style.get_total_cost()) }}</strong></td>
+                    <td>
+                        {% if style.base_margin_percent >= 65 %}
+                            <span style="font-weight: 600; color: #059669;">{{ style.base_margin_percent|int }}%</span>
+                        {% elif style.base_margin_percent >= 50 %}
+                            <span style="font-weight: 600; color: #d97706;">{{ style.base_margin_percent|int }}%</span>
+                        {% else %}
+                            <span style="font-weight: 600; color: #dc2626;">{{ style.base_margin_percent|int }}%</span>
+                        {% endif %}
+                    </td>
+                   
+                    <td>
+                        <small>{{ style.updated_at.strftime('%Y-%m-%d %H:%M') if style.updated_at else 'N/A' }}</small>
+                        <br>
+                        <small style="color: #94a3b8;">by {{ style.last_modified_by or 'Admin' }}</small>
+                    </td>
+                    <td>
+                        <span class="status-badge {% if style.is_active %}status-active{% else %}status-inactive{% endif %}">
+                            {{ 'Active' if style.is_active else 'Inactive' }}
+                        </span>
+                    </td>
+                    
+                    <td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="action-btn edit" 
+                                        title="Edit" 
+                                        data-vendor-style="{{ style.vendor_style }}"
+                                        onclick="editStyle(this.dataset.vendorStyle)">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
+                                </button>
+                                <button class="action-btn copy" 
+                                        title="Duplicate" 
+                                        data-style-id="{{ style.id }}"
+                                        onclick="duplicateStyle(this.dataset.styleId)">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                    </svg>
+                                </button>
+                                <button class="action-btn delete" 
+                                        title="Delete" 
+                                        data-style-id="{{ style.id }}"
+                                        data-vendor-style="{{ style.vendor_style }}"
+                                        onclick="deleteStyle(this.dataset.styleId, this.dataset.vendorStyle)">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div class="pagination">
+            <div class="pagination-info">
+                Showing <strong id="showingFrom">1</strong> to <strong id="showingTo">50</strong> of <strong id="totalRows">{{ total_styles }}</strong> styles
+            </div>
+            <div class="items-per-page">
+                <span>Items per page:</span>
+                <select id="itemsPerPage" onchange="changeItemsPerPage()">
+                    <option value="25">25</option>
+                    <option value="50" selected>50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+            <div class="pagination-controls" id="paginationControls"></div>
+        </div>
+    </div>
 </div>
 
 <script>
-// Filter table
+let currentSort = { column: 'updated_at', direction: 'desc' };
+let currentPage = 1;
+let itemsPerPage = 50;
+let currentFilter = 'all';
+
+document.addEventListener('DOMContentLoaded', function() {
+    sortTable('updated_at');
+    updatePagination();
+});
+
+function sortTable(column) {
+    const table = document.getElementById('stylesTable');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    if (currentSort.column === column) {
+        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort.column = column;
+        currentSort.direction = 'asc';
+    }
+    
+    // Remove all sort indicators
+    table.querySelectorAll('th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+    
+    // Find the clicked header and add sort indicator
+    const clickedHeader = Array.from(table.querySelectorAll('th')).find(th => {
+        const onClick = th.getAttribute('onclick');
+        return onClick && onClick.includes(`'${column}'`);
+    });
+    
+    if (clickedHeader) {
+        clickedHeader.classList.add(currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+    }
+    
+    // Sort rows
+    rows.sort((a, b) => {
+        let aVal, bVal;
+        
+        switch(column) {
+            case 'vendor_style':
+                aVal = a.dataset.vendorStyle;
+                bVal = b.dataset.vendorStyle;
+                break;
+            case 'style_name':
+                aVal = a.dataset.styleName;
+                bVal = b.dataset.styleName;
+                break;
+            case 'gender':
+                aVal = a.dataset.gender || '';
+                bVal = b.dataset.gender || '';
+                break;
+            case 'cost':
+                aVal = parseFloat(a.dataset.cost) || 0;
+                bVal = parseFloat(b.dataset.cost) || 0;
+                break;
+            case 'margin':
+                aVal = parseFloat(a.dataset.margin) || 0;
+                bVal = parseFloat(b.dataset.margin) || 0;
+                break;
+            case 'updated_at':
+                aVal = new Date(a.dataset.updated || '1970-01-01');
+                bVal = new Date(b.dataset.updated || '1970-01-01');
+                break;
+            default:
+                return 0;
+        }
+        
+        if (aVal < bVal) return currentSort.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return currentSort.direction === 'asc' ? 1 : -1;
+        return 0;
+    });
+    
+    rows.forEach(row => tbody.appendChild(row));
+    updatePagination();
+}
+
+
 function filterTable() {
-  const searchValue = document.getElementById('searchInput').value.toLowerCase();
-  const genderValue = document.getElementById('genderFilter').value;
-  const costValue = document.getElementById('costFilter').value;
-  const rows = document.querySelectorAll('#stylesTable tbody tr');
-  
-  rows.forEach(row => {
-    const text = row.textContent.toLowerCase();
-    const gender = row.dataset.gender;
-    const cost = parseFloat(row.dataset.cost);
+    const searchValue = document.getElementById('searchInput').value.toLowerCase();
+    const genderValue = document.getElementById('genderFilter').value;
+    const costValue = document.getElementById('costFilter').value;
+    const rows = document.querySelectorAll('#tableBody tr');
     
-    let showRow = true;
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        const gender = row.dataset.gender;
+        const cost = parseFloat(row.dataset.cost);
+        const favorite = row.dataset.favorite === 'true';
+        const updatedDate = new Date(row.dataset.updated);
+        const today = new Date();
+        const daysDiff = Math.floor((today - updatedDate) / (1000 * 60 * 60 * 24));
+        
+        let showRow = true;
+        
+        if (searchValue && !text.includes(searchValue)) showRow = false;
+        if (genderValue && gender !== genderValue) showRow = false;
+        if (costValue) {
+            if (costValue === '0-50' && (cost < 0 || cost > 50)) showRow = false;
+            if (costValue === '50-100' && (cost < 50 || cost > 100)) showRow = false;
+            if (costValue === '100+' && cost < 100) showRow = false;
+        }
+        
+        if (currentFilter === 'high-margin' && parseFloat(row.dataset.margin) < 65) showRow = false;
+        if (currentFilter === 'low-margin' && parseFloat(row.dataset.margin) >= 50) showRow = false;
+        if (currentFilter === 'favorites' && !favorite) showRow = false;
+        if (currentFilter === 'recent' && daysDiff > 0) showRow = false;
+        if (currentFilter === 'week' && daysDiff > 7) showRow = false;
+        
+        row.style.display = showRow ? '' : 'none';
+    });
     
-    // Search filter
-    if (searchValue && !text.includes(searchValue)) {
-      showRow = false;
-    }
-    
-    // Gender filter
-    if (genderValue && gender !== genderValue) {
-      showRow = false;
-    }
-    
-    // Cost filter
-    if (costValue) {
-      if (costValue === '0-25' && (cost < 0 || cost > 25)) showRow = false;
-      if (costValue === '25-50' && (cost < 25 || cost > 50)) showRow = false;
-      if (costValue === '50-100' && (cost < 50 || cost > 100)) showRow = false;
-      if (costValue === '100+' && cost < 100) showRow = false;
-    }
-    
-    row.style.display = showRow ? '' : 'none';
-  });
+    currentPage = 1;
+    updatePagination();
+}
+
+function quickFilter(filter, event) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-chip').forEach(chip => chip.classList.remove('active'));
+    event.target.classList.add('active');
+    filterTable();
 }
 
 function clearFilters() {
-  document.getElementById('searchInput').value = '';
-  document.getElementById('genderFilter').value = '';
-  document.getElementById('costFilter').value = '';
-  filterTable();
+    document.getElementById('searchInput').value = '';
+    document.getElementById('genderFilter').value = '';
+    document.getElementById('costFilter').value = '';
+    currentFilter = 'all';
+    document.querySelectorAll('.filter-chip').forEach(chip => chip.classList.remove('active'));
+    document.querySelector('.filter-chip').classList.add('active');
+    filterTable();
 }
 
-// Select all checkbox
-function toggleSelectAll() {
-  const selectAll = document.getElementById('selectAll');
-  const checkboxes = document.querySelectorAll('.style-checkbox');
-  checkboxes.forEach(cb => {
-    if (cb.closest('tr').style.display !== 'none') {
-      cb.checked = selectAll.checked;
+function updatePagination() {
+    const rows = Array.from(document.querySelectorAll('#tableBody tr')).filter(row => row.style.display !== 'none');
+    const totalRows = rows.length;
+    const totalPages = Math.ceil(totalRows / itemsPerPage);
+    
+    rows.forEach((row, index) => {
+        const start = (currentPage - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+        row.style.display = (index >= start && index < end) ? '' : 'none';
+    });
+    
+    document.getElementById('showingFrom').textContent = totalRows > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
+    document.getElementById('showingTo').textContent = Math.min(currentPage * itemsPerPage, totalRows);
+    document.getElementById('totalRows').textContent = totalRows;
+    
+    const controls = document.getElementById('paginationControls');
+    controls.innerHTML = '';
+    
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'page-btn';
+    prevBtn.textContent = '←';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.onclick = () => { currentPage--; updatePagination(); };
+    controls.appendChild(prevBtn);
+    
+    for (let i = 1; i <= Math.min(totalPages, 10); i++) {
+        const btn = document.createElement('button');
+        btn.className = 'page-btn' + (i === currentPage ? ' active' : '');
+        btn.textContent = i;
+        btn.onclick = () => { currentPage = i; updatePagination(); };
+        controls.appendChild(btn);
     }
-  });
-  updateBulkActions();
+    
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'page-btn';
+    nextBtn.textContent = '→';
+    nextBtn.disabled = currentPage === totalPages || totalPages === 0;
+    nextBtn.onclick = () => { currentPage++; updatePagination(); };
+    controls.appendChild(nextBtn);
 }
 
-// Update bulk actions visibility
+function changeItemsPerPage() {
+    itemsPerPage = parseInt(document.getElementById('itemsPerPage').value);
+    currentPage = 1;
+    updatePagination();
+}
+
+function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAll');
+    document.querySelectorAll('.style-checkbox').forEach(cb => {
+        if (cb.closest('tr').style.display !== 'none') cb.checked = selectAll.checked;
+    });
+    updateBulkActions();
+}
+
 function updateBulkActions() {
-  const checked = document.querySelectorAll('.style-checkbox:checked').length;
-  const bulkActions = document.getElementById('bulkActions');
-  const selectedCount = document.getElementById('selectedCount');
-  
-  if (checked > 0) {
-    bulkActions.classList.add('active');
-    selectedCount.textContent = `${checked} selected`;
-  } else {
-    bulkActions.classList.remove('active');
-  }
+    const checked = document.querySelectorAll('.style-checkbox:checked').length;
+    const bulkActions = document.getElementById('bulkActions');
+    const selectedCount = document.getElementById('selectedCount');
+    
+    if (checked > 0) {
+        bulkActions.classList.add('active');
+        selectedCount.textContent = `${checked} selected`;
+    } else {
+        bulkActions.classList.remove('active');
+    }
 }
 
 function clearSelection() {
-  document.querySelectorAll('.style-checkbox').forEach(cb => cb.checked = false);
-  document.getElementById('selectAll').checked = false;
-  updateBulkActions();
+    document.querySelectorAll('.style-checkbox').forEach(cb => cb.checked = false);
+    document.getElementById('selectAll').checked = false;
+    updateBulkActions();
 }
 
-// View style (read-only)
-function viewStyle(vendorStyle) {
-  window.open(`/style/new?vendor_style=${vendorStyle}&readonly=true`, '_blank');
-}
-
-// Edit style
 function editStyle(vendorStyle) {
-  window.location.href = `/style/new?vendor_style=${vendorStyle}`;
+    window.location.href = `/style/new?vendor_style=${vendorStyle}`;
 }
 
-// Duplicate style - opens form with pre-filled data
 function duplicateStyle(styleId) {
-  if (!confirm('Duplicate this style?\n\nYou will need to enter a new Vendor Style and Style Name before saving.')) return;
-  
-  // Redirect to style form with duplicate parameter
-  window.location.href = `/style/new?duplicate_from_id=${styleId}`;
+    if (!confirm('Duplicate this style?\n\nYou will need to enter a new Vendor Style and Style Name before saving.')) return;
+    window.location.href = `/style/new?duplicate_from_id=${styleId}`;
 }
 
-
-// Delete single style
 async function deleteStyle(styleId, vendorStyle) {
-  if (!confirm(`Delete style "${vendorStyle}"?\n\nThis action cannot be undone.`)) return;
-  
-  try {
-    const response = await fetch(`/api/style/delete/${styleId}`, {
-      method: 'DELETE'
-    });
-    const data = await response.json();
+    if (!confirm(`Delete style "${vendorStyle}"?\n\nThis action cannot be undone.`)) return;
     
-    if (data.ok) {
-      alert('Style deleted successfully!');
-      window.location.reload();
-    } else {
-      alert('Error: ' + data.error);
+    try {
+        const response = await fetch(`/api/style/delete/${styleId}`, {
+            method: 'DELETE'
+        });
+        const data = await response.json();
+        
+        if (data.ok) {
+            alert('Style deleted successfully!');
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (error) {
+        alert('Error deleting style: ' + error);
     }
-  } catch (error) {
-    alert('Error deleting style: ' + error);
-  }
 }
 
-// Bulk delete
 async function bulkDelete() {
-  const checked = Array.from(document.querySelectorAll('.style-checkbox:checked')).map(cb => parseInt(cb.value));
-  
-  if (checked.length === 0) {
-    alert('No styles selected');
-    return;
-  }
-  
-  if (!confirm(`Delete ${checked.length} style(s)?\n\nThis action cannot be undone.`)) return;
-  
-  try {
-    const response = await fetch('/api/styles/bulk-delete', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({style_ids: checked})
-    });
-    const data = await response.json();
+    const checked = Array.from(document.querySelectorAll('.style-checkbox:checked')).map(cb => parseInt(cb.value));
     
-    if (data.ok) {
-      alert(data.message);
-      window.location.reload();
-    } else {
-      alert('Error: ' + data.error);
+    if (checked.length === 0) {
+        alert('No styles selected');
+        return;
     }
-  } catch (error) {
-    alert('Error deleting styles: ' + error);
-  }
+    
+    if (!confirm(`Delete ${checked.length} style(s)?\n\nThis action cannot be undone.`)) return;
+    
+    try {
+        const response = await fetch('/api/styles/bulk-delete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({style_ids: checked})
+        });
+        const data = await response.json();
+        
+        if (data.ok) {
+            alert(data.message);
+            window.location.reload();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (error) {
+        alert('Error deleting styles: ' + error);
+    }
 }
 
-// Export all to Excel
+
+async function toggleFavorite(styleId, element) {
+    const isFavorite = element.classList.contains('active');
+    
+    try {
+        const response = await fetch(`/api/style/${styleId}/favorite`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({is_favorite: !isFavorite})
+        });
+        
+        if (response.ok) {
+            element.classList.toggle('active');
+            element.closest('tr').dataset.favorite = !isFavorite;
+        }
+    } catch (error) {
+        console.error('Error toggling favorite:', error);
+    }
+}
+    
+
 function exportAllToExcel() {
-  window.location.href = '/export-all-styles';
+    window.location.href = '/export-all-styles';
 }
 </script>
 

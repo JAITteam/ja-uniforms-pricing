@@ -129,6 +129,9 @@ class Style(db.Model):
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_modified_by = db.Column(db.String(100), default='Admin')
+    is_active = db.Column(db.Boolean, default=True)
+    is_favorite = db.Column(db.Boolean, default=False)
     colors = db.relationship('StyleColor', back_populates='style', cascade='all, delete-orphan')
     
     def get_total_fabric_cost(self):

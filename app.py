@@ -1007,6 +1007,61 @@ def check_vendor_style():
 # These replace your existing /master-costs route and add the API endpoints
 
 # ===== EDITABLE MASTER COSTS WITH VENDOR MANAGEMENT =====
+@app.route('/migrate-phase1')
+def migrate_phase1():
+    """Add Phase 1 columns to styles table"""
+    try:
+        from sqlalchemy import text, inspect
+        
+        inspector = inspect(db.engine)
+        existing_columns = [col['name'] for col in inspector.get_columns('styles')]
+        
+        migrations = []
+        
+        if 'last_modified_by' not in existing_columns:
+            db.session.execute(text("ALTER TABLE styles ADD COLUMN last_modified_by VARCHAR(100) DEFAULT 'Admin'"))
+            migrations.append('✅ Added last_modified_by')
+        
+        if 'is_active' not in existing_columns:
+            db.session.execute(text('ALTER TABLE styles ADD COLUMN is_active BOOLEAN DEFAULT 1'))
+            migrations.append('✅ Added is_active')
+        
+        if 'is_favorite' not in existing_columns:
+            db.session.execute(text('ALTER TABLE styles ADD COLUMN is_favorite BOOLEAN DEFAULT 0'))
+            migrations.append('✅ Added is_favorite')
+        
+        db.session.commit()
+        
+        html = '<h1>🎉 Phase 1 Migration Complete!</h1>'
+        if migrations:
+            html += '<ul style="font-size: 1.2rem;">'
+            for m in migrations:
+                html += f'<li>{m}</li>'
+            html += '</ul>'
+        else:
+            html += '<p>All columns already exist!</p>'
+        
+        html += '<br><a href="/view-all-styles" style="padding: 10px 20px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">Go to Styles</a>'
+        
+        return html
+        
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        return f"<h1>❌ Migration Error:</h1><pre>{traceback.format_exc()}</pre>"
+
+@app.route('/api/style/<int:style_id>/favorite', methods=['POST'])
+def toggle_favorite(style_id):
+    """Toggle favorite status"""
+    try:
+        style = Style.query.get_or_404(style_id)
+        data = request.get_json()
+        style.is_favorite = data.get('is_favorite', False)
+        db.session.commit()
+        return jsonify({"ok": True}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route('/master-costs')
 def master_costs_editable():
