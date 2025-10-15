@@ -288,16 +288,16 @@
           <td>
             <div class="action-btn-group" style="justify-content: center;">
               <button class="action-btn view" onclick="viewStyle('{{ style.vendor_style }}')">
-                👁️ View
+                👁️
               </button>
-              <button class="action-btn edit" onclick="editStyle('{{ style.vendor_style }}')">
-                ✏️ Edit
+              <button class="action-btn edit" data-vendor-style="{{ style.vendor_style }}" onclick="editStyle(this.dataset.vendorStyle)">
+                Edit
               </button>
-              <button class="action-btn duplicate" onclick="duplicateStyle({{ style.id }})">
-                📋 Copy
+              <button class="action-btn duplicate" data-style-id="{{ style.id }}" onclick="duplicateStyle(this.dataset.styleId)">
+                Copy
               </button>
-              <button class="action-btn delete" onclick="deleteStyle({{ style.id }}, '{{ style.vendor_style }}')">
-                🗑️ Delete
+              <button class="action-btn delete" data-style-id="{{ style.id }}" data-vendor-style="{{ style.vendor_style }}" onclick="deleteStyle(this.dataset.styleId, this.dataset.vendorStyle)">
+                Delete
               </button>
             </div>
           </td>
