@@ -1,4 +1,91 @@
 // ============================================
+// CUSTOM ALERT MODAL (REPLACES BROWSER ALERTS)
+// ============================================
+window.customAlert = function(message, type = 'info') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('customAlertModal');
+        const messageEl = document.getElementById('alertMessage');
+        const iconEl = document.getElementById('alertIcon');
+        const okBtn = document.getElementById('alertOkBtn');
+        const cancelBtn = document.getElementById('alertCancelBtn');
+        
+        messageEl.textContent = message;
+        iconEl.className = 'custom-alert-icon ' + type;
+        cancelBtn.style.display = 'none';
+        
+        modal.classList.add('active');
+        
+        const handleOk = () => {
+            modal.classList.remove('active');
+            okBtn.removeEventListener('click', handleOk);
+            resolve(true);
+        };
+        
+        okBtn.addEventListener('click', handleOk);
+        
+        // Close on Escape
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                modal.classList.remove('active');
+                document.removeEventListener('keydown', handleEscape);
+                resolve(true);
+            }
+        };
+        document.addEventListener('keydown', handleEscape);
+    });
+};
+
+window.customConfirm = function(message, type = 'question') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('customAlertModal');
+        const messageEl = document.getElementById('alertMessage');
+        const iconEl = document.getElementById('alertIcon');
+        const okBtn = document.getElementById('alertOkBtn');
+        const cancelBtn = document.getElementById('alertCancelBtn');
+        
+        messageEl.textContent = message;
+        iconEl.className = 'custom-alert-icon ' + type;
+        okBtn.textContent = 'OK';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.style.display = 'inline-block';
+        
+        modal.classList.add('active');
+        
+        const handleOk = () => {
+            modal.classList.remove('active');
+            okBtn.removeEventListener('click', handleOk);
+            cancelBtn.removeEventListener('click', handleCancel);
+            resolve(true);
+        };
+        
+        const handleCancel = () => {
+            modal.classList.remove('active');
+            okBtn.removeEventListener('click', handleOk);
+            cancelBtn.removeEventListener('click', handleCancel);
+            resolve(false);
+        };
+        
+        okBtn.addEventListener('click', handleOk);
+        cancelBtn.addEventListener('click', handleCancel);
+        
+        // Close on Escape = Cancel
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                modal.classList.remove('active');
+                document.removeEventListener('keydown', handleEscape);
+                resolve(false);
+            }
+        };
+        document.addEventListener('keydown', handleEscape);
+    });
+};
+
+// Override default alert and confirm
+window.alert = window.customAlert;
+window.confirm = window.customConfirm;
+
+
+// ============================================
 // HANDLE DUPLICATION FROM EXISTING STYLE
 // ============================================
 (function() {
@@ -243,6 +330,49 @@ document.addEventListener('DOMContentLoaded', () => {
   loadColors();
   loadVariables(); 
 
+  // Function to prevent negative values - REUSABLE FOR DYNAMIC ROWS
+  function preventNegativeValues(input) {
+    // Prevent typing negative sign, 'e', and 'E'
+    input.addEventListener('keydown', function(e) {
+      if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+        e.preventDefault();
+      }
+    });
+    
+    // Check on every input change
+    input.addEventListener('input', function() {
+      const value = parseFloat(this.value);
+      if (this.value && value < 0) {
+        this.value = 0;
+      }
+    });
+    
+    // Final check when user leaves the field
+    input.addEventListener('blur', function() {
+      const value = parseFloat(this.value);
+      if (this.value && value < 0) {
+        this.value = 0;
+      }
+    });
+    
+    // Prevent paste of negative numbers
+    input.addEventListener('paste', function(e) {
+      setTimeout(() => {
+        const value = parseFloat(this.value);
+        if (!isNaN(value) && value < 0) {
+          this.value = 0;
+          this.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      }, 10);
+    });
+  }
+
+  // Apply to all existing number inputs on page load
+  document.querySelectorAll('input[type="number"]').forEach(input => {
+    preventNegativeValues(input);
+  });
+
+
   // Capture dropdown options once at page load for dynamic row creation
   const fabricVendorOptions = Array.from($('[data-fabric-vendor-id]').options).map(opt => ({
     value: opt.value,
@@ -306,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
       input.dataset.touched = '0';
     }
     
-    $('#fabric_code').value = fabricCode || '';
+    $('#fabric_code').value = fabricCode || 'Auto';
     setText('#snap_vendor_style', vendorStyle || '(vendor style)');
   }
 
@@ -1027,6 +1157,10 @@ updateSizeRangeDisplay();
     
     const addBtn = $('#addFabric').parentElement;
     addBtn.parentElement.insertBefore(newRow, addBtn);
+    // Apply negative prevention to new row's number inputs
+    newRow.querySelectorAll('input[type="number"]').forEach(input => {
+      preventNegativeValues(input);
+    });
     
     const fabricSelect = newRow.querySelector('[data-fabric-id]');
     fabricSelect?.addEventListener('change', function() {
@@ -1124,6 +1258,10 @@ updateSizeRangeDisplay();
     
     const addBtn = $('#addNotion').parentElement;
     addBtn.parentElement.insertBefore(newRow, addBtn);
+    // Apply negative prevention to new row's number inputs
+    newRow.querySelectorAll('input[type="number"]').forEach(input => {
+      preventNegativeValues(input);
+    });
     
     const notionSelect = newRow.querySelector('[data-notion-id]');
     notionSelect?.addEventListener('change', function() {

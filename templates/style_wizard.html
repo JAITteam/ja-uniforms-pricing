@@ -109,10 +109,10 @@
           </label>
           
           <label>Avg.Cost/yd</label>
-          <input class="form-control w-110 text-end" type="number" step="0.01" data-fabric-cost readonly>
+          <input class="form-control w-110 text-end" type="number" step="0.01" min="0" data-fabric-cost readonly>
           
           <label>Avg.Yds</label>
-          <input class="form-control w-110 text-end" type="number" step="0.01" data-fabric-yds>
+          <input class="form-control w-110 text-end" type="number" step="0.01" min="0" data-fabric-yds>
           
           <label>Total</label>
           <input class="form-control w-110 text-end" disabled data-fabric-total>
@@ -141,10 +141,10 @@
           </select>
           
           <label>Avg.Cost</label>
-          <input class="form-control w-110 text-end" type="number" step="0.01" data-notion-cost readonly>
+          <input class="form-control w-110 text-end" type="number" step="0.01" min="0" data-notion-cost readonly>
           
           <label>Qty</label>
-          <input class="form-control qty text-end" type="number" step="1" data-notion-qty>
+          <input class="form-control qty text-end" type="number" step="1" min="0" data-notion-qty>
           
           <label>Total</label>
           <input class="form-control w-110 text-end" disabled data-notion-total>
@@ -156,7 +156,7 @@
 
         <div class="kv">
           <span class="text-muted">Avg. Label(s) Cost</span>
-          <input class="form-control w-110 text-end" id="label_cost" type="number" step="0.01" value="{{ default_label_cost }}" readonly title="Edit in Master Costs">
+          <input class="form-control w-110 text-end" id="label_cost" type="number" step="0.01" min="0" value="{{ default_label_cost }}" readonly title="Edit in Master Costs">
         </div>
 
         <div class="sumline">
@@ -174,11 +174,11 @@
         <div class="kv" data-labor-row data-labor-name="{{ labor.name }}">
           <label>{{ labor.name }}</label>
           <label>{% if labor.cost_type == 'hourly' %}Avg.Cost/Hr{% else %}Avg.Cost{% endif %}</label>
-          <input class="form-control w-110 text-end" type="number" step="0.01" 
+          <input class="form-control w-110 text-end" type="number" step="0.01" min="0"
                  value="{% if labor.cost_type == 'flat_rate' %}{{ labor.fixed_cost }}{% elif labor.cost_type == 'hourly' %}{{ labor.cost_per_hour }}{% else %}{{ labor.cost_per_piece }}{% endif %}" 
                  data-labor-rate readonly>
           <label>{% if labor.cost_type == 'hourly' %}Hours{% else %}Qty{% endif %}</label>
-          <input class="form-control qty text-end" type="number" step="{% if labor.cost_type == 'hourly' %}0.01{% else %}1{% endif %}" data-labor-qoh>
+          <input class="form-control qty text-end" type="number" step="{% if labor.cost_type == 'hourly' %}0.01{% else %}1{% endif %}" min="0" data-labor-qoh>
           <label>Total</label>
           <input class="form-control w-110 text-end" disabled data-labor-total>
         </div>
@@ -193,7 +193,7 @@
             {% endfor %}
           </select>
           <label>Total</label>
-          <input class="form-control w-110 text-end" type="number" step="0.01" id="cleaning_cost" readonly>
+          <input class="form-control w-110 text-end" type="number" step="0.01" min="0" id="cleaning_cost" readonly>
         </div>
 
         <div class="sumline">
@@ -275,29 +275,34 @@
           </div>
         </div>
 
-        <!-- Pricing Section -->
-        <div class="row g-3 mb-3">
-          <div class="col-md-6">
-            <div class="kv">
-              <span class="text-muted">RETAIL SALES PRICE @</span>
-              <input id="margin" class="form-control w-110 text-end" type="number" step="1" value="60">
-              <span class="text-muted">% =</span>
-              <input id="retail_price" class="form-control w-110 text-end" disabled>
-            </div>
-          </div>
-          <div class="col-md-6">
-            <div class="kv">
-              <span class="text-muted">SUGGESTED PRICE</span>
-              <input id="suggested_price" class="form-control w-110 text-end" value="54.95" type="number" step="0.01">
-              <span class="text-muted">MARGIN</span>
-              <input id="suggested_margin" class="form-control w-110 text-end" type="number" step="1" min="0" max="95">
-            </div>
-          </div>
+        <!-- Pricing Section - ULTRA COMPACT -->
+        <div class="kv mb-3" style="background: #f8f9fa; padding: 0.5rem 0.75rem; border-radius: 4px;">
+          <strong style="font-size: 0.8rem; color: #555;">Pricing:</strong>
+          
+          <span style="font-size: 0.75rem; color: #666;">Margin</span>
+          <input id="margin" class="form-control text-end" type="number" step="1" value="60" min="0" max="95" style="width: 55px; padding: 0.2rem 0.4rem; font-size: 0.8rem;">
+          <span style="font-size: 0.75rem; color: #666;">%</span>
+          
+          <span style="margin: 0 0.3rem; color: #999; font-size: 0.75rem;">→</span>
+          
+          <span style="font-size: 0.75rem; color: #666;">Retail</span>
+          <input id="retail_price" class="form-control text-end" disabled style="width: 75px; padding: 0.2rem 0.4rem; background: white; font-weight: 600; font-size: 0.8rem;">
+          
+          <span style="margin: 0 0.75rem; color: #ddd;">|</span>
+          
+          <span style="font-size: 0.75rem; color: #666;">Suggested Price</span>
+          <input id="suggested_price" class="form-control text-end" value="54.95" type="number" step="0.01" min="0" style="width: 75px; padding: 0.2rem 0.4rem; font-size: 0.8rem;">
+          
+          <span style="margin: 0 0.3rem; color: #999; font-size: 0.75rem;">→</span>
+          
+          <span style="font-size: 0.75rem; color: #666;">Margin</span>
+          <input id="suggested_margin" class="form-control text-end" type="number" step="1" min="0" max="95" style="width: 55px; padding: 0.2rem 0.4rem; font-size: 0.8rem;">
+          <span style="font-size: 0.75rem; color: #666;">%</span>
         </div>
         
         <div class="kv mb-3">
           <span class="text-muted">Shipping Cost</span>
-          <input id="shipping_cost" class="form-control w-110 text-end" type="number" step="0.01" value="{{ default_shipping_cost }}" readonly title="Edit in Master Costs">
+          <input id="shipping_cost" class="form-control w-110 text-end" type="number" step="0.01" min="0" value="{{ default_shipping_cost }}" readonly title="Edit in Master Costs">
         </div>
         
         <div>
