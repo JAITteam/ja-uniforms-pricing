@@ -1,0 +1,464 @@
+{% extends "base.html" %}
+{% block title %}All Styles - J.A Uniforms{% endblock %}
+
+{% block content %}
+<style>
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  
+  .stat-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    text-align: center;
+  }
+  
+  .stat-number {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  
+  .stat-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+  }
+  
+  .action-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  
+  .action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  
+  .bulk-actions {
+    display: none;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  
+  .bulk-actions.active {
+    display: flex;
+  }
+  
+  .table-container {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  
+  .styles-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .styles-table thead {
+    background: var(--gray-50);
+  }
+  
+  .styles-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--border);
+  }
+  
+  .styles-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--gray-100);
+    font-size: 0.875rem;
+  }
+  
+  .styles-table tbody tr:hover {
+    background: var(--gray-50);
+  }
+  
+  .action-btn-group {
+    display: flex;
+    gap: 0.25rem;
+  }
+  
+  .action-btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    border-radius: var(--radius);
+    border: 1px solid;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .action-btn.view {
+    background: white;
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+  
+  .action-btn.view:hover {
+    background: var(--primary);
+    color: white;
+  }
+  
+  .action-btn.edit {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+  }
+  
+  .action-btn.edit:hover {
+    background: #1e40af;
+  }
+  
+  .action-btn.duplicate {
+    background: white;
+    border-color: #10b981;
+    color: #10b981;
+  }
+  
+  .action-btn.duplicate:hover {
+    background: #10b981;
+    color: white;
+  }
+  
+  .action-btn.delete {
+    background: white;
+    border-color: #ef4444;
+    color: #ef4444;
+  }
+  
+  .action-btn.delete:hover {
+    background: #ef4444;
+    color: white;
+  }
+  
+  .checkbox-cell {
+    width: 40px;
+    text-align: center;
+  }
+  
+  input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+  
+  .gender-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--gray-100);
+    color: var(--text-secondary);
+  }
+</style>
+
+<div class="container-fluid" style="max-width: 1600px; padding: 2rem;">
+  
+  <!-- Header -->
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <div>
+      <h1 style="margin: 0;">All Uniform Styles</h1>
+      <p style="color: var(--text-secondary); margin: 0.25rem 0 0 0;">Total: {{ total_styles }} styles</p>
+    </div>
+    <button class="btn btn-secondary" onclick="window.location.href='/'">
+      ← Back to Dashboard
+    </button>
+  </div>
+  
+  <!-- Stats Bar -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-number">{{ total_styles }}</div>
+      <div class="stat-label">Total Styles</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">${{ "%.2f"|format(avg_cost) }}</div>
+      <div class="stat-label">Avg Cost Per Style</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">${{ "%.2f"|format(total_value) }}</div>
+      <div class="stat-label">Total Inventory Value</div>
+    </div>
+  </div>
+  
+  <!-- Action Bar -->
+  <div class="action-bar">
+    <div class="action-buttons">
+      <button class="btn btn-primary" onclick="window.location.href='/style/new'">
+        ➕ Create New Style
+      </button>
+      <button class="btn btn-success" onclick="exportAllToExcel()">
+        📊 Export All to Excel
+      </button>
+      <button class="btn btn-secondary" onclick="window.location.href='/import-excel'">
+        📥 Import Excel
+      </button>
+    </div>
+    
+    <!-- Bulk Actions (hidden by default) -->
+    <div class="bulk-actions" id="bulkActions">
+      <span id="selectedCount">0 selected</span>
+      <button class="btn btn-danger btn-sm" onclick="bulkDelete()">
+        🗑️ Delete Selected
+      </button>
+      <button class="btn btn-secondary btn-sm" onclick="clearSelection()">
+        Clear Selection
+      </button>
+    </div>
+  </div>
+  
+  <!-- Search & Filters -->
+  <div style="background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem;">
+    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 1rem;">
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Search</label>
+        <input type="text" class="form-control" id="searchInput" placeholder="Search vendor style, name, or any field..." onkeyup="filterTable()">
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Gender</label>
+        <select class="form-control" id="genderFilter" onchange="filterTable()">
+          <option value="">All Genders</option>
+          <option value="MENS">Mens</option>
+          <option value="LADIES">Ladies</option>
+          <option value="UNISEX">Unisex</option>
+        </select>
+      </div>
+      <div>
+        <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Cost Range</label>
+        <select class="form-control" id="costFilter" onchange="filterTable()">
+          <option value="">All Costs</option>
+          <option value="0-25">$0 - $25</option>
+          <option value="25-50">$25 - $50</option>
+          <option value="50-100">$50 - $100</option>
+          <option value="100+">$100+</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-secondary btn-sm" style="margin-top: 1rem;" onclick="clearFilters()">
+      Clear All Filters
+    </button>
+  </div>
+  
+  <!-- Table -->
+  <div class="table-container">
+    <table class="styles-table" id="stylesTable">
+      <thead>
+        <tr>
+          <th class="checkbox-cell">
+            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+          </th>
+          <th>Vendor Style</th>
+          <th>Style Name</th>
+          <th>Gender</th>
+          <th>Total Cost</th>
+          <th>Retail Price</th>
+          <th>Margin %</th>
+          <th style="text-align: center;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for style in styles %}
+        <tr data-style-id="{{ style.id }}" data-gender="{{ style.gender or '' }}" data-cost="{{ style.get_total_cost() }}">
+          <td class="checkbox-cell">
+            <input type="checkbox" class="style-checkbox" value="{{ style.id }}" onchange="updateBulkActions()">
+          </td>
+          <td><strong>{{ style.vendor_style or 'N/A' }}</strong></td>
+          <td>{{ style.style_name }}</td>
+          <td><span class="gender-badge">{{ style.gender or 'N/A' }}</span></td>
+          <td>${{ "%.2f"|format(style.get_total_cost()) }}</td>
+          <td>${{ "%.2f"|format(style.get_retail_price()) }}</td>
+          <td>{{ "%.0f"|format(style.base_margin_percent) }}%</td>
+          <td>
+            <div class="action-btn-group" style="justify-content: center;">
+              <button class="action-btn view" onclick="viewStyle('{{ style.vendor_style }}')">
+                👁️ View
+              </button>
+              <button class="action-btn edit" onclick="editStyle('{{ style.vendor_style }}')">
+                ✏️ Edit
+              </button>
+              <button class="action-btn duplicate" onclick="duplicateStyle({{ style.id }})">
+                📋 Copy
+              </button>
+              <button class="action-btn delete" onclick="deleteStyle({{ style.id }}, '{{ style.vendor_style }}')">
+                🗑️ Delete
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  
+</div>
+
+<script>
+// Filter table
+function filterTable() {
+  const searchValue = document.getElementById('searchInput').value.toLowerCase();
+  const genderValue = document.getElementById('genderFilter').value;
+  const costValue = document.getElementById('costFilter').value;
+  const rows = document.querySelectorAll('#stylesTable tbody tr');
+  
+  rows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    const gender = row.dataset.gender;
+    const cost = parseFloat(row.dataset.cost);
+    
+    let showRow = true;
+    
+    // Search filter
+    if (searchValue && !text.includes(searchValue)) {
+      showRow = false;
+    }
+    
+    // Gender filter
+    if (genderValue && gender !== genderValue) {
+      showRow = false;
+    }
+    
+    // Cost filter
+    if (costValue) {
+      if (costValue === '0-25' && (cost < 0 || cost > 25)) showRow = false;
+      if (costValue === '25-50' && (cost < 25 || cost > 50)) showRow = false;
+      if (costValue === '50-100' && (cost < 50 || cost > 100)) showRow = false;
+      if (costValue === '100+' && cost < 100) showRow = false;
+    }
+    
+    row.style.display = showRow ? '' : 'none';
+  });
+}
+
+function clearFilters() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('genderFilter').value = '';
+  document.getElementById('costFilter').value = '';
+  filterTable();
+}
+
+// Select all checkbox
+function toggleSelectAll() {
+  const selectAll = document.getElementById('selectAll');
+  const checkboxes = document.querySelectorAll('.style-checkbox');
+  checkboxes.forEach(cb => {
+    if (cb.closest('tr').style.display !== 'none') {
+      cb.checked = selectAll.checked;
+    }
+  });
+  updateBulkActions();
+}
+
+// Update bulk actions visibility
+function updateBulkActions() {
+  const checked = document.querySelectorAll('.style-checkbox:checked').length;
+  const bulkActions = document.getElementById('bulkActions');
+  const selectedCount = document.getElementById('selectedCount');
+  
+  if (checked > 0) {
+    bulkActions.classList.add('active');
+    selectedCount.textContent = `${checked} selected`;
+  } else {
+    bulkActions.classList.remove('active');
+  }
+}
+
+function clearSelection() {
+  document.querySelectorAll('.style-checkbox').forEach(cb => cb.checked = false);
+  document.getElementById('selectAll').checked = false;
+  updateBulkActions();
+}
+
+// View style (read-only)
+function viewStyle(vendorStyle) {
+  window.open(`/style/new?vendor_style=${vendorStyle}&readonly=true`, '_blank');
+}
+
+// Edit style
+function editStyle(vendorStyle) {
+  window.location.href = `/style/new?vendor_style=${vendorStyle}`;
+}
+
+// Duplicate style - opens form with pre-filled data
+function duplicateStyle(styleId) {
+  if (!confirm('Duplicate this style?\n\nYou will need to enter a new Vendor Style and Style Name before saving.')) return;
+  
+  // Redirect to style form with duplicate parameter
+  window.location.href = `/style/new?duplicate_from_id=${styleId}`;
+}
+
+
+// Delete single style
+async function deleteStyle(styleId, vendorStyle) {
+  if (!confirm(`Delete style "${vendorStyle}"?\n\nThis action cannot be undone.`)) return;
+  
+  try {
+    const response = await fetch(`/api/style/delete/${styleId}`, {
+      method: 'DELETE'
+    });
+    const data = await response.json();
+    
+    if (data.ok) {
+      alert('Style deleted successfully!');
+      window.location.reload();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  } catch (error) {
+    alert('Error deleting style: ' + error);
+  }
+}
+
+// Bulk delete
+async function bulkDelete() {
+  const checked = Array.from(document.querySelectorAll('.style-checkbox:checked')).map(cb => parseInt(cb.value));
+  
+  if (checked.length === 0) {
+    alert('No styles selected');
+    return;
+  }
+  
+  if (!confirm(`Delete ${checked.length} style(s)?\n\nThis action cannot be undone.`)) return;
+  
+  try {
+    const response = await fetch('/api/styles/bulk-delete', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({style_ids: checked})
+    });
+    const data = await response.json();
+    
+    if (data.ok) {
+      alert(data.message);
+      window.location.reload();
+    } else {
+      alert('Error: ' + data.error);
+    }
+  } catch (error) {
+    alert('Error deleting styles: ' + error);
+  }
+}
+
+// Export all to Excel
+function exportAllToExcel() {
+  window.location.href = '/export-all-styles';
+}
+</script>
+
+{% endblock %}

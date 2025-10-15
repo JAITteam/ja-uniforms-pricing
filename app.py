@@ -39,14 +39,63 @@ from models import *
 # ===== MAIN APPLICATION ROUTES =====
 @app.route('/')
 def index():
-    return render_template('dashboard.html')
+    """Dashboard with real-time stats"""
+    
+    # Get real counts
+    total_styles = Style.query.count()
+    total_fabrics = Fabric.query.count()
+    total_notions = Notion.query.count()
+    total_fabric_vendors = FabricVendor.query.count()
+    total_notion_vendors = NotionVendor.query.count()
+    
+    # Get recent styles (last 4)
+    recent_styles = Style.query.order_by(Style.id.desc()).limit(4).all()
+    
+    # Calculate analytics
+    styles = Style.query.all()
+    
+    # Average cost per style
+    if styles:
+        total_cost = sum([s.get_total_cost() for s in styles])
+        avg_cost = total_cost / len(styles) if len(styles) > 0 else 0
+    else:
+        avg_cost = 0
+    
+    # Price range (min-max)
+    if styles:
+        costs = [s.get_total_cost() for s in styles]
+        min_cost = min(costs) if costs else 0
+        max_cost = max(costs) if costs else 0
+        price_range = f"${min_cost:.0f}-${max_cost:.0f}"
+    else:
+        price_range = "$0-$0"
+    
+    # Top fabric (most used)
+    from sqlalchemy import func
+    top_fabric_query = db.session.query(
+        Fabric.name, 
+        func.count(StyleFabric.fabric_id).label('count')
+    ).join(
+        StyleFabric, Fabric.id == StyleFabric.fabric_id
+    ).group_by(
+        Fabric.name
+    ).order_by(
+        func.count(StyleFabric.fabric_id).desc()
+    ).first()
+    
+    top_fabric = top_fabric_query[0] if top_fabric_query else "N/A"
+    
+    return render_template('dashboard.html',
+                         total_styles=total_styles,
+                         total_fabrics=total_fabrics,
+                         total_notions=total_notions,
+                         total_fabric_vendors=total_fabric_vendors,
+                         total_notion_vendors=total_notion_vendors,
+                         recent_styles=recent_styles,
+                         avg_cost=avg_cost,
+                         price_range=price_range,
+                         top_fabric=top_fabric)
 
-@app.route('/search', methods=['POST'])
-def search_style():
-    vendor_style = request.form.get('vendor_style', '').strip()
-    if vendor_style:
-        return redirect(url_for('style_wizard') + f'?vendor_style={vendor_style}')
-    return redirect(url_for('index'))
 
 @app.route('/style/<vendor_style>')
 def view_style(vendor_style):
@@ -186,6 +235,8 @@ def test_complete_lookup():
         return "<h1>No style found!</h1><a href='/create-complete-data'>Create Sample Data First</a>"
 
 # ===== ADMIN ROUTES (Future expansion) =====
+
+
 @app.route('/api/style/<int:style_id>/upload-image', methods=['POST'])
 def upload_style_image(style_id):
     """Upload an image for a style"""
@@ -652,253 +703,305 @@ def admin_panel():
 
 @app.route('/view-all-styles')
 def view_all_styles():
-    styles = Style.query.order_by(Style.vendor_style).all()
+    """View all styles with filters"""
+    styles = Style.query.all()
     
-    # Get unique genders for filter dropdown
-    genders = db.session.query(Style.gender).distinct().all()
-    gender_list = [g[0] for g in genders if g[0]]
+    # Calculate stats
+    total_styles = len(styles)
+    total_value = sum([s.get_total_cost() for s in styles])
+    avg_cost = total_value / total_styles if total_styles > 0 else 0
     
-    html = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>All Styles - J.A Uniforms</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-        <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            .filter-section { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-            .table-container { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-            table { margin-bottom: 0; }
-            th { cursor: pointer; user-select: none; background-color: #e9ecef; position: relative; }
-            th:hover { background-color: #dee2e6; }
-            th.sortable::after { content: ' ⇅'; color: #999; }
-            th.sort-asc::after { content: ' ↑'; color: #000; }
-            th.sort-desc::after { content: ' ↓'; color: #000; }
-            .no-results { text-align: center; padding: 40px; color: #666; }
-            .search-box { max-width: 400px; }
-            .filter-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-            .badge { font-size: 0.9em; }
-        </style>
-    </head>
-    <body>
-        <div class="container-fluid" style="max-width: 1400px;">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h1>All Uniform Styles</h1>
-                    <p class="text-muted mb-0">Total: <span id="totalCount">0</span> styles</p>
-                </div>
-                <a href="/admin-panel" class="btn btn-secondary">Back to Admin</a>
-            </div>
+    return render_template('view_all_styles.html', 
+                         styles=styles,
+                         total_styles=total_styles,
+                         total_value=total_value,
+                         avg_cost=avg_cost)
 
-            <!-- Filters Section -->
-            <div class="filter-section">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label fw-bold">Search</label>
-                        <input 
-                            type="text" 
-                            id="searchInput" 
-                            class="form-control" 
-                            placeholder="Search vendor style, name, or any field..."
-                            autocomplete="off">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-bold">Gender</label>
-                        <select id="genderFilter" class="form-select">
-                            <option value="">All Genders</option>
-    """
-    
-    for gender in gender_list:
-        html += f'<option value="{gender}">{gender}</option>'
-    
-    html += """
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-bold">Cost Range</label>
-                        <select id="costFilter" class="form-select">
-                            <option value="">All Costs</option>
-                            <option value="0-30">$0 - $30</option>
-                            <option value="30-50">$30 - $50</option>
-                            <option value="50-100">$50 - $100</option>
-                            <option value="100-999">$100+</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="mt-3">
-                    <button class="btn btn-sm btn-outline-secondary" onclick="clearFilters()">Clear All Filters</button>
-                </div>
-            </div>
+@app.route('/api/style/delete/<int:style_id>', methods=['DELETE'])
+def delete_style(style_id):
+    """Delete a style and all its relationships"""
+    try:
+        style = Style.query.get_or_404(style_id)
+        
+        # Delete style images first (foreign key constraint)
+        db.session.execute(
+            db.text("DELETE FROM style_images WHERE style_id = :style_id"),
+            {"style_id": style_id}
+        )
+        
+        # Delete all other relationships
+        StyleFabric.query.filter_by(style_id=style_id).delete()
+        StyleNotion.query.filter_by(style_id=style_id).delete()
+        StyleLabor.query.filter_by(style_id=style_id).delete()
+        StyleColor.query.filter_by(style_id=style_id).delete()
+        StyleVariable.query.filter_by(style_id=style_id).delete()
+        
+        # Delete the style
+        db.session.delete(style)
+        db.session.commit()
+        
+        return jsonify({"ok": True, "message": "Style deleted successfully"}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Delete error: {error_details}")
+        return jsonify({"ok": False, "error": str(e)}), 500
 
-            <!-- Table -->
-            <div class="table-container">
-                <table class="table table-hover" id="stylesTable">
-                    <thead>
-                        <tr>
-                            <th class="sortable" data-sort="vendor_style">Vendor Style</th>
-                            <th class="sortable" data-sort="style_name">Style Name</th>
-                            <th class="sortable" data-sort="gender">Gender</th>
-                            <th class="sortable text-end" data-sort="total_cost">Total Cost</th>
-                            <th class="sortable text-end" data-sort="retail_price">Retail Price</th>
-                            <th class="text-center">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody">
-    """
-    
-    for style in styles:
-        total_cost = style.get_total_cost()
-        retail_price = style.get_retail_price()
-        html += f"""
-                        <tr data-vendor-style="{style.vendor_style}" 
-                            data-style-name="{style.style_name}" 
-                            data-gender="{style.gender}"
-                            data-total-cost="{total_cost}"
-                            data-retail-price="{retail_price}">
-                            <td><strong>{style.vendor_style}</strong></td>
-                            <td>{style.style_name}</td>
-                            <td><span class="badge bg-secondary">{style.gender}</span></td>
-                            <td class="text-end">${total_cost:.2f}</td>
-                            <td class="text-end">${retail_price:.2f}</td>
-                            <td class="text-center">
-                                <a href="/style/new?vendor_style={style.vendor_style}" class="btn btn-sm btn-primary">Edit</a>
-                            </td>
-                        </tr>
-        """
-    
-    html += """
-                    </tbody>
-                </table>
-                <div id="noResults" class="no-results" style="display: none;">
-                    <p>No styles match your filters.</p>
-                </div>
-            </div>
-        </div>
+@app.route('/api/style/duplicate/<int:style_id>', methods=['POST'])
+def duplicate_style(style_id):
+    """Duplicate a style with all its components"""
+    try:
+        original = Style.query.get_or_404(style_id)
+        
+        # Generate unique vendor_style for the copy
+        base_vendor_style = original.vendor_style if original.vendor_style else "COPY"
+        new_vendor_style = f"{base_vendor_style}-COPY"
+        
+        # Check if this vendor_style already exists, if so add a number
+        counter = 1
+        while Style.query.filter_by(vendor_style=new_vendor_style).first():
+            new_vendor_style = f"{base_vendor_style}-COPY{counter}"
+            counter += 1
+        
+        # Create new style
+        new_style = Style(
+            style_name=f"{original.style_name} (Copy)",
+            vendor_style=new_vendor_style,
+            base_item_number=original.base_item_number,
+            variant_code=original.variant_code,
+            gender=original.gender,
+            garment_type=original.garment_type,
+            size_range=original.size_range,
+            notes=original.notes,
+            base_margin_percent=original.base_margin_percent,
+            suggested_price=original.suggested_price
+        )
+        db.session.add(new_style)
+        db.session.flush()
+        
+        # Copy fabrics - Query directly from StyleFabric table
+        style_fabrics = StyleFabric.query.filter_by(style_id=original.id).all()
+        for sf in style_fabrics:
+            new_sf = StyleFabric(
+                style_id=new_style.id,
+                fabric_id=sf.fabric_id,
+                yards_required=sf.yards_required,
+                is_primary=sf.is_primary,
+                is_sublimation=sf.is_sublimation
+            )
+            db.session.add(new_sf)
+        
+        # Copy notions - Query directly from StyleNotion table
+        style_notions = StyleNotion.query.filter_by(style_id=original.id).all()
+        for sn in style_notions:
+            new_sn = StyleNotion(
+                style_id=new_style.id,
+                notion_id=sn.notion_id,
+                quantity_required=sn.quantity_required
+            )
+            db.session.add(new_sn)
+        
+        # Copy labor - Query directly from StyleLabor table
+        style_labor = StyleLabor.query.filter_by(style_id=original.id).all()
+        for sl in style_labor:
+            new_sl = StyleLabor(
+                style_id=new_style.id,
+                labor_operation_id=sl.labor_operation_id,
+                time_hours=sl.time_hours,
+                quantity=sl.quantity
+            )
+            db.session.add(new_sl)
+        
+        # Copy colors - Query directly from StyleColor table
+        style_colors = StyleColor.query.filter_by(style_id=original.id).all()
+        for sc in style_colors:
+            new_sc = StyleColor(
+                style_id=new_style.id,
+                color_id=sc.color_id
+            )
+            db.session.add(new_sc)
+        
+        # Copy variables - Query directly from StyleVariable table
+        style_variables = StyleVariable.query.filter_by(style_id=original.id).all()
+        for sv in style_variables:
+            new_sv = StyleVariable(
+                style_id=new_style.id,
+                variable_id=sv.variable_id
+            )
+            db.session.add(new_sv)
+        
+        db.session.commit()
+        
+        return jsonify({
+            "ok": True, 
+            "new_style_id": new_style.id, 
+            "new_vendor_style": new_vendor_style,
+            "message": f"Style duplicated as '{new_vendor_style}'"
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Duplicate error: {error_details}")
+        return jsonify({"ok": False, "error": str(e)}), 500
 
-        <script>
-            const rows = document.querySelectorAll('#tableBody tr');
-            const searchInput = document.getElementById('searchInput');
-            const genderFilter = document.getElementById('genderFilter');
-            const costFilter = document.getElementById('costFilter');
-            const totalCount = document.getElementById('totalCount');
-            const noResults = document.getElementById('noResults');
-            const tableBody = document.getElementById('tableBody');
+@app.route('/api/styles/bulk-delete', methods=['POST'])
+def bulk_delete_styles():
+    """Delete multiple styles"""
+    try:
+        data = request.get_json()
+        style_ids = data.get('style_ids', [])
+        
+        if not style_ids:
+            return jsonify({"ok": False, "error": "No styles selected"}), 400
+        
+        for style_id in style_ids:
+            # Delete all relationships in the correct order
+            # (Images first, then other relationships, then the style itself)
+            
+            # Delete style images
+            db.session.execute(
+                db.text("DELETE FROM style_images WHERE style_id = :style_id"),
+                {"style_id": style_id}
+            )
+            
+            # Delete other relationships
+            StyleFabric.query.filter_by(style_id=style_id).delete()
+            StyleNotion.query.filter_by(style_id=style_id).delete()
+            StyleLabor.query.filter_by(style_id=style_id).delete()
+            StyleColor.query.filter_by(style_id=style_id).delete()
+            StyleVariable.query.filter_by(style_id=style_id).delete()
+            
+            # Finally, delete the style itself
+            style = Style.query.get(style_id)
+            if style:
+                db.session.delete(style)
+        
+        db.session.commit()
+        
+        return jsonify({"ok": True, "message": f"{len(style_ids)} style(s) deleted successfully"}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Bulk delete error: {error_details}")
+        return jsonify({"ok": False, "error": str(e)}), 500
 
-            let currentSort = { column: null, direction: 'asc' };
-
-            // Update count
-            function updateCount() {
-                const visible = Array.from(rows).filter(r => r.style.display !== 'none').length;
-                totalCount.textContent = visible;
-                noResults.style.display = visible === 0 ? 'block' : 'none';
-                tableBody.style.display = visible === 0 ? 'none' : '';
-            }
-
-            // Filter function
-            function filterTable() {
-                const searchTerm = searchInput.value.toLowerCase();
-                const selectedGender = genderFilter.value.toLowerCase();
-                const selectedCost = costFilter.value;
-
-                rows.forEach(row => {
-                    const vendorStyle = row.dataset.vendorStyle.toLowerCase();
-                    const styleName = row.dataset.styleName.toLowerCase();
-                    const gender = row.dataset.gender.toLowerCase();
-                    const totalCost = parseFloat(row.dataset.totalCost);
-
-                    // Search filter
-                    const matchesSearch = !searchTerm || 
-                        vendorStyle.includes(searchTerm) || 
-                        styleName.includes(searchTerm) ||
-                        gender.includes(searchTerm);
-
-                    // Gender filter
-                    const matchesGender = !selectedGender || gender === selectedGender;
-
-                    // Cost filter
-                    let matchesCost = true;
-                    if (selectedCost) {
-                        const [min, max] = selectedCost.split('-').map(Number);
-                        matchesCost = totalCost >= min && totalCost <= (max || Infinity);
-                    }
-
-                    row.style.display = matchesSearch && matchesGender && matchesCost ? '' : 'none';
-                });
-
-                updateCount();
-            }
-
-            // Sort function
-            function sortTable(column) {
-                const sortedRows = Array.from(rows);
+@app.route('/api/style/load-for-duplicate/<int:style_id>')
+def load_style_for_duplicate(style_id):
+    """Load a style's data for duplication"""
+    try:
+        style = Style.query.get_or_404(style_id)
+        
+        # Get fabrics
+        fabrics = []
+        for sf in StyleFabric.query.filter_by(style_id=style.id).all():
+            fabric = Fabric.query.get(sf.fabric_id)
+            if fabric:
+                vendor_name = ""
+                if fabric.fabric_vendor_id:
+                    vendor = FabricVendor.query.get(fabric.fabric_vendor_id)
+                    if vendor:
+                        vendor_name = vendor.name
                 
-                // Toggle direction
-                if (currentSort.column === column) {
-                    currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
-                } else {
-                    currentSort.column = column;
-                    currentSort.direction = 'asc';
-                }
-
-                sortedRows.sort((a, b) => {
-                    let aVal = a.dataset[column];
-                    let bVal = b.dataset[column];
-
-                    // Convert to numbers for cost/price columns
-                    if (column === 'total_cost' || column === 'retail_price') {
-                        aVal = parseFloat(aVal);
-                        bVal = parseFloat(bVal);
-                    } else {
-                        aVal = aVal.toLowerCase();
-                        bVal = bVal.toLowerCase();
-                    }
-
-                    if (aVal < bVal) return currentSort.direction === 'asc' ? -1 : 1;
-                    if (aVal > bVal) return currentSort.direction === 'asc' ? 1 : -1;
-                    return 0;
-                });
-
-                // Re-append rows in sorted order
-                sortedRows.forEach(row => tableBody.appendChild(row));
-
-                // Update header indicators
-                document.querySelectorAll('th.sortable').forEach(th => {
-                    th.classList.remove('sort-asc', 'sort-desc');
-                });
-                const activeHeader = document.querySelector(`th[data-sort="${column}"]`);
-                activeHeader.classList.add(currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
-            }
-
-            // Clear filters
-            function clearFilters() {
-                searchInput.value = '';
-                genderFilter.value = '';
-                costFilter.value = '';
-                filterTable();
-            }
-
-            // Event listeners
-            searchInput.addEventListener('input', filterTable);
-            genderFilter.addEventListener('change', filterTable);
-            costFilter.addEventListener('change', filterTable);
-
-            document.querySelectorAll('th.sortable').forEach(th => {
-                th.addEventListener('click', () => sortTable(th.dataset.sort));
-            });
-
-            // Initial count
-            updateCount();
-        </script>
-    </body>
-    </html>
-    """
+                fabrics.append({
+                    "name": fabric.name,
+                    "vendor": vendor_name,
+                    "yards": sf.yards_required,
+                    "cost_per_yard": fabric.cost_per_yard,
+                    "primary": sf.is_primary,
+                    "sublimation": sf.is_sublimation
+                })
+        
+        # Get notions
+        notions = []
+        for sn in StyleNotion.query.filter_by(style_id=style.id).all():
+            notion = Notion.query.get(sn.notion_id)
+            if notion:
+                vendor_name = ""
+                if notion.notion_vendor_id:
+                    vendor = NotionVendor.query.get(notion.notion_vendor_id)
+                    if vendor:
+                        vendor_name = vendor.name
+                
+                notions.append({
+                    "name": notion.name,
+                    "vendor": vendor_name,
+                    "qty": sn.quantity_required,
+                    "cost_per_unit": notion.cost_per_unit
+                })
+        
+        # Get labor
+        labor = []
+        for sl in StyleLabor.query.filter_by(style_id=style.id).all():
+            op = LaborOperation.query.get(sl.labor_operation_id)
+            if op:
+                labor.append({
+                    "name": op.name,
+                    "qty_or_hours": sl.time_hours if op.cost_type == 'hourly' else sl.quantity
+                })
+        
+        # Get colors
+        colors = []
+        for sc in StyleColor.query.filter_by(style_id=style.id).all():
+            color = Color.query.get(sc.color_id)
+            if color:
+                colors.append({
+                    "color_id": color.id,
+                    "name": color.name
+                })
+        
+        # Get variables
+        variables = []
+        for sv in StyleVariable.query.filter_by(style_id=style.id).all():
+            variable = Variable.query.get(sv.variable_id)
+            if variable:
+                variables.append({
+                    "variable_id": variable.id,
+                    "name": variable.name
+                })
+        
+        return jsonify({
+            "ok": True,
+            "style": {
+                "vendor_style": style.vendor_style + "-COPY",  # Suggest a new vendor style
+                "style_name": style.style_name + " (Copy)",     # Suggest a new style name
+                "base_item_number": style.base_item_number,
+                "variant_code": style.variant_code,
+                "gender": style.gender,
+                "garment_type": style.garment_type,
+                "size_range": style.size_range,
+                "margin": style.base_margin_percent,
+                "suggested_price": style.suggested_price,
+                "notes": style.notes,
+                "original_vendor_style": style.vendor_style,  # Track original
+                "original_style_name": style.style_name        # Track original
+            },
+            "fabrics": fabrics,
+            "notions": notions,
+            "labor": labor,
+            "colors": colors,
+            "variables": variables
+        }), 200
+        
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
     
-    return html
-
-# ADD THESE ROUTES TO YOUR app.py
-# These replace your existing /master-costs route and add the API endpoints
-
-# ===== EDITABLE MASTER COSTS - REPLACE EXISTING /master-costs ROUTE =====
+@app.route('/api/style/check-vendor-style')
+def check_vendor_style():
+    """Check if a vendor_style already exists"""
+    vendor_style = request.args.get('vendor_style', '').strip()
+    
+    if not vendor_style:
+        return jsonify({"exists": False})
+    
+    exists = Style.query.filter_by(vendor_style=vendor_style).first() is not None
+    
+    return jsonify({"exists": exists})
 
 # ADD THESE ROUTES TO YOUR app.py
 # These replace your existing /master-costs route and add the API endpoints
@@ -982,7 +1085,7 @@ def master_costs_editable():
             <h2>Vendors</h2>
             <div class="vendor-grid">
                 <!-- FABRIC VENDORS -->
-                <div>
+                <div id="fabric-vendors">
                     <h3>Fabric Vendors</h3>
                     <button class="btn btn-success add-row-btn" onclick="openModal('fabric_vendor')">+ Add Fabric Vendor</button>
                     <table class="vendors">
@@ -1016,7 +1119,7 @@ def master_costs_editable():
                 </div>
                 
                 <!-- NOTION VENDORS -->
-                <div>
+                <div id="notion-vendors">
                     <h3>Notion Vendors</h3>
                     <button class="btn btn-success add-row-btn" onclick="openModal('notion_vendor')">+ Add Notion Vendor</button>
                     <table class="vendors">
@@ -1205,7 +1308,7 @@ def master_costs_editable():
 
     html += """
             <!-- COLORS SECTION -->
-            <h2>Colors</h2>
+            <h2 id="colors-section">Colors</h2>
             <div style="margin-bottom: 15px;">
                 <input type="text" id="colorSearch" placeholder="Search colors..." style="width: 300px; padding: 8px; margin-bottom: 10px;">
             </div>
@@ -1238,7 +1341,7 @@ def master_costs_editable():
             </table>
             
             <!-- VARIABLES SECTION - ADD THIS ENTIRE BLOCK HERE -->
-            <h2>Variables</h2>
+            <h2 id="variables-section">Variables</h2>
             <div style="margin-bottom: 15px;">
                 <input type="text" id="variableSearch" placeholder="Search variables..." style="width: 300px; padding: 8px; margin-bottom: 10px;">
             </div>
@@ -1272,7 +1375,7 @@ def master_costs_editable():
             </table>  
 
             <!-- SIZE RANGES SECTION - INSERT HERE -->
-            <h2>Size Ranges</h2>
+            <h2 id="size-ranges-section">Size Ranges</h2>
             <div style="margin-bottom: 15px;">
                 <input type="text" id="sizeRangeSearch" placeholder="Search size ranges..." style="width: 300px; padding: 8px; margin-bottom: 10px;">
             </div>
@@ -1314,7 +1417,7 @@ def master_costs_editable():
             </table>
 
             <!-- GLOBAL SETTINGS SECTION - ADD HERE -->
-            <h2>Global Settings</h2>
+            <h2 id="global-settings-section">Global Settings</h2>
             <p style="color: #666; margin-bottom: 15px;">Default values applied to all new styles</p>
             <table class="vendors">
                 <thead>
@@ -2434,32 +2537,47 @@ def api_style_by_vendor_style():
 @app.post("/api/style/save")
 def api_style_save():
     """
-    Upsert a Style and replace its BOM, Labor, and Colors with the payload from the UI.
+    Upsert a Style and replace its BOM, Labor, Colors, and Variables.
+    Uses vendor_style as the unique identifier.
     """
     data = request.get_json(silent=True) or {}
     s = data.get("style") or {}
-    name = (s.get("style_name") or "").strip()
-    if not name:
+    
+    style_name = (s.get("style_name") or "").strip()
+    vendor_style = (s.get("vendor_style") or "").strip()
+    
+    if not style_name:
         return jsonify({"error": "style.style_name required"}), 400
 
     try:
-        # Upsert style by style_name
-        style = Style.query.filter(func.lower(Style.style_name) == name.lower()).first()
+        # Upsert style by vendor_style (the unique identifier)
+        style = None
         is_new = False
+        
+        if vendor_style:
+            # If vendor_style provided, look for existing style by vendor_style
+            style = Style.query.filter_by(vendor_style=vendor_style).first()
+        
         if not style:
+            # If not found by vendor_style, try by style_name
+            style = Style.query.filter(func.lower(Style.style_name) == style_name.lower()).first()
+        
+        if not style:
+            # Create new style
             style = Style()
             is_new = True
 
-        style.style_name = name
-        style.vendor_style = (s.get("vendor_style") or None)
+        # Update style fields
+        style.style_name = style_name
+        style.vendor_style = vendor_style if vendor_style else None
         style.base_item_number = (s.get("base_item_number") or None)
         style.variant_code = (s.get("variant_code") or None)
         style.gender = (s.get("gender") or None)
         style.garment_type = (s.get("garment_type") or None)
         style.size_range = (s.get("size_range") or None)
-        style.notes = (s.get("notes") or None)  # Add notes field too
+        style.notes = (s.get("notes") or None)
         style.base_margin_percent = float(s.get("margin") or 60.0)
-        style.suggested_price = float(s.get("suggested_price") or 0) if s.get("suggested_price") else None  # NEW
+        style.suggested_price = float(s.get("suggested_price") or 0) if s.get("suggested_price") else None
         
         db.session.add(style)
         db.session.flush()
@@ -2468,8 +2586,8 @@ def api_style_save():
         StyleFabric.query.filter_by(style_id=style.id).delete()
         StyleNotion.query.filter_by(style_id=style.id).delete()
         StyleLabor.query.filter_by(style_id=style.id).delete()
-        StyleColor.query.filter_by(style_id=style.id).delete()  # NEW
-        StyleVariable.query.filter_by(style_id=style.id).delete() 
+        StyleColor.query.filter_by(style_id=style.id).delete()
+        StyleVariable.query.filter_by(style_id=style.id).delete()
         db.session.flush()
 
         # Fabrics
@@ -2509,7 +2627,7 @@ def api_style_save():
                     fabric_id=fabric.id,
                     yards_required=float(f.get("yards") or 0),
                     is_primary=bool(f.get("primary") or False),
-                    is_sublimation=bool(f.get("sublimation") or False)  # ADD THIS LIne
+                    is_sublimation=bool(f.get("sublimation") or False)
                 )
                 db.session.add(sf)
 
@@ -2583,11 +2701,10 @@ def api_style_save():
                 )
             db.session.add(sl)
 
-        # Colors - NEW SECTION
+        # Colors
         for color_data in data.get("colors") or []:
             color_id = color_data.get("color_id")
             if color_id:
-                # Verify color exists
                 color = Color.query.get(color_id)
                 if color:
                     style_color = StyleColor(
@@ -2596,7 +2713,7 @@ def api_style_save():
                     )
                     db.session.add(style_color)
 
-        # Variables - NEW SECTION - ADD THIS ENTIRE BLOCK
+        # Variables
         for variable_data in data.get("variables") or []:
             variable_id = variable_data.get("variable_id")
             if variable_id:

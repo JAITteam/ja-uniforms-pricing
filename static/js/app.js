@@ -1,3 +1,238 @@
+// ============================================
+// HANDLE DUPLICATION FROM EXISTING STYLE
+// ============================================
+(function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const duplicateFromId = urlParams.get('duplicate_from_id');
+
+    if (duplicateFromId && window.location.pathname === '/style/new') {
+        // Wait for page to load, then load style for duplication
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => loadStyleForDuplication(duplicateFromId));
+        } else {
+            loadStyleForDuplication(duplicateFromId);
+        }
+    }
+
+    async function loadStyleForDuplication(styleId) {
+        try {
+            const response = await fetch(`/api/style/load-for-duplicate/${styleId}`);
+            const data = await response.json();
+            
+            if (!data.ok) {
+                alert('Error loading style for duplication: ' + (data.error || 'Unknown error'));
+                return;
+            }
+            
+            // Store original values for validation
+            window.originalVendorStyle = data.style.original_vendor_style;
+            window.originalStyleName = data.style.original_style_name;
+            window.isDuplicating = true;
+            
+            // Wait for page to fully load
+            setTimeout(() => {
+                const $ = s => document.querySelector(s);
+                const set = (sel, val) => { const el = $(sel); if (el) el.value = (val ?? ""); };
+                
+                // Add warning banner
+                const container = document.querySelector('.container-fluid') || document.querySelector('.row.g-3');
+                if (container) {
+                    const banner = document.createElement('div');
+                    banner.id = 'duplication-warning';
+                    banner.style.cssText = 'background: #fef3c7; border: 2px solid #f59e0b; padding: 1rem; margin-bottom: 1.5rem; border-radius: 8px; text-align: center; position: sticky; top: 0; z-index: 100; grid-column: 1 / -1;';
+                    banner.innerHTML = `
+                        <strong style="font-size: 1.1rem;">⚠️ Duplicating Style</strong><br>
+                        <span style="color: #92400e;">You MUST change the Vendor Style and Style Name before saving to avoid conflicts.</span>
+                    `;
+                    container.insertBefore(banner, container.firstChild);
+                }
+                
+                // Populate form fields directly (don't trigger auto-load)
+                const s = data.style;
+                set('#vendor_style', s.vendor_style);
+                set('#base_item_number', s.base_item_number);
+                set('#variant_code', s.variant_code);
+                set('#style_name', s.style_name);
+                set('#gender', s.gender);
+                set('#garment_type', s.garment_type);
+                set('#margin', s.margin);
+                set('#suggested_price', s.suggested_price);
+                set('#notes', s.notes);
+                
+                // Set size range
+                const sizeRangeSelect = $('#size_range_id');
+                if (sizeRangeSelect && s.size_range) {
+                    Array.from(sizeRangeSelect.options).forEach(option => {
+                        if (option.dataset.name === s.size_range) {
+                            option.selected = true;
+                        }
+                    });
+                }
+                
+                // Clear existing rows
+                document.querySelectorAll('[data-fabric-id]').forEach((el, i) => {
+                    if (i > 0) el.closest('.kv').remove();
+                });
+                document.querySelectorAll('[data-notion-id]').forEach((el, i) => {
+                    if (i > 0) el.closest('.kv').remove();
+                });
+                
+                // Load fabrics
+                const fabrics = data.fabrics || [];
+                fabrics.forEach((f, index) => {
+                    if (index > 0) {
+                        // Click add button to create new row
+                        $('#addFabric')?.click();
+                    }
+                    
+                    const allFabricRows = document.querySelectorAll('[data-fabric-id]');
+                    const targetRow = allFabricRows[index]?.closest('.kv');
+                    
+                    if (targetRow) {
+                        const fabricSelect = targetRow.querySelector('[data-fabric-id]');
+                        const vendorSelect = targetRow.querySelector('[data-fabric-vendor-id]');
+                        const yardsInput = targetRow.querySelector('[data-fabric-yds]');
+                        const costInput = targetRow.querySelector('[data-fabric-cost]');
+                        const sublimationCheckbox = targetRow.querySelector('[data-fabric-sublimation]');
+                        
+                        if (vendorSelect && f.vendor) {
+                            Array.from(vendorSelect.options).forEach(opt => {
+                                if (opt.text === f.vendor) vendorSelect.value = opt.value;
+                            });
+                        }
+                        
+                        if (fabricSelect && f.name) {
+                            Array.from(fabricSelect.options).forEach(opt => {
+                                if (opt.text === f.name) fabricSelect.value = opt.value;
+                            });
+                        }
+                        
+                        if (yardsInput) yardsInput.value = f.yards || '';
+                        if (costInput) costInput.value = f.cost_per_yard || '';
+                        if (sublimationCheckbox) sublimationCheckbox.checked = f.sublimation || false;
+                    }
+                });
+                
+                // Load notions
+                const notions = data.notions || [];
+                notions.forEach((n, index) => {
+                    if (index > 0) {
+                        $('#addNotion')?.click();
+                    }
+                    
+                    const allNotionRows = document.querySelectorAll('[data-notion-id]');
+                    const targetRow = allNotionRows[index]?.closest('.kv');
+                    
+                    if (targetRow) {
+                        const notionSelect = targetRow.querySelector('[data-notion-id]');
+                        const vendorSelect = targetRow.querySelector('[data-notion-vendor-id]');
+                        const qtyInput = targetRow.querySelector('[data-notion-qty]');
+                        const costInput = targetRow.querySelector('[data-notion-cost]');
+                        
+                        if (vendorSelect && n.vendor) {
+                            Array.from(vendorSelect.options).forEach(opt => {
+                                if (opt.text === n.vendor) vendorSelect.value = opt.value;
+                            });
+                        }
+                        
+                        if (notionSelect && n.name) {
+                            Array.from(notionSelect.options).forEach(opt => {
+                                if (opt.text === n.name) notionSelect.value = opt.value;
+                            });
+                        }
+                        
+                        if (qtyInput) qtyInput.value = n.qty || '';
+                        if (costInput) costInput.value = n.cost_per_unit || '';
+                    }
+                });
+                
+                // Load labor
+                const labor = data.labor || [];
+                document.querySelectorAll('[data-labor-row]').forEach((row, i) => {
+                    const l = labor[i] || {};
+                    const qInput = row.querySelector('[data-labor-qoh]');
+                    if (qInput && l.qty_or_hours) qInput.value = l.qty_or_hours;
+                });
+                
+                // Load colors
+                if (data.colors && data.colors.length > 0) {
+                    const colorList = $('#color_list');
+                    if (colorList) {
+                        colorList.innerHTML = '';
+                        data.colors.forEach(color => {
+                            const option = document.createElement('option');
+                            option.value = color.color_id;
+                            option.text = color.name;
+                            colorList.add(option);
+                        });
+                    }
+                }
+                
+                // Load variables
+                if (data.variables && data.variables.length > 0) {
+                    const variableList = $('#variable_list');
+                    if (variableList) {
+                        variableList.innerHTML = '';
+                        data.variables.forEach(variable => {
+                            const option = document.createElement('option');
+                            option.value = variable.variable_id;
+                            option.text = variable.name;
+                            variableList.add(option);
+                        });
+                    }
+                }
+                
+                // Trigger calculations
+                const recalcEvent = new Event('input', { bubbles: true });
+                $('#margin')?.dispatchEvent(recalcEvent);
+                document.querySelector('[data-fabric-yds]')?.dispatchEvent(recalcEvent);
+                
+                alert('✅ Style data loaded for duplication!\n\nPlease change the Vendor Style and Style Name before saving.');
+                
+            }, 1500); // Increased timeout to ensure page is fully loaded
+            
+        } catch (error) {
+            console.error('Duplication error:', error);
+            alert('Error loading style for duplication: ' + error.message);
+        }
+    }
+})();
+
+// ============================================
+// ENABLE COPY/PASTE EVERYWHERE
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    // Remove any copy/paste blockers
+    document.addEventListener('copy', function(e) {
+        // Allow copy
+    }, true);
+    
+    document.addEventListener('paste', function(e) {
+        // Allow paste
+    }, true);
+    
+    document.addEventListener('cut', function(e) {
+        // Allow cut
+    }, true);
+    
+    // Enable text selection
+    document.body.style.userSelect = 'text';
+    document.body.style.webkitUserSelect = 'text';
+    document.body.style.mozUserSelect = 'text';
+    document.body.style.msUserSelect = 'text';
+});
+
+// Allow copy/paste on all input fields
+window.addEventListener('load', function() {
+    const inputs = document.querySelectorAll('input, textarea');
+    inputs.forEach(input => {
+        input.removeAttribute('oncopy');
+        input.removeAttribute('onpaste');
+        input.removeAttribute('oncut');
+        input.style.userSelect = 'text';
+    });
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   const $ = s => document.querySelector(s);
   const fmt = n => '$' + (Number(n||0).toFixed(2));
@@ -596,6 +831,36 @@ updateSizeRangeDisplay();
     if (!styleName) { 
       alert('Enter a Style Name before saving.'); 
       return; 
+    }
+    // Validation for duplicated styles
+    if (window.isDuplicating) {
+        const currentVendorStyle = $('#vendor_style')?.value.trim();
+        
+        if (!currentVendorStyle) {
+            alert('❌ Vendor Style is required!');
+            return;
+        }
+        
+        if (currentVendorStyle === window.originalVendorStyle) {
+            alert('❌ You must change the Vendor Style!\n\nThe Vendor Style cannot be the same as the original style ("' + window.originalVendorStyle + '").');
+            return;
+        }
+        
+        // Check if vendor_style already exists
+        try {
+            const checkResponse = await fetch(`/api/style/check-vendor-style?vendor_style=${encodeURIComponent(currentVendorStyle)}`);
+            const checkData = await checkResponse.json();
+            
+            if (checkData.exists) {
+                alert('❌ This Vendor Style already exists!\n\nPlease choose a different Vendor Style.');
+                return;
+            }
+        } catch (error) {
+            console.error('Error checking vendor style:', error);
+        }
+        
+        // Clear duplication flag after validation passes
+        window.isDuplicating = false;
     }
 
     const labor = [];

@@ -1,0 +1,11 @@
+# 1. See which files changed
+git status
+
+# 2. Stage all changes
+git add .
+
+# 3. Commit with a message
+git commit -m "Describe your changes here"
+
+# 4. Push to your remote repository (e.g., GitHub)
+git push origin main

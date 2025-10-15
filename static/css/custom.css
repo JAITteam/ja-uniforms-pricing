@@ -987,3 +987,19 @@ select[multiple] option:hover {
     height: 240px;
   }
 }
+/* ============================================
+   ENABLE COPY/PASTE
+   ============================================ */
+body, input, textarea, select {
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+}
+
+/* Allow copy/paste in form fields */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea {
+    -webkit-user-select: text !important;
+    user-select: text !important;
+}
