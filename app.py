@@ -3,11 +3,14 @@ from flask import Config, Flask, request, redirect, url_for
 from flask import jsonify, request
 from sqlalchemy import func
 from database import db
-from flask import Flask, render_template, redirect, url_for, request, flash, send_from_directory
+#from flask import Flask, render_template, redirect, url_for, request, flash, send_from_directory
+from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, Response
 from config import Config
 from database import db
 from datetime import datetime
 import os
+import csv
+from io import StringIO
 from werkzeug.utils import secure_filename
 from models import (
     Style, Fabric, FabricVendor, Notion, NotionVendor, 
@@ -657,6 +660,144 @@ def handle_color(color_id):
         db.session.delete(color)
         db.session.commit()
         return jsonify({'success': True})
+
+# Helper function to parse size range
+def parse_size_range(size_range):
+    """Parse size range string into individual sizes"""
+    if not size_range:
+        return []
+    
+    # Remove spaces and convert to uppercase
+    size_range = size_range.upper().strip()
+    
+    # All possible sizes in order
+    all_sizes = ['XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL']
+    
+    # Parse range (e.g., "S-4XL" or "XS-XL")
+    if '-' in size_range:
+        parts = size_range.split('-')
+        start_size = parts[0].strip()
+        end_size = parts[1].strip()
+        
+        try:
+            start_idx = all_sizes.index(start_size)
+            end_idx = all_sizes.index(end_size)
+            return all_sizes[start_idx:end_idx + 1]
+        except ValueError:
+            return []
+    else:
+        # Single size or comma-separated
+        return [s.strip() for s in size_range.split(',')]
+
+# Helper to determine if size is extended
+def is_extended_size(size):
+    """Check if size is extended (2XL and above)"""
+    extended = ['2XL', '3XL', '4XL', '5XL']
+    return size in extended
+
+@app.route('/export-sap-format', methods=['POST'])
+def export_sap_format():
+    """Export selected styles in SAP B1 format"""
+    try:
+        import json
+        style_ids = json.loads(request.form.get('style_ids', '[]'))
+        
+        if not style_ids:
+            return "No styles selected", 400
+        
+        # Get selected styles
+        styles = Style.query.filter(Style.id.in_(style_ids)).all()
+        
+        # Create CSV in memory
+        output = StringIO()
+        writer = csv.writer(output)
+        
+        # Headers (row 1 and 2 are identical)
+        headers = ['Code', 'Name', 'U_COLOR', 'U_SIZE', 'U_VARIABLE', 
+                   'U_PRICE', 'U_SHIP_COST', 'U_STYLE', 'U_CardCode', 'U_PROD_NAME']
+        writer.writerow(headers)
+        writer.writerow(headers)  # Duplicate header row
+        
+        # Generate rows for each style
+        for style in styles:
+            # Get base cost
+            base_cost = style.get_total_cost()
+            
+            # Parse sizes
+            sizes = parse_size_range(style.size_range)
+            if not sizes:
+                sizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL']  # Default
+            
+            # Get colors (from style_colors relationship)
+            colors = [sc.color.name.upper() for sc in style.colors] if style.colors else ['BLACK']
+            
+            # Get variables (from style_variables if exists)
+            variables = []
+            if hasattr(style, 'style_variables'):
+                variables = [sv.variable.name.upper() for sv in style.style_variables]
+            
+            # Get vendor code from fabric vendor (first fabric's vendor)
+            vendor_code = 'V100'  # Default
+            if style.style_fabrics and style.style_fabrics[0].fabric.fabric_vendor:
+                vendor_code = style.style_fabrics[0].fabric.fabric_vendor.vendor_code
+            
+            # Remove hyphens from vendor style
+            u_style = style.vendor_style.replace('-', '')
+            
+            # Shipping cost
+            shipping_cost = style.shipping_cost if hasattr(style, 'shipping_cost') else 0.00
+            
+            # Generate rows: Colors × Sizes × Variables
+            for color in colors:
+                for size in sizes:
+                    # Calculate price based on size
+                    if is_extended_size(size):
+                        price = round(base_cost * 1.15, 2)  # Extended size markup
+                    else:
+                        price = round(base_cost, 2)  # Regular size
+                    
+                    if variables:
+                        # If has variables, generate row for each variable
+                        for variable in variables:
+                            writer.writerow([
+                                '',  # Code (blank)
+                                '',  # Name (blank)
+                                color,  # U_COLOR
+                                size,  # U_SIZE
+                                variable,  # U_VARIABLE
+                                price,  # U_PRICE
+                                shipping_cost,  # U_SHIP_COST
+                                u_style,  # U_STYLE
+                                vendor_code,  # U_CardCode
+                                style.style_name  # U_PROD_NAME
+                            ])
+                        
+                        # Also add row with blank variable
+                        writer.writerow([
+                            '', '', color, size, '', price, shipping_cost,
+                            u_style, vendor_code, style.style_name
+                        ])
+                    else:
+                        # No variables, just one row per color-size combination
+                        writer.writerow([
+                            '', '', color, size, '', price, shipping_cost,
+                            u_style, vendor_code, style.style_name
+                        ])
+        
+        # Prepare download
+        output.seek(0)
+        filename = f"SAP_Export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment; filename={filename}'}
+        )
+        
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return f"Error exporting: {str(e)}", 500
     
 
 @app.route('/admin-panel')
@@ -1201,15 +1342,19 @@ def master_costs_editable():
                                 </td>
                             </tr>
         """
-    
+
     html += """
                         </tbody>
                     </table>
                 </div>
             </div>
-            
+
             <!-- FABRICS -->
             <h2>Fabrics</h2>
+            <div style="margin-bottom: 15px;">
+                <input type="text" id="fabricSearch" placeholder="🔍 Search fabrics..." style="width: 300px; padding: 8px; margin-bottom: 10px;">
+                <span id="fabricCount" style="margin-left: 15px; color: #666;"></span>
+            </div>
             <button class="btn btn-success add-row-btn" onclick="openModal('fabric')">+ Add Fabric</button>
             <table class="fabrics">
                 <thead>
@@ -1227,7 +1372,7 @@ def master_costs_editable():
     for fabric in fabrics:
         vendor_name = fabric.fabric_vendor.name if fabric.fabric_vendor else 'N/A'
         html += f"""
-                    <tr data-id="{fabric.id}">
+                    <tr data-id="{fabric.id}" class="fabric-row">
                         <td>{fabric.name}</td>
                         <td>{fabric.fabric_code or ''}</td>
                         <td>${fabric.cost_per_yard:.2f}</td>
@@ -1242,23 +1387,27 @@ def master_costs_editable():
         """
     
     html += """
-                </tbody>
-            </table>
-            
-            <!-- NOTIONS -->
-            <h2>Notions</h2>
-            <button class="btn btn-success add-row-btn" onclick="openModal('notion')">+ Add Notion</button>
-            <table class="notions">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Cost/Unit</th>
-                        <th>Unit Type</th>
-                        <th>Vendor</th>
-                        <th style="width: 150px;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="notionsTable">
+            </tbody>
+        </table>
+        
+        <!-- NOTIONS -->
+        <h2>Notions</h2>
+        <div style="margin-bottom: 15px;">
+            <input type="text" id="notionSearch" placeholder="🔍 Search notions..." style="width: 300px; padding: 8px; margin-bottom: 10px;">
+            <span id="notionCount" style="margin-left: 15px; color: #666;"></span>
+        </div>
+        <button class="btn btn-success add-row-btn" onclick="openModal('notion')">+ Add Notion</button>
+        <table class="notions">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Cost/Unit</th>
+                    <th>Unit Type</th>
+                    <th>Vendor</th>
+                    <th style="width: 150px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="notionsTable">
     """
     
     for notion in notions:
@@ -1279,22 +1428,26 @@ def master_costs_editable():
         """
     
     html += """
-                </tbody>
-            </table>
-            
-            <!-- LABOR OPERATIONS -->
-            <h2>Labor Operations</h2>
-            <button class="btn btn-success add-row-btn" onclick="openModal('labor')">+ Add Labor Operation</button>
-            <table class="labor">
-                <thead>
-                    <tr>
-                        <th>Operation</th>
-                        <th>Cost Type</th>
-                        <th>Rate</th>
-                        <th style="width: 150px;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="laborTable">
+            </tbody>
+        </table>
+        
+        <!-- LABOR OPERATIONS -->
+        <h2>Labor Operations</h2>
+        <div style="margin-bottom: 15px;">
+            <input type="text" id="laborSearch" placeholder="🔍 Search labor operations..." style="width: 300px; padding: 8px; margin-bottom: 10px;">
+            <span id="laborCount" style="margin-left: 15px; color: #666;"></span>
+        </div>
+        <button class="btn btn-success add-row-btn" onclick="openModal('labor')">+ Add Labor Operation</button>
+        <table class="labor">
+            <thead>
+                <tr>
+                    <th>Operation</th>
+                    <th>Cost Type</th>
+                    <th>Rate</th>
+                    <th style="width: 150px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="laborTable">
     """
     
     for labor in labor_ops:
@@ -1308,7 +1461,7 @@ def master_costs_editable():
             rate_display = "N/A"
             
         html += f"""
-                    <tr data-id="{labor.id}">
+                    <tr data-id="{labor.id}" class="labor-row">
                         <td>{labor.name}</td>
                         <td>{labor.cost_type.replace('_', ' ').title()}</td>
                         <td>{rate_display}</td>
@@ -1322,23 +1475,27 @@ def master_costs_editable():
         """
     
     html += """
-                </tbody>
-            </table>
-            
-            <!-- CLEANING COSTS -->
-            <h2>Cleaning & Ironing Costs</h2>
-            <p style="color: #666; margin-bottom: 15px;">Based on $19.32/hour = $0.32/minute</p>
-            <button class="btn btn-success add-row-btn" onclick="openModal('cleaning')">+ Add Cleaning Cost</button>
-            <table class="cleaning">
-                <thead>
-                    <tr>
-                        <th>Garment Type</th>
-                        <th>Minutes</th>
-                        <th>Fixed Cost</th>
-                        <th style="width: 150px;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="cleaningTable">
+            </tbody>
+        </table>
+        
+        <!-- CLEANING COSTS -->
+        <h2>Cleaning & Ironing Costs</h2>
+        <p style="color: #666; margin-bottom: 5px;">Based on $19.32/hour = $0.32/minute</p>
+        <div style="margin-bottom: 15px;">
+            <input type="text" id="cleaningSearch" placeholder="🔍 Search cleaning costs..." style="width: 300px; padding: 8px; margin-bottom: 10px;">
+            <span id="cleaningCount" style="margin-left: 15px; color: #666;"></span>
+        </div>
+        <button class="btn btn-success add-row-btn" onclick="openModal('cleaning')">+ Add Cleaning Cost</button>
+        <table class="cleaning">
+            <thead>
+                <tr>
+                    <th>Garment Type</th>
+                    <th>Minutes</th>
+                    <th>Fixed Cost</th>
+                    <th style="width: 150px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="cleaningTable">
     """
     
     for cleaning in cleaning_costs:
@@ -1360,22 +1517,23 @@ def master_costs_editable():
         </table>
     """
     # Add to master_costs_editable() function, after notion vendors section:
-
     html += """
             <!-- COLORS SECTION -->
             <h2 id="colors-section">Colors</h2>
             <div style="margin-bottom: 15px;">
-                <input type="text" id="colorSearch" placeholder="Search colors..." style="width: 300px; padding: 8px; margin-bottom: 10px;">
+                <input type="text" id="colorSearch" placeholder="🔍 Search colors..." style="width: 300px; padding: 8px; margin-bottom: 10px;">
+                <span id="colorCount" style="margin-left: 15px; color: #666;"></span>
             </div>
             <button class="btn btn-success add-row-btn" onclick="openModal('color')">+ Add Color</button>
-            <table class="vendors">
-                <thead>
-                    <tr>
-                        <th>Color Name</th>
-                        <th style="width: 120px;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="colorTableBody">
+            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;">
+                <table class="vendors" style="margin-bottom: 0;">
+                    <thead style="position: sticky; top: 0; background: #ffe8e8; z-index: 10;">
+                        <tr>
+                            <th>Color Name</th>
+                            <th style="width: 120px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="colorTableBody">
     """
 
     colors = Color.query.order_by(Color.name).all()
@@ -1394,6 +1552,7 @@ def master_costs_editable():
     html += f"""
                 </tbody>
             </table>
+            </div>
             
             <!-- VARIABLES SECTION - ADD THIS ENTIRE BLOCK HERE -->
             <h2 id="variables-section">Variables</h2>
@@ -1843,16 +2002,41 @@ def master_costs_editable():
                 }}
             }}
 
-            // Color search filter - ADD THIS ENTIRE BLOCK HERE
-            document.getElementById('colorSearch')?.addEventListener('input', function() {{
-                const searchTerm = this.value.toLowerCase();
-                const rows = document.querySelectorAll('.color-row');
+            // Universal filter function for all tables
+            function setupTableFilter(searchId, rowClass, countId) {{
+                const searchInput = document.getElementById(searchId);
+                if (!searchInput) return;
                 
-                rows.forEach(row => {{
-                    const colorName = row.cells[0].textContent.toLowerCase();
-                    row.style.display = colorName.includes(searchTerm) ? '' : 'none';
+                const updateCount = () => {{
+                    const rows = document.querySelectorAll('.' + rowClass);
+                    const visible = Array.from(rows).filter(r => r.style.display !== 'none').length;
+                    const countEl = document.getElementById(countId);
+                    if (countEl) countEl.textContent = 'Showing ' + visible + ' of ' + rows.length;
+                }};
+                
+                searchInput.addEventListener('input', function() {{
+                    const searchTerm = this.value.toLowerCase();
+                    const rows = document.querySelectorAll('.' + rowClass);
+                    
+                    rows.forEach(row => {{
+                        const text = row.textContent.toLowerCase();
+                        row.style.display = text.includes(searchTerm) ? '' : 'none';
+                    }});
+                    
+                    updateCount();
                 }});
-            }});
+                
+                updateCount();
+            }}
+            
+            // Initialize all filters
+            setupTableFilter('fabricSearch', 'fabric-row', 'fabricCount');
+            setupTableFilter('notionSearch', 'notion-row', 'notionCount');
+            setupTableFilter('laborSearch', 'labor-row', 'laborCount');
+            setupTableFilter('cleaningSearch', 'cleaning-row', 'cleaningCount');
+            setupTableFilter('colorSearch', 'color-row', 'colorCount');
+            setupTableFilter('variableSearch', 'variable-row', 'variableCount');
+            setupTableFilter('sizeRangeSearch', 'size-range-row', 'sizeRangeCount');
 
             // Variable functions - ADD THIS ENTIRE BLOCK HERE
             function editVariable(id) {{ openModal('variable', id); }}
@@ -2232,40 +2416,6 @@ def style_wizard():
                           default_label_cost=default_label_cost,
                           default_shipping_cost=default_shipping_cost)
 
-@app.route("/import-step1", methods=["GET","POST"])
-def import_step1():
-    if request.method == "POST":
-        file = request.files.get("file")
-        if not file:
-            flash("Upload an .xlsx file", "warning")
-            return redirect(url_for("import_step1"))
-        import pandas as pd
-        xls = pd.ExcelFile(file)
-        sheets = []
-        for name in xls.sheet_names:
-            df = pd.read_excel(xls, sheet_name=name)
-            if df.empty: 
-                continue
-            cols = {c.lower().strip(): c for c in df.columns}
-            item_col = next((cols[k] for k in cols if "item" in k), None)
-            variant_col = next((cols[k] for k in cols if "variant" in k), None)
-            name_col = next((cols[k] for k in cols if k in ("name","style name","description")), None)
-            preview = []
-            if item_col and name_col:
-                row0 = df.iloc[0]
-                base = str(row0[item_col]).strip().split("-")[0]
-                variant = str(row0[variant_col]).strip() if variant_col else ""
-                vendor_style = "-".join([p for p in [base, variant] if p])
-                preview.append({
-                    "sheet": name,
-                    "vendor_style": vendor_style,
-                    "base_item_number": base,
-                    "variant_code": variant,
-                    "style_name": str(row0[name_col]).strip(),
-                })
-            sheets.append(preview)
-        return render_template("import_step1.html", previews=sheets)
-    return render_template("import_step1.html", previews=None)
 
 @app.get("/api/style/by-name")
 def api_style_by_name():

@@ -3,6 +3,18 @@
 
 {% block content %}
 <style>
+/* AGGRESSIVE FULL WIDTH OVERRIDE */
+body {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+body > nav + div {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
 /* ============================================
    COMPACT PROFESSIONAL DESIGN
    ============================================ */
@@ -10,9 +22,10 @@
 * { box-sizing: border-box; }
 
 .page-container {
-    max-width: 1800px;
-    margin: 0 auto;
-    padding: 1.5rem;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 1rem 1.5rem !important;
     background: #f8fafc;
     min-height: 100vh;
 }
@@ -228,12 +241,26 @@
     background: #dc2626;
 }
 
+/* Export Success Button */
+.btn-success {
+    background: #10b981;
+    color: white;
+    border: none;
+    font-weight: 600;
+}
+
+.btn-success:hover {
+    background: #059669;
+}
+
+
 /* Compact Table */
 .table-container {
     background: white;
     border-radius: 8px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     overflow: hidden;
+    width: 100%;
 }
 
 .modern-table {
@@ -469,6 +496,159 @@
     border-radius: 5px;
     font-size: 0.8rem;
 }
+/* Export Modal */
+.export-modal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.export-modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.export-modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 700px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.export-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.export-modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #1e293b;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: #64748b;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.close-modal:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+}
+
+.export-modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.export-search {
+    margin-bottom: 1rem;
+}
+
+.export-select-all {
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.export-select-all label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    margin: 0;
+}
+
+.export-styles-list {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.5rem;
+}
+
+.export-style-item {
+    padding: 0.75rem;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.2s;
+}
+
+.export-style-item:last-child {
+    border-bottom: none;
+}
+
+.export-style-item:hover {
+    background: #f8fafc;
+}
+
+.export-style-item label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    cursor: pointer;
+    margin: 0;
+}
+
+.export-style-item input[type="checkbox"] {
+    margin-top: 0.25rem;
+    cursor: pointer;
+}
+
+.export-style-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.export-style-info strong {
+    color: #1e293b;
+    font-size: 0.95rem;
+}
+
+.export-style-info span {
+    color: #475569;
+    font-size: 0.875rem;
+}
+
+.export-style-info small {
+    color: #64748b;
+    font-size: 0.8rem;
+}
+
+.export-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    border-top: 2px solid #e2e8f0;
+}
 </style>
 
 <div class="page-container">
@@ -482,11 +662,11 @@
                 </svg>
                 New Style
             </a>
-            <button class="btn btn-secondary" onclick="exportAllToExcel()" type="button">
+            <button class="btn btn-secondary" onclick="openExportModal()">
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                 </svg>
-                Export Excel
+                Export to SAP
             </button>
             <a href="/admin-panel" class="btn btn-secondary">← Back</a>
         </div>
@@ -549,6 +729,13 @@
     <!-- Bulk Actions -->
     <div class="bulk-actions" id="bulkActions">
         <span class="bulk-actions-label" id="selectedCount">0 selected</span>
+        <button class="btn btn-success" onclick="exportSelected()">
+            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 4px;">
+                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+            </svg>
+            Export Selected to SAP
+        </button>
         <button class="btn btn-danger" onclick="bulkDelete()">Delete Selected</button>
         <button class="btn btn-secondary" onclick="clearSelection()">Clear Selection</button>
     </div>
@@ -677,6 +864,66 @@
                 </select>
             </div>
             <div class="pagination-controls" id="paginationControls"></div>
+        </div>
+    </div>
+</div>
+<!-- Export Modal -->
+<div id="exportModal" class="export-modal">
+    <div class="export-modal-content">
+        <div class="export-modal-header">
+            <h3>📊 Export Styles to SAP B1</h3>
+            <button class="close-modal" onclick="closeExportModal()">&times;</button>
+        </div>
+        
+        <div class="export-modal-body">
+            <!-- Search Bar -->
+            <div class="export-search">
+                <input type="text" 
+                       id="exportSearch" 
+                       class="form-control" 
+                       placeholder="🔍 Search by vendor style or name..." 
+                       onkeyup="filterExportList()">
+            </div>
+            
+            <!-- Select All -->
+            <div class="export-select-all">
+                <label>
+                    <input type="checkbox" id="exportSelectAll" onchange="toggleExportSelectAll()">
+                    <strong>Select All (<span id="exportSelectedCount">0</span> selected)</strong>
+                </label>
+            </div>
+            
+            <!-- Styles List -->
+            <div class="export-styles-list" id="exportStylesList">
+                {% for style in styles %}
+                <div class="export-style-item" data-search="{{ style.vendor_style|lower }} {{ style.style_name|lower }}">
+                    <label>
+                        <input type="checkbox" 
+                               class="export-style-checkbox" 
+                               value="{{ style.id }}"
+                               data-vendor-style="{{ style.vendor_style }}"
+                               data-style-name="{{ style.style_name }}"
+                               onchange="updateExportCount()">
+                        <div class="export-style-info">
+                            <strong>{{ style.vendor_style }}</strong>
+                            <span>{{ style.style_name }}</span>
+                            <small class="text-muted">{{ style.gender }} • ${{ "%.2f"|format(style.get_total_cost()) }}</small>
+                        </div>
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="export-modal-footer">
+            <button class="btn btn-secondary" onclick="closeExportModal()">Cancel</button>
+            <button class="btn btn-success" onclick="exportSelectedFromModal()">
+                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 4px;">
+                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                </svg>
+                Export Selected
+            </button>
         </div>
     </div>
 </div>
@@ -813,6 +1060,29 @@ function clearFilters() {
     document.querySelectorAll('.filter-chip').forEach(chip => chip.classList.remove('active'));
     document.querySelector('.filter-chip').classList.add('active');
     filterTable();
+}
+
+function exportSelected() {
+    const checked = Array.from(document.querySelectorAll('.style-checkbox:checked')).map(cb => parseInt(cb.value));
+    
+    if (checked.length === 0) {
+        alert('Please select at least one style to export');
+        return;
+    }
+    
+    // Send to export endpoint
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/export-sap-format';
+    
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'style_ids';
+    input.value = JSON.stringify(checked);
+    
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
 }
 
 function updatePagination() {
@@ -971,6 +1241,87 @@ async function toggleFavorite(styleId, element) {
 function exportAllToExcel() {
     window.location.href = '/export-all-styles';
 }
+
+// Export Modal Functions
+function openExportModal() {
+    document.getElementById('exportModal').classList.add('active');
+    updateExportCount();
+}
+
+function closeExportModal() {
+    document.getElementById('exportModal').classList.remove('active');
+}
+
+function filterExportList() {
+    const searchValue = document.getElementById('exportSearch').value.toLowerCase();
+    const items = document.querySelectorAll('.export-style-item');
+    
+    items.forEach(item => {
+        const searchText = item.dataset.search;
+        if (searchText.includes(searchValue)) {
+            item.style.display = '';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+function toggleExportSelectAll() {
+    const selectAll = document.getElementById('exportSelectAll');
+    const checkboxes = document.querySelectorAll('.export-style-checkbox');
+    const visibleCheckboxes = Array.from(checkboxes).filter(cb => 
+        cb.closest('.export-style-item').style.display !== 'none'
+    );
+    
+    visibleCheckboxes.forEach(cb => {
+        cb.checked = selectAll.checked;
+    });
+    
+    updateExportCount();
+}
+
+function updateExportCount() {
+    const checked = document.querySelectorAll('.export-style-checkbox:checked').length;
+    document.getElementById('exportSelectedCount').textContent = checked;
+}
+
+function exportSelectedFromModal() {
+    const checked = Array.from(document.querySelectorAll('.export-style-checkbox:checked'))
+        .map(cb => parseInt(cb.value));
+    
+    if (checked.length === 0) {
+        alert('Please select at least one style to export');
+        return;
+    }
+    
+    // Close modal
+    closeExportModal();
+    
+    // Send to export endpoint
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/export-sap-format';
+    
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'style_ids';
+    input.value = JSON.stringify(checked);
+    
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// Close modal on outside click
+window.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('exportModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeExportModal();
+        }
+    });
+});
+
+
 </script>
 
 {% endblock %}
