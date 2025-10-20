@@ -1070,17 +1070,28 @@ function exportSelected() {
         return;
     }
     
+    // Get CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    
     // Send to export endpoint
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = '/export-sap-format';
     
+    // Add CSRF token
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+    
+    // Add style IDs
     const input = document.createElement('input');
     input.type = 'hidden';
     input.name = 'style_ids';
     input.value = JSON.stringify(checked);
-    
     form.appendChild(input);
+    
     document.body.appendChild(form);
     form.submit();
 }
@@ -1297,17 +1308,28 @@ function exportSelectedFromModal() {
     // Close modal
     closeExportModal();
     
+    // Get CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    
     // Send to export endpoint
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = '/export-sap-format';
     
+    // Add CSRF token
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+    
+    // Add style IDs
     const input = document.createElement('input');
     input.type = 'hidden';
     input.name = 'style_ids';
     input.value = JSON.stringify(checked);
-    
     form.appendChild(input);
+    
     document.body.appendChild(form);
     form.submit();
 }

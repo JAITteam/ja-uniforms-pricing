@@ -12,6 +12,7 @@ import os
 import csv
 from io import StringIO
 from werkzeug.utils import secure_filename
+from flask_wtf.csrf import CSRFProtect
 from models import (
     Style, Fabric, FabricVendor, Notion, NotionVendor, 
     LaborOperation, CleaningCost, StyleFabric, StyleNotion, 
@@ -24,6 +25,10 @@ from models import (
 # Initialize Flask app
 app = Flask(__name__)
 app.config.from_object(Config)
+
+
+# Initialize CSRF protection
+csrf = CSRFProtect(app)
 
 
 UPLOAD_FOLDER = 'static/img'
@@ -798,7 +803,7 @@ def export_sap_format():
         import traceback
         print(traceback.format_exc())
         return f"Error exporting: {str(e)}", 500
-    
+
 @app.route('/export-sap-single-style', methods=['POST'])
 def export_sap_single_style():
     """Export a single style in SAP B1 format"""
@@ -827,6 +832,18 @@ def export_sap_single_style():
         # Get base cost
         base_cost = style.get_total_cost()
         
+        # ========================================
+        # GET DYNAMIC MARKUP FROM SIZE RANGE
+        # ========================================
+        size_range = SizeRange.query.filter_by(name=style.size_range).first()
+        extended_markup_percent = 15  # Default fallback
+        
+        if size_range:
+            extended_markup_percent = size_range.extended_markup_percent
+        
+        # Convert percentage to multiplier (20% = 1.20, 15% = 1.15)
+        extended_multiplier = 1 + (extended_markup_percent / 100)
+        
         # Parse sizes
         sizes = parse_size_range(style.size_range)
         if not sizes:
@@ -854,9 +871,11 @@ def export_sap_single_style():
         # Generate rows: Colors × Sizes × Variables
         for color in colors:
             for size in sizes:
-                # Calculate price based on size
-                if is_extended_size(size):
-                    price = round(base_cost * 1.15, 2)  # Extended size markup
+                # ========================================
+                # CALCULATE PRICE WITH DYNAMIC MARKUP
+                # ========================================
+                if is_extended_size(size, size_range):
+                    price = round(base_cost * extended_multiplier, 2)  # Use dynamic markup
                 else:
                     price = round(base_cost, 2)  # Regular size
                 
@@ -902,6 +921,189 @@ def export_sap_single_style():
         import traceback
         print(traceback.format_exc())
         return f"Error exporting: {str(e)}", 500
+
+
+# ========================================
+# UPDATED STYLE MODEL METHODS
+# ========================================
+
+# ADD THESE TO YOUR Style CLASS in models.py
+
+def get_total_labor_cost(self):
+    """Calculate total labor cost - only add costs for non-empty fields"""
+    total = 0
+    
+    # Regular labor operations
+    for sl in self.style_labor:
+        labor_op = sl.labor_operation
+        # Skip if labor operation was deleted
+        if not labor_op:
+            continue
+        
+        if labor_op.cost_type == 'flat_rate':
+            # Only add if quantity is explicitly set and > 0
+            if sl.quantity and sl.quantity > 0:
+                total += (labor_op.fixed_cost or 0) * sl.quantity
+                
+        elif labor_op.cost_type == 'hourly':
+            # Only add if time_hours is set and > 0
+            if sl.time_hours and sl.time_hours > 0:
+                total += (labor_op.cost_per_hour or 0) * sl.time_hours
+                
+        elif labor_op.cost_type == 'per_piece':
+            # Only add if quantity is set and > 0
+            if sl.quantity and sl.quantity > 0:
+                total += (labor_op.cost_per_piece or 0) * sl.quantity
+    
+    # Only add cleaning cost if garment_type is set
+    if self.garment_type:
+        cleaning_cost = CleaningCost.query.filter_by(garment_type=self.garment_type).first()
+        if cleaning_cost and cleaning_cost.fixed_cost > 0:
+            total += cleaning_cost.fixed_cost
+    
+    return round(total, 2)
+
+
+# ========================================
+# EXPORT ROUTE WITH DYNAMIC MARKUP
+# ========================================
+
+@app.route('/export-sap-single-style', methods=['POST'])
+def export_sap_single_style():
+    """Export a single style in SAP B1 format"""
+    try:
+        vendor_style = request.form.get('vendor_style')
+        
+        if not vendor_style:
+            return "No style specified", 400
+        
+        # Get the style
+        style = Style.query.filter_by(vendor_style=vendor_style).first()
+        
+        if not style:
+            return "Style not found", 404
+        
+        # Create CSV in memory
+        output = StringIO()
+        writer = csv.writer(output)
+        
+        # Headers (row 1 and 2 are identical)
+        headers = ['Code', 'Name', 'U_COLOR', 'U_SIZE', 'U_VARIABLE', 
+                   'U_PRICE', 'U_SHIP_COST', 'U_STYLE', 'U_CardCode', 'U_PROD_NAME']
+        writer.writerow(headers)
+        writer.writerow(headers)  # Duplicate header row
+        
+        # Get base cost
+        base_cost = style.get_total_cost()
+        
+        # ========================================
+        # GET DYNAMIC MARKUP FROM SIZE RANGE
+        # ========================================
+        size_range = SizeRange.query.filter_by(name=style.size_range).first()
+        extended_markup_percent = 15  # Default fallback
+        
+        if size_range:
+            extended_markup_percent = size_range.extended_markup_percent
+        
+        # Convert percentage to multiplier (20% = 1.20, 15% = 1.15)
+        extended_multiplier = 1 + (extended_markup_percent / 100)
+        
+        # Parse sizes
+        sizes = parse_size_range(style.size_range)
+        if not sizes:
+            sizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL']  # Default
+        
+        # Get colors (from style_colors relationship)
+        colors = [sc.color.name.upper() for sc in style.colors] if style.colors else ['BLACK']
+        
+        # Get variables (from style_variables if exists)
+        variables = []
+        if hasattr(style, 'style_variables'):
+            variables = [sv.variable.name.upper() for sv in style.style_variables]
+        
+        # Get vendor code from fabric vendor (first fabric's vendor)
+        vendor_code = 'V100'  # Default
+        if style.style_fabrics and style.style_fabrics[0].fabric.fabric_vendor:
+            vendor_code = style.style_fabrics[0].fabric.fabric_vendor.vendor_code
+        
+        # Remove hyphens from vendor style
+        u_style = style.vendor_style.replace('-', '')
+        
+        # Shipping cost
+        shipping_cost = style.shipping_cost if hasattr(style, 'shipping_cost') else 0.00
+        
+        # Generate rows: Colors × Sizes × Variables
+        for color in colors:
+            for size in sizes:
+                # ========================================
+                # CALCULATE PRICE WITH DYNAMIC MARKUP
+                # ========================================
+                if is_extended_size(size, size_range):
+                    price = round(base_cost * extended_multiplier, 2)  # Use dynamic markup
+                else:
+                    price = round(base_cost, 2)  # Regular size
+                
+                if variables:
+                    # If has variables, generate row for each variable
+                    for variable in variables:
+                        writer.writerow([
+                            '',  # Code (blank)
+                            '',  # Name (blank)
+                            color,  # U_COLOR
+                            size,  # U_SIZE
+                            variable,  # U_VARIABLE
+                            price,  # U_PRICE
+                            shipping_cost,  # U_SHIP_COST
+                            u_style,  # U_STYLE
+                            vendor_code,  # U_CardCode
+                            style.style_name  # U_PROD_NAME
+                        ])
+                    
+                    # Also add row with blank variable
+                    writer.writerow([
+                        '', '', color, size, '', price, shipping_cost,
+                        u_style, vendor_code, style.style_name
+                    ])
+                else:
+                    # No variables, just one row per color-size combination
+                    writer.writerow([
+                        '', '', color, size, '', price, shipping_cost,
+                        u_style, vendor_code, style.style_name
+                    ])
+        
+        # Prepare download
+        output.seek(0)
+        filename = f"SAP_{style.vendor_style}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment; filename={filename}'}
+        )
+        
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return f"Error exporting: {str(e)}", 500
+
+
+# ========================================
+# HELPER FUNCTION - UPDATE THIS TOO
+# ========================================
+def is_extended_size(size, size_range=None):
+    """
+    Check if a size is an extended size based on the size range.
+    If size_range object is provided, check against its extended_sizes.
+    Otherwise, use legacy logic.
+    """
+    if size_range and size_range.extended_sizes:
+        # Parse extended sizes from the size range
+        extended_sizes = [s.strip() for s in size_range.extended_sizes.split(',')]
+        return size in extended_sizes
+    
+    # Legacy fallback: sizes like 2XL, 3XL, 4XL, 5XL are extended
+    extended_patterns = ['2XL', '3XL', '4XL', '5XL', '6XL', 'XXL', 'XXXL', 'XXXXL']
+    return size.upper() in extended_patterns
     
 
 @app.route('/admin-panel')

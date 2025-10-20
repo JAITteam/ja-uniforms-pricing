@@ -354,20 +354,82 @@
 <script>
 // Export current style to SAP B1 format
 function exportCurrentStyle() {
-    const vendorStyle = document.getElementById('vendor_style').value;
-    const styleName = document.getElementById('style_name').value;
+    // ========================================
+    // EXPORT VALIDATION - 4 REQUIREMENTS
+    // ========================================
     
-    if (!vendorStyle || !styleName) {
-        alert('⚠️ Please save the style first before exporting');
+    const vendorStyle = document.getElementById('vendor_style')?.value.trim();
+    const styleName = document.getElementById('style_name')?.value.trim();
+    
+    // Build error message for missing requirements
+    const missing = [];
+    
+    // 1. Vendor Style
+    if (!vendorStyle) {
+        missing.push('• VENDOR STYLE (Base Item #)');
+    }
+    
+    // 2. Style Name
+    if (!styleName) {
+        missing.push('• STYLE NAME');
+    }
+    
+    // 3. At least one COLOR
+    const colorList = document.getElementById('color_list');
+    const hasColors = colorList && colorList.options.length > 0;
+    if (!hasColors) {
+        missing.push('• At least ONE COLOR');
+    }
+    
+    // 4. Size Range selected
+    const sizeRange = document.getElementById('size_range_id');
+    const hasSizeRange = sizeRange && sizeRange.value;
+    if (!hasSizeRange) {
+        missing.push('• SIZE RANGE');
+    }
+    
+    // Show error if anything is missing
+    if (missing.length > 0) {
+        alert('⚠️ Cannot export! Missing required fields:\n\n' + missing.join('\n') + '\n\nPlease complete these fields and SAVE the style first.');
+        
+        // Focus on first missing field
+        if (!vendorStyle) {
+            document.getElementById('base_item_number')?.focus();
+        } else if (!styleName) {
+            document.getElementById('style_name')?.focus();
+        } else if (!hasColors) {
+            document.getElementById('color_dropdown')?.focus();
+        } else if (!hasSizeRange) {
+            document.getElementById('size_range_id')?.focus();
+        }
+        
         return;
     }
     
-    // Get the style ID from the URL or from a hidden field
+    // Check if style is saved (has URL parameter)
     const urlParams = new URLSearchParams(window.location.search);
     const currentVendorStyle = urlParams.get('vendor_style');
     
     if (!currentVendorStyle) {
-        alert('⚠️ Please save the style first. Style must be saved to get an ID for export.');
+        alert('⚠️ Style not saved yet!\n\nPlease click "Save Style" button first, then try exporting again.');
+        return;
+    }
+    
+    // Verify the saved vendor_style matches current vendor_style
+    if (currentVendorStyle !== vendorStyle) {
+        alert('⚠️ Style has been modified!\n\nPlease SAVE the style again before exporting.');
+        return;
+    }
+    
+    // ========================================
+    // PROCEED WITH EXPORT
+    // ========================================
+    
+    // Get CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    
+    if (!csrfToken) {
+        alert('❌ Security token not found. Please refresh the page and try again.');
         return;
     }
     
@@ -376,13 +438,20 @@ function exportCurrentStyle() {
     form.method = 'POST';
     form.action = '/export-sap-single-style';
     
+    // Add CSRF token
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+    
     // Add vendor_style as form data
     const input = document.createElement('input');
     input.type = 'hidden';
     input.name = 'vendor_style';
     input.value = currentVendorStyle;
-    
     form.appendChild(input);
+    
     document.body.appendChild(form);
     form.submit();
     document.body.removeChild(form);

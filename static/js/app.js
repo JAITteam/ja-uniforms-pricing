@@ -1,4 +1,26 @@
 // ============================================
+// CSRF TOKEN HELPER (MUST BE GLOBAL)
+// ============================================
+function getCsrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+}
+
+function addCsrfToFetch(options = {}) {
+    const csrfToken = getCsrfToken();
+    
+    if (!options.headers) {
+        options.headers = {};
+    }
+    
+    if (options.headers instanceof Headers) {
+        options.headers.append('X-CSRFToken', csrfToken);
+    } else {
+        options.headers['X-CSRFToken'] = csrfToken;
+    }
+    
+    return options;
+}
+// ============================================
 // CUSTOM ALERT MODAL (REPLACES BROWSER ALERTS)
 // ============================================
 window.customAlert = function(message, type = 'info') {
@@ -83,6 +105,8 @@ window.customConfirm = function(message, type = 'question') {
 // Override default alert and confirm
 window.alert = window.customAlert;
 window.confirm = window.customConfirm;
+
+
 
 
 // ============================================
@@ -558,11 +582,12 @@ document.addEventListener('DOMContentLoaded', () => {
   });
  
   // Garment type - auto-fill cleaning cost
+  // Garment type - auto-fill cleaning cost
   $('#garment_type')?.addEventListener('change', async function() {
     const garmentType = this.value;
     
     if (!garmentType) {
-      $('#cleaning_cost').value = '';
+      $('#cleaning_cost').value = '0.00';
       recalcLabor();
       return;
     }
@@ -580,12 +605,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       } else {
         console.error('API returned error status:', res.status);
-        $('#cleaning_cost').value = '';
+        $('#cleaning_cost').value = '0.00';
         recalcLabor();
       }
     } catch (e) {
       console.error('Failed to fetch cleaning cost:', e);
-      $('#cleaning_cost').value = '';
+      $('#cleaning_cost').value = '0.00';
       recalcLabor();
     }
   });
@@ -957,12 +982,53 @@ updateSizeRangeDisplay();
   toggleSave();
 
   saveBtn?.addEventListener('click', async () => {
+    // ========================================
+    // SAVE VALIDATION - 3 REQUIREMENTS
+    // ========================================
+    
+    // Build error message for missing requirements
+    const missing = [];
+    
+    // 1. Vendor Style (Base Item) is required
+    const vendorStyle = $('#vendor_style')?.value.trim();
+    if (!vendorStyle) { 
+        missing.push('• VENDOR STYLE (Base Item #)');
+    }
+    
+    // 2. Style Name is required
     const styleName = $('#style_name')?.value.trim();
     if (!styleName) { 
-      alert('Enter a Style Name before saving.'); 
-      return; 
+        missing.push('• STYLE NAME');
     }
-    // Validation for duplicated styles
+    
+    // 3. First fabric row must be complete
+    const firstFabricVendor = document.querySelector('[data-fabric-vendor-id]')?.value;
+    const firstFabric = document.querySelector('[data-fabric-id]')?.value;
+    const firstYards = document.querySelector('[data-fabric-yds]')?.value;
+    
+    if (!firstFabricVendor || !firstFabric || !firstYards) {
+        missing.push('• FIRST FABRIC ROW (Vendor, Fabric, and Yards)');
+    }
+    
+    // Show error if anything is missing
+    if (missing.length > 0) {
+        alert('⚠️ Cannot save! Missing required fields:\n\n' + missing.join('\n') + '\n\nPlease complete these fields before saving.');
+        
+        // Focus on first missing field
+        if (!vendorStyle) {
+            $('#base_item_number')?.focus();
+        } else if (!styleName) {
+            $('#style_name')?.focus();
+        } else if (!firstFabricVendor) {
+            document.querySelector('[data-fabric-vendor-id]')?.focus();
+        }
+        
+        return; 
+    }
+    
+    // ========================================
+    // DUPLICATION VALIDATION
+    // ========================================
     if (window.isDuplicating) {
         const currentVendorStyle = $('#vendor_style')?.value.trim();
         
@@ -993,6 +1059,10 @@ updateSizeRangeDisplay();
         window.isDuplicating = false;
     }
 
+    // ========================================
+    // COLLECT DATA FOR SAVE
+    // ========================================
+    
     const labor = [];
     document.querySelectorAll('[data-labor-row]').forEach(row => {
       const name = row.getAttribute('data-labor-name') || row.querySelector('label')?.textContent.trim();
@@ -1057,7 +1127,6 @@ updateSizeRangeDisplay();
       });
     }
 
-    // Collect variables - ADD THIS ENTIRE BLOCK
     const variables = [];
     const variableList = $('#variable_list');
     if (variableList) {
@@ -1072,7 +1141,7 @@ updateSizeRangeDisplay();
     const payload = {
       style: {
         style_name: styleName,
-        vendor_style: $('#vendor_style')?.value.trim() || '',
+        vendor_style: vendorStyle,
         base_item_number: $('#base_item_number')?.value.trim() || '',
         variant_code: $('#variant_code')?.value.trim() || '',
         gender: $('#gender')?.value || 'MENS',
@@ -1091,28 +1160,40 @@ updateSizeRangeDisplay();
       variables: variables
     };
 
+    // ========================================
+    // SEND SAVE REQUEST
+    // ========================================
     try {
-      const res = await fetch('/api/style/save', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(payload)
-      });
+      const res = await fetch('/api/style/save', addCsrfToFetch({
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload)
+      }));
       
       const out = await res.json().catch(() => ({}));
       
       if (res.ok && out.ok) {
-        alert(out.new ? 'Created new style!' : 'Updated style.');
+        alert(out.new ? '✅ New style created successfully!' : '✅ Style updated successfully!');
         // Set current style ID and load images
         if (out.style_id) {
           currentStyleId = out.style_id;
           await loadStyleImages(out.style_id);
         }
+        // UPDATE URL WITH VENDOR_STYLE PARAMETER (without reloading page)
+        const savedVendorStyle = $('#vendor_style')?.value.trim();
+        if (savedVendorStyle) {
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('vendor_style', savedVendorStyle);
+            window.history.pushState({}, '', newUrl);
+            
+            console.log('✅ URL updated with vendor_style:', savedVendorStyle);
+        }
       } else {
-        alert('Save failed: ' + (out.error || res.statusText));
+        alert('❌ Save failed: ' + (out.error || res.statusText));
+      }
+    } catch (error) {
+      alert('❌ Save failed: ' + error.message);
     }
-  } catch (error) {
-    alert('Save failed: ' + error.message);
-  }
 });
 
   $('#addFabric')?.addEventListener('click', () => {
@@ -1356,11 +1437,11 @@ updateSizeRangeDisplay();
     }
     
     try {
-      const res = await fetch('/api/colors', {
+      const res = await fetch('/api/colors', addCsrfToFetch({
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({name: colorName})
-      });
+    }));
       
       const data = await res.json();
       
@@ -1462,12 +1543,12 @@ updateSizeRangeDisplay();
     }
     
     try {
-      const res = await fetch('/api/variables', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({name: variableName})
-      });
-      
+      const res = await fetch('/api/variables', addCsrfToFetch({
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({name: variableName})
+      }));
+  
       const data = await res.json();
       
       if (data.success) {
@@ -1623,9 +1704,13 @@ updateSizeRangeDisplay();
       const formData = new FormData();
       formData.append('image', file);
       
+      const csrfToken = getCsrfToken();
       const res = await fetch(`/api/style/${currentStyleId}/upload-image`, {
-        method: 'POST',
-        body: formData
+          method: 'POST',
+          headers: {
+              'X-CSRFToken': csrfToken
+          },
+          body: formData
       });
       
       if (!res.ok) {
@@ -1659,9 +1744,9 @@ updateSizeRangeDisplay();
     if (!confirm('Delete this image?')) return;
     
     try {
-      const res = await fetch(`/api/style-image/${imageId}`, {
+      const res = await fetch(`/api/style-image/${imageId}`, addCsrfToFetch({
         method: 'DELETE'
-      });
+      }));
       
       if (!res.ok) throw new Error('Failed to delete image');
       

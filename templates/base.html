@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{% block title %}J.A Uniforms Pricing Tool{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -85,9 +86,35 @@
     <div class="container-fluid mt-4" style="padding: 0;">
         {% block content %}{% endblock %}
     </div>
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-     <!-- Custom Alert Modal -->
+    
+    <!-- CSRF Token Setup for AJAX -->
+    <script>
+    // Setup CSRF token for all fetch requests
+    (function() {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        
+        // Override fetch to include CSRF token
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options = {}) {
+            // Add CSRF token to POST, PUT, DELETE, PATCH requests
+            if (options.method && options.method.toUpperCase() !== 'GET') {
+                options.headers = options.headers || {};
+                
+                if (options.headers instanceof Headers) {
+                    options.headers.append('X-CSRFToken', csrfToken);
+                } else {
+                    options.headers['X-CSRFToken'] = csrfToken;
+                }
+            }
+            return originalFetch(url, options);
+        };
+    })();
+    </script>
+    
+    <!-- Custom Alert Modal -->
     <div id="customAlertModal" class="custom-alert-modal">
         <div class="custom-alert-content">
             <div class="custom-alert-icon" id="alertIcon"></div>
