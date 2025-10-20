@@ -799,6 +799,110 @@ def export_sap_format():
         print(traceback.format_exc())
         return f"Error exporting: {str(e)}", 500
     
+@app.route('/export-sap-single-style', methods=['POST'])
+def export_sap_single_style():
+    """Export a single style in SAP B1 format"""
+    try:
+        vendor_style = request.form.get('vendor_style')
+        
+        if not vendor_style:
+            return "No style specified", 400
+        
+        # Get the style
+        style = Style.query.filter_by(vendor_style=vendor_style).first()
+        
+        if not style:
+            return "Style not found", 404
+        
+        # Create CSV in memory
+        output = StringIO()
+        writer = csv.writer(output)
+        
+        # Headers (row 1 and 2 are identical)
+        headers = ['Code', 'Name', 'U_COLOR', 'U_SIZE', 'U_VARIABLE', 
+                   'U_PRICE', 'U_SHIP_COST', 'U_STYLE', 'U_CardCode', 'U_PROD_NAME']
+        writer.writerow(headers)
+        writer.writerow(headers)  # Duplicate header row
+        
+        # Get base cost
+        base_cost = style.get_total_cost()
+        
+        # Parse sizes
+        sizes = parse_size_range(style.size_range)
+        if not sizes:
+            sizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL']  # Default
+        
+        # Get colors (from style_colors relationship)
+        colors = [sc.color.name.upper() for sc in style.colors] if style.colors else ['BLACK']
+        
+        # Get variables (from style_variables if exists)
+        variables = []
+        if hasattr(style, 'style_variables'):
+            variables = [sv.variable.name.upper() for sv in style.style_variables]
+        
+        # Get vendor code from fabric vendor (first fabric's vendor)
+        vendor_code = 'V100'  # Default
+        if style.style_fabrics and style.style_fabrics[0].fabric.fabric_vendor:
+            vendor_code = style.style_fabrics[0].fabric.fabric_vendor.vendor_code
+        
+        # Remove hyphens from vendor style
+        u_style = style.vendor_style.replace('-', '')
+        
+        # Shipping cost
+        shipping_cost = style.shipping_cost if hasattr(style, 'shipping_cost') else 0.00
+        
+        # Generate rows: Colors × Sizes × Variables
+        for color in colors:
+            for size in sizes:
+                # Calculate price based on size
+                if is_extended_size(size):
+                    price = round(base_cost * 1.15, 2)  # Extended size markup
+                else:
+                    price = round(base_cost, 2)  # Regular size
+                
+                if variables:
+                    # If has variables, generate row for each variable
+                    for variable in variables:
+                        writer.writerow([
+                            '',  # Code (blank)
+                            '',  # Name (blank)
+                            color,  # U_COLOR
+                            size,  # U_SIZE
+                            variable,  # U_VARIABLE
+                            price,  # U_PRICE
+                            shipping_cost,  # U_SHIP_COST
+                            u_style,  # U_STYLE
+                            vendor_code,  # U_CardCode
+                            style.style_name  # U_PROD_NAME
+                        ])
+                    
+                    # Also add row with blank variable
+                    writer.writerow([
+                        '', '', color, size, '', price, shipping_cost,
+                        u_style, vendor_code, style.style_name
+                    ])
+                else:
+                    # No variables, just one row per color-size combination
+                    writer.writerow([
+                        '', '', color, size, '', price, shipping_cost,
+                        u_style, vendor_code, style.style_name
+                    ])
+        
+        # Prepare download
+        output.seek(0)
+        filename = f"SAP_{style.vendor_style}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment; filename={filename}'}
+        )
+        
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return f"Error exporting: {str(e)}", 500
+    
 
 @app.route('/admin-panel')
 def admin_panel():

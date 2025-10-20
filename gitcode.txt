@@ -9,3 +9,5 @@ git commit -m "Describe your changes here"
 
 # 4. Push to your remote repository (e.g., GitHub)
 git push origin main
+
+.\.venv\Scripts\Activate.ps1    

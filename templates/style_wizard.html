@@ -10,12 +10,12 @@
       </svg>
       Save Style
     </button>
-    <button class="btn btn-outline-secondary btn-pill" disabled title="Coming soon">
+    <button class="btn btn-outline-secondary btn-pill" onclick="exportCurrentStyle()">
       <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
         <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
         <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
       </svg>
-      Export CSV
+      Export
     </button>
   </div>
   
@@ -89,7 +89,7 @@
         <div class="kv">
           <label>Vendor</label>
           <select class="form-select md" data-fabric-vendor-id>
-            <option value="">Select Vendor</option>
+            <option value="">Select Fabric Vendor</option>
             {% for v in fabric_vendors %}
             <option value="{{ v.id }}">{{ v.name }}</option>
             {% endfor %}
@@ -126,7 +126,7 @@
         <div class="kv">
           <label>Vendor</label>
           <select class="form-select md" data-notion-vendor-id>
-            <option value="">Select Vendor</option>
+            <option value="">Select Notion Vendor</option>
             {% for v in notion_vendors %}
             <option value="{{ v.id }}">{{ v.name }}</option>
             {% endfor %}
@@ -350,5 +350,44 @@
   <span class="close-modal" onclick="closeImageModal()">&times;</span>
   <img id="modalImage" src="" alt="Zoomed image">
 </div>
+
+<script>
+// Export current style to SAP B1 format
+function exportCurrentStyle() {
+    const vendorStyle = document.getElementById('vendor_style').value;
+    const styleName = document.getElementById('style_name').value;
+    
+    if (!vendorStyle || !styleName) {
+        alert('⚠️ Please save the style first before exporting');
+        return;
+    }
+    
+    // Get the style ID from the URL or from a hidden field
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentVendorStyle = urlParams.get('vendor_style');
+    
+    if (!currentVendorStyle) {
+        alert('⚠️ Please save the style first. Style must be saved to get an ID for export.');
+        return;
+    }
+    
+    // Create a form and submit to the export endpoint
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/export-sap-single-style';
+    
+    // Add vendor_style as form data
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'vendor_style';
+    input.value = currentVendorStyle;
+    
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+}
+</script>
+
 
 {% endblock %}
