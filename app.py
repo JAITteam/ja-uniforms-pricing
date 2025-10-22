@@ -729,329 +729,230 @@ def handle_color(color_id):
         db.session.commit()
         return jsonify({'success': True})
 
-# Helper function to parse size range
-def parse_size_range(size_range):
-    """Parse size range string into individual sizes"""
-    if not size_range:
-        return []
-    
-    # Remove spaces and convert to uppercase
-    size_range = size_range.upper().strip()
-    
-    # All possible sizes in order
-    all_sizes = ['XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL']
-    
-    # Parse range (e.g., "S-4XL" or "XS-XL")
-    if '-' in size_range:
-        parts = size_range.split('-')
-        start_size = parts[0].strip()
-        end_size = parts[1].strip()
-        
-        try:
-            start_idx = all_sizes.index(start_size)
-            end_idx = all_sizes.index(end_size)
-            return all_sizes[start_idx:end_idx + 1]
-        except ValueError:
-            return []
-    else:
-        # Single size or comma-separated
-        return [s.strip() for s in size_range.split(',')]
+# ===== Extended-size + Range helpers (robust) =====
 
-# Helper to determine if size is extended
-def is_extended_size(size):
-    """Check if size is extended (2XL and above)"""
-    extended = ['2XL', '3XL', '4XL', '5XL']
-    return size in extended
+def _normalize_size_token(tok: str) -> str:
+    """Normalize a size label to compare safely, e.g. '3x' -> '3XL'."""
+    if tok is None:
+        return ''
+    s = tok.strip().upper().replace(' ', '')
+    # Treat '3X' as '3XL'
+    if s.endswith('X') and not s.endswith('XL'):
+        s = s + 'L'
+    return s
+
+_ALPHA_LADDER = ["XXS","XS","S","M","L","XL","2XL","3XL","4XL","5XL","6XL"]
+
+def _expand_alpha_range(a: str, b: str):
+    A = _normalize_size_token(a); B = _normalize_size_token(b)
+    try:
+        ia, ib = _ALPHA_LADDER.index(A), _ALPHA_LADDER.index(B)
+    except ValueError:
+        return [A, B] if A != B else [A]
+    return _ALPHA_LADDER[ia:ib+1] if ia <= ib else list(reversed(_ALPHA_LADDER[ib:ia+1]))
+
+def _expand_numeric_range(a: str, b: str):
+    """
+    Expand numeric ranges with step=2.
+      - Special case: if start token is '00', return ['00', '0', '2', '4', ...]
+        (no padding after the first '00').
+      - Otherwise, preserve zero-padding width of endpoints.
+      - Inclusive of end when the step lands on it.
+    Examples:
+      '00-30' -> ['00','0','2','4','6','8','10','12','14','16','18','20','22','24','26','28','30']
+      '00-32' -> ['00','0','2','4','6','8','10','12','14','16','18','20','22','24','26','28','30','32']
+      '32-60' -> ['32','34','36','38','40','42','44','46','48','50','52','54','56','58','60']
+    """
+    sa, sb = a.strip(), b.strip()
+    try:
+        ia, ib = int(sa), int(sb)
+    except ValueError:
+        return [_normalize_size_token(a), _normalize_size_token(b)]
+
+    # Special rule: starting at '00' ⇒ include '00' then unpadded evens from 0
+    if sa == "00":
+        start, end = (ia, ib) if ia <= ib else (ib, ia)  # support reversed just in case
+        # Start from 0 and step by 2 up to end (inclusive if even)
+        tail = [str(n) for n in range(0, end + 1, 2)]
+        # Put '00' first; if tail starts with '0', keep both '00' and '0'
+        return ["00"] + tail
+
+    # General rule (non '00' starts): preserve padding width
+    width = max(len(sa), len(sb))
+    step = 2
+    if ia <= ib:
+        seq = range(ia, ib + 1, step)
+    else:
+        seq = range(ia, ib - 1, -step)
+
+    return [str(n).zfill(width) for n in seq]
+
+
+def _expand_mixed_token(token: str):
+    t = token.strip()
+    if not t:
+        return []
+    if '-' in t:
+        left, right = [x.strip() for x in t.split('-', 1)]
+        if any(c.isalpha() for c in left+right):
+            return _expand_alpha_range(left, right)
+        return _expand_numeric_range(left, right)
+    s = _normalize_size_token(t)
+    return [s] if s else []
+
+def expand_sizes_string(s: str):
+    """'XS-XL, 2XL-6XL' or '00-18, 20-30' -> flat list of sizes."""
+    if not s:
+        return []
+    out = []
+    for part in s.split(','):
+        out.extend(_expand_mixed_token(part))
+    # de-dup preserving order
+    seen, flat = set(), []
+    for x in out:
+        if x not in seen:
+            seen.add(x); flat.append(x)
+    return flat
+
+def is_extended_size_for_range(size_label: str, size_range_obj) -> bool:
+    """True if size_label is inside size_range_obj.extended_sizes (supports ranges)."""
+    if size_range_obj is None:
+        return False
+    ext_list = expand_sizes_string(getattr(size_range_obj, 'extended_sizes', '') or '')
+    if not ext_list:
+        return False
+    return _normalize_size_token(size_label) in ext_list
 
 @app.route('/export-sap-format', methods=['POST'])
 def export_sap_format():
-    """Export selected styles in SAP B1 format"""
+    """Export selected styles in SAP B1 format (bulk)"""
     try:
         import json
         style_ids = json.loads(request.form.get('style_ids', '[]'))
-        
         if not style_ids:
             return "No styles selected", 400
-        
-        # Get selected styles
+
         styles = Style.query.filter(Style.id.in_(style_ids)).all()
-        
-        # Create CSV in memory
         output = StringIO()
         writer = csv.writer(output)
-        
-        # Headers (row 1 and 2 are identical)
-        headers = ['Code', 'Name', 'U_COLOR', 'U_SIZE', 'U_VARIABLE', 
+
+        headers = ['Code', 'Name', 'U_COLOR', 'U_SIZE', 'U_VARIABLE',
                    'U_PRICE', 'U_SHIP_COST', 'U_STYLE', 'U_CardCode', 'U_PROD_NAME']
         writer.writerow(headers)
-        writer.writerow(headers)  # Duplicate header row
-        
-        # Generate rows for each style
+        writer.writerow(headers)
+
         for style in styles:
-            # Get base cost
             base_cost = style.get_total_cost()
-            
-            # Parse sizes
-            sizes = parse_size_range(style.size_range)
-            if not sizes:
-                sizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL']  # Default
-            
-            # Get colors (from style_colors relationship)
+            from models import SizeRange
+            size_range_obj = SizeRange.query.filter_by(name=style.size_range).first() if style.size_range else None
+
+            extended_pct = (size_range_obj.extended_markup_percent
+                            if (size_range_obj and size_range_obj.extended_markup_percent is not None)
+                            else 15.0)
+            extended_mult = 1.0 + (float(extended_pct) / 100.0)
+
+            regular_list = expand_sizes_string(getattr(size_range_obj, 'regular_sizes', '') or '')
+            extended_list = expand_sizes_string(getattr(size_range_obj, 'extended_sizes', '') or '')
+            all_sizes = regular_list + [s for s in extended_list if s not in regular_list]
+            if not all_sizes:
+                all_sizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL']
+
             colors = [sc.color.name.upper() for sc in style.colors] if style.colors else ['BLACK']
-            
-            # Get variables (from style_variables if exists)
-            variables = []
-            if hasattr(style, 'style_variables'):
-                variables = [sv.variable.name.upper() for sv in style.style_variables]
-            
-            # Get vendor code from fabric vendor (first fabric's vendor)
-            vendor_code = 'V100'  # Default
+            variables = [sv.variable.name.upper() for sv in style.style_variables] if hasattr(style, 'style_variables') else []
+            vendor_code = 'V100'
             if style.style_fabrics and style.style_fabrics[0].fabric.fabric_vendor:
                 vendor_code = style.style_fabrics[0].fabric.fabric_vendor.vendor_code
-            
-            # Remove hyphens from vendor style
+
             u_style = style.vendor_style.replace('-', '')
-            
-            # Shipping cost
             shipping_cost = style.shipping_cost if hasattr(style, 'shipping_cost') else 0.00
-            
-            # Generate rows: Colors × Sizes × Variables
+
             for color in colors:
-                for size in sizes:
-                    # Calculate price based on size
-                    if is_extended_size(size):
-                        price = round(base_cost * 1.15, 2)  # Extended size markup
-                    else:
-                        price = round(base_cost, 2)  # Regular size
-                    
+                for size in all_sizes:
+                    price = round(base_cost * extended_mult, 2) if is_extended_size_for_range(size, size_range_obj) else round(base_cost, 2)
                     if variables:
-                        # If has variables, generate row for each variable
                         for variable in variables:
-                            writer.writerow([
-                                '',  # Code (blank)
-                                '',  # Name (blank)
-                                color,  # U_COLOR
-                                size,  # U_SIZE
-                                variable,  # U_VARIABLE
-                                price,  # U_PRICE
-                                shipping_cost,  # U_SHIP_COST
-                                u_style,  # U_STYLE
-                                vendor_code,  # U_CardCode
-                                style.style_name  # U_PROD_NAME
-                            ])
-                        
-                        # Also add row with blank variable
-                        writer.writerow([
-                            '', '', color, size, '', price, shipping_cost,
-                            u_style, vendor_code, style.style_name
-                        ])
+                            writer.writerow(['', '', color, size, variable, price, shipping_cost, u_style, vendor_code, style.style_name])
+                        writer.writerow(['', '', color, size, '', price, shipping_cost, u_style, vendor_code, style.style_name])
                     else:
-                        # No variables, just one row per color-size combination
-                        writer.writerow([
-                            '', '', color, size, '', price, shipping_cost,
-                            u_style, vendor_code, style.style_name
-                        ])
-        
-        # Prepare download
+                        writer.writerow(['', '', color, size, '', price, shipping_cost, u_style, vendor_code, style.style_name])
+
         output.seek(0)
         filename = f"SAP_Export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        
-        return Response(
-            output.getvalue(),
-            mimetype='text/csv',
-            headers={'Content-Disposition': f'attachment; filename={filename}'}
-        )
-        
+        return Response(output.getvalue(), mimetype='text/csv',
+                        headers={'Content-Disposition': f'attachment; filename={filename}'})
+
     except Exception as e:
         import traceback
         print(traceback.format_exc())
         return f"Error exporting: {str(e)}", 500
-
-
-
-# ========================================
-# EXPORT ROUTE WITH DYNAMIC MARKUP
-# ========================================
-
 @app.route('/export-sap-single-style', methods=['POST'])
 def export_sap_single_style():
-    """Export a single style in SAP B1 format"""
+    """Export a single style in SAP B1 format with dynamic extended markup"""
     try:
         vendor_style = request.form.get('vendor_style')
-        
         if not vendor_style:
             return "No style specified", 400
-        
-        # Get the style
+
         style = Style.query.filter_by(vendor_style=vendor_style).first()
-        
         if not style:
             return "Style not found", 404
-        
-        # Create CSV in memory
+
         output = StringIO()
         writer = csv.writer(output)
-        
-        # Headers (row 1 and 2 are identical)
-        headers = ['Code', 'Name', 'U_COLOR', 'U_SIZE', 'U_VARIABLE', 
+
+        headers = ['Code', 'Name', 'U_COLOR', 'U_SIZE', 'U_VARIABLE',
                    'U_PRICE', 'U_SHIP_COST', 'U_STYLE', 'U_CardCode', 'U_PROD_NAME']
         writer.writerow(headers)
-        writer.writerow(headers)  # Duplicate header row
-        
-        # Get base cost
+        writer.writerow(headers)
+
         base_cost = style.get_total_cost()
-        
-        # ========================================
-        # GET DYNAMIC MARKUP FROM SIZE RANGE
-        # ========================================
-        size_range = SizeRange.query.filter_by(name=style.size_range).first()
-        extended_markup_percent = 15  # Default fallback
-        
-        if size_range:
-            extended_markup_percent = size_range.extended_markup_percent
-        
-        # Convert percentage to multiplier (20% = 1.20, 15% = 1.15)
-        extended_multiplier = 1 + (extended_markup_percent / 100)
-        
-        # Parse sizes
-        sizes = parse_size_range(style.size_range)
-        if not sizes:
-            sizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL']  # Default
-        
-        # Get colors (from style_colors relationship)
+        from models import SizeRange
+        size_range_obj = SizeRange.query.filter_by(name=style.size_range).first() if style.size_range else None
+
+        extended_pct = (size_range_obj.extended_markup_percent
+                        if (size_range_obj and size_range_obj.extended_markup_percent is not None)
+                        else 15.0)
+        extended_mult = 1.0 + (float(extended_pct) / 100.0)
+
+        regular_list = expand_sizes_string(getattr(size_range_obj, 'regular_sizes', '') or '')
+        extended_list = expand_sizes_string(getattr(size_range_obj, 'extended_sizes', '') or '')
+        all_sizes = regular_list + [s for s in extended_list if s not in regular_list]
+        if not all_sizes:
+            all_sizes = ['OSFM']
+
         colors = [sc.color.name.upper() for sc in style.colors] if style.colors else ['BLACK']
-        
-        # Get variables (from style_variables if exists)
-        variables = []
-        if hasattr(style, 'style_variables'):
-            variables = [sv.variable.name.upper() for sv in style.style_variables]
-        
-        # Get vendor code from fabric vendor (first fabric's vendor)
-        vendor_code = 'V100'  # Default
+        variables = [sv.variable.name.upper() for sv in style.style_variables] if hasattr(style, 'style_variables') else []
+        vendor_code = 'V100'
         if style.style_fabrics and style.style_fabrics[0].fabric.fabric_vendor:
             vendor_code = style.style_fabrics[0].fabric.fabric_vendor.vendor_code
-        
-        # Remove hyphens from vendor style
+
         u_style = style.vendor_style.replace('-', '')
-        
-        # Shipping cost
         shipping_cost = style.shipping_cost if hasattr(style, 'shipping_cost') else 0.00
-        
-        # Generate rows: Colors × Sizes × Variables
+
         for color in colors:
-            for size in sizes:
-                # ========================================
-                # CALCULATE PRICE WITH DYNAMIC MARKUP
-                # ========================================
-                if is_extended_size(size, size_range):
-                    price = round(base_cost * extended_multiplier, 2)  # Use dynamic markup
+            for size in all_sizes:
+                if is_extended_size_for_range(size, size_range_obj):
+                    price = round(base_cost * extended_mult, 2)
                 else:
-                    price = round(base_cost, 2)  # Regular size
-                
+                    price = round(base_cost, 2)
+
                 if variables:
-                    # If has variables, generate row for each variable
                     for variable in variables:
-                        writer.writerow([
-                            '',  # Code (blank)
-                            '',  # Name (blank)
-                            color,  # U_COLOR
-                            size,  # U_SIZE
-                            variable,  # U_VARIABLE
-                            price,  # U_PRICE
-                            shipping_cost,  # U_SHIP_COST
-                            u_style,  # U_STYLE
-                            vendor_code,  # U_CardCode
-                            style.style_name  # U_PROD_NAME
-                        ])
-                    
-                    # Also add row with blank variable
-                    writer.writerow([
-                        '', '', color, size, '', price, shipping_cost,
-                        u_style, vendor_code, style.style_name
-                    ])
+                        writer.writerow(['', '', color, size, variable, price, shipping_cost, u_style, vendor_code, style.style_name])
+                    writer.writerow(['', '', color, size, '', price, shipping_cost, u_style, vendor_code, style.style_name])
                 else:
-                    # No variables, just one row per color-size combination
-                    writer.writerow([
-                        '', '', color, size, '', price, shipping_cost,
-                        u_style, vendor_code, style.style_name
-                    ])
-        
-        # Prepare download
+                    writer.writerow(['', '', color, size, '', price, shipping_cost, u_style, vendor_code, style.style_name])
+
         output.seek(0)
         filename = f"SAP_{style.vendor_style}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        
-        return Response(
-            output.getvalue(),
-            mimetype='text/csv',
-            headers={'Content-Disposition': f'attachment; filename={filename}'}
-        )
-        
+        return Response(output.getvalue(), mimetype='text/csv',
+                        headers={'Content-Disposition': f'attachment; filename={filename}'})
+
     except Exception as e:
         import traceback
         print(traceback.format_exc())
         return f"Error exporting: {str(e)}", 500
 
-
-# ========================================
-# HELPER FUNCTION - UPDATE THIS TOO
-# ========================================
-def is_extended_size(size, size_range=None):
-    """
-    Check if a size is an extended size based on the size range.
-    If size_range object is provided, check against its extended_sizes.
-    Otherwise, use legacy logic.
-    """
-    if size_range and size_range.extended_sizes:
-        # Parse extended sizes from the size range
-        extended_sizes = [s.strip() for s in size_range.extended_sizes.split(',')]
-        return size in extended_sizes
-    
-    # Legacy fallback: sizes like 2XL, 3XL, 4XL, 5XL are extended
-    extended_patterns = ['2XL', '3XL', '4XL', '5XL', '6XL', 'XXL', 'XXXL', 'XXXXL']
-    return size.upper() in extended_patterns
-    
-
-@app.route('/admin-panel')
-def admin_panel():
-    # Check if we have any styles
-    styles_count = Style.query.count()
-    fabrics_count = Fabric.query.count()
-    notions_count = Notion.query.count()
-    labor_ops_count = LaborOperation.query.count()
-    
-    html = f"""
-    <div style="max-width: 1000px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
-        <h1>J.A Uniforms - Admin Panel</h1>
-        
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 30px 0;">
-            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; text-align: center;">
-                <h3>Styles</h3>
-                <p style="font-size: 24px; color: #007bff;">{styles_count}</p>
-            </div>
-            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; text-align: center;">
-                <h3>Fabrics</h3>
-                <p style="font-size: 24px; color: #28a745;">{fabrics_count}</p>
-            </div>
-            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; text-align: center;">
-                <h3>Notions</h3>
-                <p style="font-size: 24px; color: #ffc107;">{notions_count}</p>
-            </div>
-            <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; text-align: center;">
-                <h3>Labor Operations</h3>
-                <p style="font-size: 24px; color: #dc3545;">{labor_ops_count}</p>
-            </div>
-        </div>
-        
-        <div style="margin: 30px 0;">
-            <h2>Quick Actions</h2>
-            <a href="/view-all-styles" style="display: inline-block; background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 5px;">View All Styles</a>
-            <a href="/master-costs" style="display: inline-block; background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 5px;">Master Costs</a>
-            <a href="/import-excel" style="display: inline-block; background-color: #ffc107; color: black; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 5px;">Import Excel</a>
-            <a href="/" style="display: inline-block; background-color: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin: 5px;">Back to Search</a>
-        </div>
-    </div>
-    """
-    return html
 
 @app.route('/view-all-styles')
 def view_all_styles():
