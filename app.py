@@ -731,37 +731,93 @@ def handle_color(color_id):
 
 # Helper function to parse size range
 def parse_size_range(size_range):
-    """Parse size range string into individual sizes"""
+    """Parse size range string into individual sizes (supports alpha and numeric ranges)."""
     if not size_range:
         return []
-    
-    # Remove spaces and convert to uppercase
-    size_range = size_range.upper().strip()
-    
-    # All possible sizes in order
-    all_sizes = ['XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL']
-    
-    # Parse range (e.g., "S-4XL" or "XS-XL")
-    if '-' in size_range:
-        parts = size_range.split('-')
-        start_size = parts[0].strip()
-        end_size = parts[1].strip()
-        
-        try:
-            start_idx = all_sizes.index(start_size)
-            end_idx = all_sizes.index(end_size)
-            return all_sizes[start_idx:end_idx + 1]
-        except ValueError:
-            return []
-    else:
-        # Single size or comma-separated
-        return [s.strip() for s in size_range.split(',')]
+    return expand_size_string(size_range)
 
 # Helper to determine if size is extended
 def is_extended_size(size):
     """Check if size is extended (2XL and above)"""
     extended = ['2XL', '3XL', '4XL', '5XL']
     return size in extended
+
+# ===== Enhanced size parsing helpers =====
+def _expand_size_token(token):
+    """Expand a single token which may be a single size or a range like 'XS-XL' or '20-30'."""
+    if not token:
+        return []
+    token = token.strip().upper()
+    # Canonicalize common synonyms
+    synonyms = {
+        'XXL': '2XL', 'XXXL': '3XL', 'XXXXL': '4XL', 'XXXXXL': '5XL', 'XXXXXXL': '6XL',
+        '2X': '2XL', '3X': '3XL', '4X': '4XL', '5X': '5XL', '6X': '6XL'
+    }
+    def canon(s):
+        return synonyms.get(s, s)
+    if '-' in token:
+        start, end = [canon(t.strip()) for t in token.split('-', 1)]
+        # Ordered alpha sizes
+        alpha_order = ['XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', '6XL']
+        # Alpha range
+        if start in alpha_order and end in alpha_order:
+            try:
+                si = alpha_order.index(start)
+                ei = alpha_order.index(end)
+                if si <= ei:
+                    return alpha_order[si:ei+1]
+                else:
+                    return list(reversed(alpha_order[ei:si+1]))
+            except ValueError:
+                return []
+        # Numeric range (e.g., 00-30 or 4-18)
+        if start.isdigit() and end.isdigit():
+            try:
+                # Preserve zero-padding width from the start token if present
+                pad = max(len(start), len(end))
+                s = int(start)
+                e = int(end)
+                if s <= e:
+                    # If both bounds are even, step by 2 (typical apparel numeric sizes); otherwise step by 1
+                    step = 2 if (s % 2 == 0 and e % 2 == 0) else 1
+                    return [str(i).zfill(pad) for i in range(s, e + 1, step)]
+                else:
+                    step = -2 if (s % 2 == 0 and e % 2 == 0) else -1
+                    return [str(i).zfill(pad) for i in range(s, e - 1, step)]
+            except ValueError:
+                return []
+        return []
+    # Single value
+    return [canon(token)]
+
+def expand_size_string(size_string):
+    """Expand a size string that may contain commas and ranges into a list of sizes in order."""
+    if not size_string:
+        return []
+    sizes = []
+    for raw in size_string.split(','):
+        sizes.extend(_expand_size_token(raw))
+    # Deduplicate while preserving order
+    seen = set()
+    deduped = []
+    for s in sizes:
+        if s not in seen:
+            seen.add(s)
+            deduped.append(s)
+    return deduped
+
+def get_sizes_for_style(style):
+    """Resolve sizes for a style using its linked SizeRange record if available; otherwise parse text."""
+    try:
+        sr = SizeRange.query.filter_by(name=style.size_range).first()
+    except Exception:
+        sr = None
+    if sr:
+        regular = expand_size_string(sr.regular_sizes)
+        extended = expand_size_string(sr.extended_sizes) if sr.extended_sizes else []
+        return regular + [s for s in extended if s not in regular]
+    # Fallback to textual parse
+    return parse_size_range(style.size_range)
 
 @app.route('/export-sap-format', methods=['POST'])
 def export_sap_format():
@@ -791,8 +847,13 @@ def export_sap_format():
             # Get base cost
             base_cost = style.get_total_cost()
             
-            # Parse sizes
-            sizes = parse_size_range(style.size_range)
+            # Determine size range object and dynamic markup
+            size_range_obj = SizeRange.query.filter_by(name=style.size_range).first()
+            extended_markup_percent = float(size_range_obj.extended_markup_percent) if size_range_obj else 15.0
+            extended_multiplier = 1 + (extended_markup_percent / 100.0)
+
+            # Resolve sizes (from SizeRange if available)
+            sizes = get_sizes_for_style(style)
             if not sizes:
                 sizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL']  # Default
             
@@ -818,11 +879,11 @@ def export_sap_format():
             # Generate rows: Colors × Sizes × Variables
             for color in colors:
                 for size in sizes:
-                    # Calculate price based on size
-                    if is_extended_size(size):
-                        price = round(base_cost * 1.15, 2)  # Extended size markup
+                    # Calculate price based on size using dynamic markup and extended detection
+                    if is_extended_size(size, size_range_obj):
+                        price = round(base_cost * extended_multiplier, 2)
                     else:
-                        price = round(base_cost, 2)  # Regular size
+                        price = round(base_cost, 2)
                     
                     if variables:
                         # If has variables, generate row for each variable
@@ -913,8 +974,8 @@ def export_sap_single_style():
         # Convert percentage to multiplier (20% = 1.20, 15% = 1.15)
         extended_multiplier = 1 + (extended_markup_percent / 100)
         
-        # Parse sizes
-        sizes = parse_size_range(style.size_range)
+        # Resolve sizes from SizeRange if available
+        sizes = get_sizes_for_style(style)
         if not sizes:
             sizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL']  # Default
         
@@ -1002,9 +1063,9 @@ def is_extended_size(size, size_range=None):
     Otherwise, use legacy logic.
     """
     if size_range and size_range.extended_sizes:
-        # Parse extended sizes from the size range
-        extended_sizes = [s.strip() for s in size_range.extended_sizes.split(',')]
-        return size in extended_sizes
+        # Parse/expand extended sizes from the size range
+        extended_sizes = expand_size_string(size_range.extended_sizes)
+        return size.upper() in extended_sizes
     
     # Legacy fallback: sizes like 2XL, 3XL, 4XL, 5XL are extended
     extended_patterns = ['2XL', '3XL', '4XL', '5XL', '6XL', 'XXL', 'XXXL', 'XXXXL']
