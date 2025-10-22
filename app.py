@@ -738,8 +738,8 @@ def parse_size_range(size_range):
     # Remove spaces and convert to uppercase
     size_range = size_range.upper().strip()
     
-    # All possible sizes in order
-    all_sizes = ['XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL']
+    # All possible sizes in order - extended list to handle more sizes
+    all_sizes = ['XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', '6XL', '7XL', '8XL', '9XL', '10XL']
     
     # Parse range (e.g., "S-4XL" or "XS-XL")
     if '-' in size_range:
@@ -752,16 +752,35 @@ def parse_size_range(size_range):
             end_idx = all_sizes.index(end_size)
             return all_sizes[start_idx:end_idx + 1]
         except ValueError:
+            # If size not found in predefined list, try to handle numeric sizes
+            try:
+                # Handle numeric sizes like "00-30" or "2-20"
+                if start_size.isdigit() and end_size.isdigit():
+                    start_num = int(start_size)
+                    end_num = int(end_size)
+                    return [str(i) for i in range(start_num, end_num + 1)]
+            except:
+                pass
             return []
     else:
         # Single size or comma-separated
         return [s.strip() for s in size_range.split(',')]
 
 # Helper to determine if size is extended
-def is_extended_size(size):
-    """Check if size is extended (2XL and above)"""
-    extended = ['2XL', '3XL', '4XL', '5XL']
-    return size in extended
+def is_extended_size(size, size_range=None):
+    """
+    Check if a size is an extended size based on the size range.
+    If size_range object is provided, check against its extended_sizes.
+    Otherwise, use legacy logic.
+    """
+    if size_range and size_range.extended_sizes:
+        # Parse extended sizes from the size range
+        extended_sizes = [s.strip() for s in size_range.extended_sizes.split(',')]
+        return size in extended_sizes
+    
+    # Legacy fallback: sizes like 2XL, 3XL, 4XL, 5XL are extended
+    extended_patterns = ['2XL', '3XL', '4XL', '5XL', '6XL', '7XL', '8XL', '9XL', '10XL', 'XXL', 'XXXL', 'XXXXL']
+    return size.upper() in extended_patterns
 
 @app.route('/export-sap-format', methods=['POST'])
 def export_sap_format():
@@ -791,6 +810,18 @@ def export_sap_format():
             # Get base cost
             base_cost = style.get_total_cost()
             
+            # ========================================
+            # GET DYNAMIC MARKUP FROM SIZE RANGE
+            # ========================================
+            size_range = SizeRange.query.filter_by(name=style.size_range).first()
+            extended_markup_percent = 15  # Default fallback
+            
+            if size_range:
+                extended_markup_percent = size_range.extended_markup_percent
+            
+            # Convert percentage to multiplier (20% = 1.20, 15% = 1.15)
+            extended_multiplier = 1 + (extended_markup_percent / 100)
+            
             # Parse sizes
             sizes = parse_size_range(style.size_range)
             if not sizes:
@@ -818,9 +849,11 @@ def export_sap_format():
             # Generate rows: Colors × Sizes × Variables
             for color in colors:
                 for size in sizes:
-                    # Calculate price based on size
-                    if is_extended_size(size):
-                        price = round(base_cost * 1.15, 2)  # Extended size markup
+                    # ========================================
+                    # CALCULATE PRICE WITH DYNAMIC MARKUP
+                    # ========================================
+                    if is_extended_size(size, size_range):
+                        price = round(base_cost * extended_multiplier, 2)  # Use dynamic markup
                     else:
                         price = round(base_cost, 2)  # Regular size
                     
@@ -993,22 +1026,8 @@ def export_sap_single_style():
 
 
 # ========================================
-# HELPER FUNCTION - UPDATE THIS TOO
+# HELPER FUNCTION - ALREADY DEFINED ABOVE
 # ========================================
-def is_extended_size(size, size_range=None):
-    """
-    Check if a size is an extended size based on the size range.
-    If size_range object is provided, check against its extended_sizes.
-    Otherwise, use legacy logic.
-    """
-    if size_range and size_range.extended_sizes:
-        # Parse extended sizes from the size range
-        extended_sizes = [s.strip() for s in size_range.extended_sizes.split(',')]
-        return size in extended_sizes
-    
-    # Legacy fallback: sizes like 2XL, 3XL, 4XL, 5XL are extended
-    extended_patterns = ['2XL', '3XL', '4XL', '5XL', '6XL', 'XXL', 'XXXL', 'XXXXL']
-    return size.upper() in extended_patterns
     
 
 @app.route('/admin-panel')
