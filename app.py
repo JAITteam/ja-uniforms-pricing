@@ -730,20 +730,37 @@ def handle_color(color_id):
         return jsonify({'success': True})
 
 # Helper function to parse size range
-def parse_size_range(size_range):
-    """Parse size range string into individual sizes"""
-    if not size_range:
+def parse_size_range(size_range_name, size_range_obj=None):
+    """Parse size range into individual sizes using SizeRange table data"""
+    if not size_range_name:
         return []
     
-    # Remove spaces and convert to uppercase
-    size_range = size_range.upper().strip()
+    # If we have a SizeRange object, use its data
+    if size_range_obj:
+        sizes = []
+        if size_range_obj.regular_sizes:
+            sizes.extend([s.strip() for s in size_range_obj.regular_sizes.split(',')])
+        if size_range_obj.extended_sizes:
+            sizes.extend([s.strip() for s in size_range_obj.extended_sizes.split(',')])
+        return sizes
     
-    # All possible sizes in order
+    # Fallback: try to find SizeRange by name
+    size_range = SizeRange.query.filter_by(name=size_range_name).first()
+    if size_range:
+        sizes = []
+        if size_range.regular_sizes:
+            sizes.extend([s.strip() for s in size_range.regular_sizes.split(',')])
+        if size_range.extended_sizes:
+            sizes.extend([s.strip() for s in size_range.extended_sizes.split(',')])
+        return sizes
+    
+    # Legacy fallback: parse the string directly
+    size_range_str = size_range_name.upper().strip()
     all_sizes = ['XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL']
     
     # Parse range (e.g., "S-4XL" or "XS-XL")
-    if '-' in size_range:
-        parts = size_range.split('-')
+    if '-' in size_range_str:
+        parts = size_range_str.split('-')
         start_size = parts[0].strip()
         end_size = parts[1].strip()
         
@@ -755,13 +772,29 @@ def parse_size_range(size_range):
             return []
     else:
         # Single size or comma-separated
-        return [s.strip() for s in size_range.split(',')]
+        return [s.strip() for s in size_range_str.split(',')]
 
 # Helper to determine if size is extended
 def is_extended_size(size):
     """Check if size is extended (2XL and above)"""
     extended = ['2XL', '3XL', '4XL', '5XL']
     return size in extended
+
+# Helper function to calculate price for a given size
+def calculate_size_price(base_cost, size, size_range=None):
+    """Calculate the price for a given size using dynamic markup from SizeRange"""
+    if size_range:
+        extended_markup_percent = size_range.extended_markup_percent
+    else:
+        extended_markup_percent = 15  # Default fallback
+    
+    # Convert percentage to multiplier (20% = 1.20, 15% = 1.15)
+    extended_multiplier = 1 + (extended_markup_percent / 100)
+    
+    if is_extended_size(size, size_range):
+        return round(base_cost * extended_multiplier, 2)
+    else:
+        return round(base_cost, 2)
 
 @app.route('/export-sap-format', methods=['POST'])
 def export_sap_format():
@@ -791,8 +824,11 @@ def export_sap_format():
             # Get base cost
             base_cost = style.get_total_cost()
             
-            # Parse sizes
-            sizes = parse_size_range(style.size_range)
+            # Get size range for dynamic pricing
+            size_range = SizeRange.query.filter_by(name=style.size_range).first()
+            
+            # Parse sizes using SizeRange data
+            sizes = parse_size_range(style.size_range, size_range)
             if not sizes:
                 sizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL']  # Default
             
@@ -818,11 +854,8 @@ def export_sap_format():
             # Generate rows: Colors × Sizes × Variables
             for color in colors:
                 for size in sizes:
-                    # Calculate price based on size
-                    if is_extended_size(size):
-                        price = round(base_cost * 1.15, 2)  # Extended size markup
-                    else:
-                        price = round(base_cost, 2)  # Regular size
+                    # Calculate price using helper function
+                    price = calculate_size_price(base_cost, size, size_range)
                     
                     if variables:
                         # If has variables, generate row for each variable
@@ -901,20 +934,11 @@ def export_sap_single_style():
         # Get base cost
         base_cost = style.get_total_cost()
         
-        # ========================================
-        # GET DYNAMIC MARKUP FROM SIZE RANGE
-        # ========================================
+        # Get size range for dynamic pricing
         size_range = SizeRange.query.filter_by(name=style.size_range).first()
-        extended_markup_percent = 15  # Default fallback
         
-        if size_range:
-            extended_markup_percent = size_range.extended_markup_percent
-        
-        # Convert percentage to multiplier (20% = 1.20, 15% = 1.15)
-        extended_multiplier = 1 + (extended_markup_percent / 100)
-        
-        # Parse sizes
-        sizes = parse_size_range(style.size_range)
+        # Parse sizes using SizeRange data
+        sizes = parse_size_range(style.size_range, size_range)
         if not sizes:
             sizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL']  # Default
         
@@ -940,13 +964,8 @@ def export_sap_single_style():
         # Generate rows: Colors × Sizes × Variables
         for color in colors:
             for size in sizes:
-                # ========================================
-                # CALCULATE PRICE WITH DYNAMIC MARKUP
-                # ========================================
-                if is_extended_size(size, size_range):
-                    price = round(base_cost * extended_multiplier, 2)  # Use dynamic markup
-                else:
-                    price = round(base_cost, 2)  # Regular size
+                # Calculate price using helper function
+                price = calculate_size_price(base_cost, size, size_range)
                 
                 if variables:
                     # If has variables, generate row for each variable
