@@ -14,6 +14,7 @@ from config import Config
 from database import db
 from datetime import datetime
 import os
+import re
 import csv
 from io import StringIO
 from werkzeug.utils import secure_filename
@@ -729,39 +730,96 @@ def handle_color(color_id):
         db.session.commit()
         return jsonify({'success': True})
 
-# Helper function to parse size range
-def parse_size_range(size_range):
-    """Parse size range string into individual sizes"""
-    if not size_range:
-        return []
-    
-    # Remove spaces and convert to uppercase
-    size_range = size_range.upper().strip()
-    
-    # All possible sizes in order
-    all_sizes = ['XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL']
-    
-    # Parse range (e.g., "S-4XL" or "XS-XL")
-    if '-' in size_range:
-        parts = size_range.split('-')
-        start_size = parts[0].strip()
-        end_size = parts[1].strip()
-        
-        try:
-            start_idx = all_sizes.index(start_size)
-            end_idx = all_sizes.index(end_size)
-            return all_sizes[start_idx:end_idx + 1]
-        except ValueError:
-            return []
-    else:
-        # Single size or comma-separated
-        return [s.strip() for s in size_range.split(',')]
+ALL_SIZES_ORDER = ['XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', '6XL']
 
-# Helper to determine if size is extended
-def is_extended_size(size):
-    """Check if size is extended (2XL and above)"""
-    extended = ['2XL', '3XL', '4XL', '5XL']
-    return size in extended
+def _normalize_size_token(token: str) -> str:
+    """Normalize size tokens (e.g., XXL -> 2XL)."""
+    if not token:
+        return ''
+    t = token.strip().upper()
+    # Map XXL/XXXL/... to 2XL/3XL/... while keeping XL as-is
+    m = re.fullmatch(r'(X{2,})L', t)
+    if m:
+        count = len(m.group(1))
+        return f"{count}XL"
+    return t
+
+def _expand_size_spec(spec: str) -> list:
+    """Expand a size spec string into a list of discrete sizes.
+    Supports formats like:
+    - "XS-XL"
+    - "S, M, L, XL"
+    - "2XL-6XL"
+    - Numeric ranges like "20-30" or list "2,4,6" (returned as strings)
+    """
+    if not spec:
+        return []
+    # Split on commas first, then expand each segment
+    parts = [p.strip() for p in str(spec).split(',') if str(p).strip()]
+    results: list[str] = []
+
+    # Precompute index map for alpha sizes
+    size_to_index = {s: i for i, s in enumerate(ALL_SIZES_ORDER)}
+
+    for part in parts:
+        p = _normalize_size_token(part)
+        if '-' in p:
+            a, b = [x.strip() for x in p.split('-', 1)]
+            a_norm = _normalize_size_token(a)
+            b_norm = _normalize_size_token(b)
+
+            # Numeric range
+            if re.fullmatch(r"\d+", a_norm) and re.fullmatch(r"\d+", b_norm):
+                start, end = int(a_norm), int(b_norm)
+                step = 1 if end >= start else -1
+                results.extend([str(n) for n in range(start, end + step, step)])
+                continue
+
+            # Alpha size range using known order
+            if a_norm in size_to_index and b_norm in size_to_index:
+                ai, bi = size_to_index[a_norm], size_to_index[b_norm]
+                if ai <= bi:
+                    results.extend(ALL_SIZES_ORDER[ai:bi + 1])
+                else:
+                    results.extend(list(reversed(ALL_SIZES_ORDER[bi:ai + 1])))
+                continue
+
+            # Fallback: treat as discrete if cannot parse
+            results.extend([a_norm, b_norm])
+        else:
+            results.append(p)
+
+    # De-duplicate while preserving order
+    seen = set()
+    deduped = []
+    for r in results:
+        if r and r not in seen:
+            deduped.append(r)
+            seen.add(r)
+    return deduped
+
+# Helper function to parse size range
+def parse_size_range(size_range_name_or_spec):
+    """Return the list of sizes for a Style's size range.
+    - If the provided string is a SizeRange.name, use its regular and extended specs
+    - Otherwise, treat it as a direct size spec (e.g., "XS-4XL")
+    """
+    if not size_range_name_or_spec:
+        return []
+
+    name_or_spec = str(size_range_name_or_spec).strip()
+
+    # Try to resolve as a SizeRange record by name
+    sr = SizeRange.query.filter_by(name=name_or_spec).first()
+    if sr:
+        regular_list = _expand_size_spec(sr.regular_sizes)
+        extended_list = _expand_size_spec(sr.extended_sizes) if sr.extended_sizes else []
+        # Regular first, then extended; de-dup while preserving order
+        combined = regular_list + [s for s in extended_list if s not in regular_list]
+        return combined
+
+    # Fallback: direct spec like "XS-4XL" or "S,M,L"
+    return _expand_size_spec(name_or_spec)
 
 @app.route('/export-sap-format', methods=['POST'])
 def export_sap_format():
@@ -791,7 +849,10 @@ def export_sap_format():
             # Get base cost
             base_cost = style.get_total_cost()
             
-            # Parse sizes
+            # Resolve size range record (for dynamic extended markup)
+            sr = SizeRange.query.filter_by(name=style.size_range).first()
+
+            # Parse sizes from SizeRange when available (regular + extended specs)
             sizes = parse_size_range(style.size_range)
             if not sizes:
                 sizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL']  # Default
@@ -818,9 +879,11 @@ def export_sap_format():
             # Generate rows: Colors × Sizes × Variables
             for color in colors:
                 for size in sizes:
-                    # Calculate price based on size
-                    if is_extended_size(size):
-                        price = round(base_cost * 1.15, 2)  # Extended size markup
+                    # Calculate price based on size using dynamic markup when available
+                    if is_extended_size(size, sr):
+                        # Use SizeRange extended markup percent when present, else 15%
+                        ext_pct = float(sr.extended_markup_percent) if sr else 15.0
+                        price = round(base_cost * (1 + ext_pct / 100.0), 2)
                     else:
                         price = round(base_cost, 2)  # Regular size
                     
@@ -905,15 +968,10 @@ def export_sap_single_style():
         # GET DYNAMIC MARKUP FROM SIZE RANGE
         # ========================================
         size_range = SizeRange.query.filter_by(name=style.size_range).first()
-        extended_markup_percent = 15  # Default fallback
+        extended_markup_percent = float(size_range.extended_markup_percent) if size_range else 15.0
+        extended_multiplier = 1 + (extended_markup_percent / 100.0)
         
-        if size_range:
-            extended_markup_percent = size_range.extended_markup_percent
-        
-        # Convert percentage to multiplier (20% = 1.20, 15% = 1.15)
-        extended_multiplier = 1 + (extended_markup_percent / 100)
-        
-        # Parse sizes
+        # Parse sizes using SizeRange mapping when present
         sizes = parse_size_range(style.size_range)
         if not sizes:
             sizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL']  # Default
@@ -1002,9 +1060,9 @@ def is_extended_size(size, size_range=None):
     Otherwise, use legacy logic.
     """
     if size_range and size_range.extended_sizes:
-        # Parse extended sizes from the size range
-        extended_sizes = [s.strip() for s in size_range.extended_sizes.split(',')]
-        return size in extended_sizes
+        # Parse extended sizes from the size range (supports ranges and lists)
+        extended_sizes = _expand_size_spec(size_range.extended_sizes)
+        return str(size).strip().upper() in [s.upper() for s in extended_sizes]
     
     # Legacy fallback: sizes like 2XL, 3XL, 4XL, 5XL are extended
     extended_patterns = ['2XL', '3XL', '4XL', '5XL', '6XL', 'XXL', 'XXXL', 'XXXXL']
