@@ -788,9 +788,6 @@ def export_sap_format():
         
         # Generate rows for each style
         for style in styles:
-            # Get base cost
-            base_cost = style.get_total_cost()
-            
             # Parse sizes
             sizes = parse_size_range(style.size_range)
             if not sizes:
@@ -815,14 +812,22 @@ def export_sap_format():
             # Shipping cost
             shipping_cost = style.shipping_cost if hasattr(style, 'shipping_cost') else 0.00
             
+            # Get size range for proper extended size detection
+            size_range = SizeRange.query.filter_by(name=style.size_range).first()
+            
             # Generate rows: Colors × Sizes × Variables
             for color in colors:
                 for size in sizes:
-                    # Calculate price based on size
-                    if is_extended_size(size):
-                        price = round(base_cost * 1.15, 2)  # Extended size markup
+                    # Calculate price using the proper retail price method with size multiplier
+                    if is_extended_size(size, size_range):
+                        # Get the extended size multiplier from size range or use default 1.15
+                        if size_range and size_range.extended_markup_percent:
+                            size_multiplier = 1 + (size_range.extended_markup_percent / 100)
+                        else:
+                            size_multiplier = 1.15  # Default 15% markup
+                        price = style.get_retail_price(size_multiplier)
                     else:
-                        price = round(base_cost, 2)  # Regular size
+                        price = style.get_retail_price(1.0)  # Regular size
                     
                     if variables:
                         # If has variables, generate row for each variable
