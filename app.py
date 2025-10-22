@@ -757,11 +757,7 @@ def parse_size_range(size_range):
         # Single size or comma-separated
         return [s.strip() for s in size_range.split(',')]
 
-# Helper to determine if size is extended
-def is_extended_size(size):
-    """Check if size is extended (2XL and above)"""
-    extended = ['2XL', '3XL', '4XL', '5XL']
-    return size in extended
+# Helper to determine if size is extended (legacy function - use the improved version below)
 
 @app.route('/export-sap-format', methods=['POST'])
 def export_sap_format():
@@ -903,21 +899,6 @@ def export_sap_single_style():
         writer.writerow(headers)
         writer.writerow(headers)  # Duplicate header row
         
-        # Get base cost
-        base_cost = style.get_total_cost()
-        
-        # ========================================
-        # GET DYNAMIC MARKUP FROM SIZE RANGE
-        # ========================================
-        size_range = SizeRange.query.filter_by(name=style.size_range).first()
-        extended_markup_percent = 15  # Default fallback
-        
-        if size_range:
-            extended_markup_percent = size_range.extended_markup_percent
-        
-        # Convert percentage to multiplier (20% = 1.20, 15% = 1.15)
-        extended_multiplier = 1 + (extended_markup_percent / 100)
-        
         # Parse sizes
         sizes = parse_size_range(style.size_range)
         if not sizes:
@@ -942,16 +923,24 @@ def export_sap_single_style():
         # Shipping cost
         shipping_cost = style.shipping_cost if hasattr(style, 'shipping_cost') else 0.00
         
+        # Get size range for proper extended size detection
+        size_range = SizeRange.query.filter_by(name=style.size_range).first()
+        
         # Generate rows: Colors × Sizes × Variables
         for color in colors:
             for size in sizes:
                 # ========================================
-                # CALCULATE PRICE WITH DYNAMIC MARKUP
+                # CALCULATE PRICE USING PROPER RETAIL PRICE METHOD
                 # ========================================
                 if is_extended_size(size, size_range):
-                    price = round(base_cost * extended_multiplier, 2)  # Use dynamic markup
+                    # Get the extended size multiplier from size range or use default 1.15
+                    if size_range and size_range.extended_markup_percent:
+                        size_multiplier = 1 + (size_range.extended_markup_percent / 100)
+                    else:
+                        size_multiplier = 1.15  # Default 15% markup
+                    price = style.get_retail_price(size_multiplier)
                 else:
-                    price = round(base_cost, 2)  # Regular size
+                    price = style.get_retail_price(1.0)  # Regular size
                 
                 if variables:
                     # If has variables, generate row for each variable
@@ -984,6 +973,71 @@ def export_sap_single_style():
         # Prepare download
         output.seek(0)
         filename = f"SAP_{style.vendor_style}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment; filename={filename}'}
+        )
+        
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return f"Error exporting: {str(e)}", 500
+
+
+@app.route('/export-all-styles')
+def export_all_styles():
+    """Export all styles to Excel format"""
+    try:
+        # Get all active styles
+        styles = Style.query.filter_by(is_active=True).all()
+        
+        if not styles:
+            return "No styles found", 404
+        
+        # Create Excel file in memory
+        output = StringIO()
+        
+        # Create a simple CSV format for now (can be enhanced to Excel later)
+        writer = csv.writer(output)
+        
+        # Headers
+        headers = ['Vendor Style', 'Style Name', 'Gender', 'Garment Type', 'Size Range', 
+                   'Base Cost', 'Regular Price', 'Extended Price', 'Margin %', 'Notes']
+        writer.writerow(headers)
+        
+        # Generate rows for each style
+        for style in styles:
+            # Get size range for proper extended size detection
+            size_range = SizeRange.query.filter_by(name=style.size_range).first()
+            
+            # Calculate prices
+            regular_price = style.get_retail_price(1.0)
+            
+            # Calculate extended price (use first extended size as example)
+            if size_range and size_range.extended_markup_percent:
+                extended_multiplier = 1 + (size_range.extended_markup_percent / 100)
+            else:
+                extended_multiplier = 1.15  # Default 15% markup
+            extended_price = style.get_retail_price(extended_multiplier)
+            
+            writer.writerow([
+                style.vendor_style,
+                style.style_name,
+                style.gender or '',
+                style.garment_type or '',
+                style.size_range or '',
+                round(style.get_total_cost(), 2),
+                regular_price,
+                extended_price,
+                style.base_margin_percent,
+                style.notes or ''
+            ])
+        
+        # Prepare download
+        output.seek(0)
+        filename = f"All_Styles_Export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         
         return Response(
             output.getvalue(),
