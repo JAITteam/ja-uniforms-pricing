@@ -20,6 +20,50 @@ function addCsrfToFetch(options = {}) {
     
     return options;
 }
+
+// ============================================
+// FRONTEND VALIDATION HELPERS
+// ============================================
+function validateRequired(value, fieldName) {
+  const val = (value || '').trim();
+  if (!val) {
+    return { valid: false, error: `${fieldName} is required` };
+  }
+  return { valid: true, value: val };
+}
+
+function validateStringLength(value, fieldName, maxLength) {
+  const val = String(value || '');
+  if (val.length > maxLength) {
+    return { valid: false, error: `${fieldName} too long (max ${maxLength} characters)` };
+  }
+  return { valid: true, value: val };
+}
+
+function validatePositiveNumber(value, fieldName, allowZero = false) {
+  const num = parseFloat(value);
+  if (isNaN(num)) {
+    return { valid: false, error: `${fieldName} must be a valid number` };
+  }
+  if (allowZero && num < 0) {
+    return { valid: false, error: `${fieldName} cannot be negative` };
+  }
+  if (!allowZero && num <= 0) {
+    return { valid: false, error: `${fieldName} must be greater than 0` };
+  }
+  return { valid: true, value: num };
+}
+
+function validatePercentage(value, fieldName) {
+  const num = parseFloat(value);
+  if (isNaN(num)) {
+    return { valid: false, error: `${fieldName} must be a valid number` };
+  }
+  if (num < 0 || num > 100) {
+    return { valid: false, error: `${fieldName} must be between 0 and 100` };
+  }
+  return { valid: true, value: num };
+}
 // ============================================
 // CUSTOM ALERT MODAL (REPLACES BROWSER ALERTS)
 // ============================================
@@ -800,7 +844,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // ADD VALIDATION FUNCTIONS HERE - END
 
-  $('#vendor_style')?.addEventListener('blur', tryLoadByVendorStyle);
+  //$('#vendor_style')?.addEventListener('blur', tryLoadByVendorStyle);
   $('#vendor_style')?.addEventListener('keydown', e => { 
     if (e.key === 'Enter') { e.preventDefault(); tryLoadByVendorStyle(); } 
   });
@@ -963,6 +1007,7 @@ updateSizeRangeDisplay();
     // Load images - ADD THIS
     if (data.style && data.style.id) {
       currentStyleId = data.style.id;
+      console.log('✅ Style loaded! currentStyleId set to:', currentStyleId); 
       await loadStyleImages(data.style.id);
     }
 
@@ -980,52 +1025,104 @@ updateSizeRangeDisplay();
   }
   $('#style_name')?.addEventListener('input', toggleSave); 
   toggleSave();
-
+  
   saveBtn?.addEventListener('click', async () => {
     // ========================================
-    // SAVE VALIDATION - 3 REQUIREMENTS
+    // ENHANCED SAVE VALIDATION
     // ========================================
     
-    // Build error message for missing requirements
-    const missing = [];
+    // Get values
+    const styleName = ($('#style_name')?.value || '').trim();
+    const vendorStyle = ($('#vendor_style')?.value || '').trim();
     
-    // 1. Vendor Style (Base Item) is required
-    const vendorStyle = $('#vendor_style')?.value.trim();
-    if (!vendorStyle) { 
-        missing.push('• VENDOR STYLE (Base Item #)');
+    // ===== STEP 1: VALIDATE STYLE NAME =====
+    let validation = validateRequired(styleName, 'Style Name');
+    if (!validation.valid) {
+      await customAlert(validation.error, 'error');
+      $('#style_name')?.focus();
+      return;
     }
     
-    // 2. Style Name is required
-    const styleName = $('#style_name')?.value.trim();
-    if (!styleName) { 
-        missing.push('• STYLE NAME');
+    validation = validateStringLength(styleName, 'Style Name', 200);
+    if (!validation.valid) {
+      await customAlert(validation.error, 'error');
+      $('#style_name')?.focus();
+      return;
     }
     
-    // 3. First fabric row must be complete
-    const firstFabricVendor = document.querySelector('[data-fabric-vendor-id]')?.value;
+    // ===== STEP 2: VALIDATE VENDOR STYLE =====
+    if (vendorStyle) {
+      validation = validateStringLength(vendorStyle, 'Vendor Style', 50);
+      if (!validation.valid) {
+        await customAlert(validation.error, 'error');
+        $('#vendor_style')?.focus();
+        return;
+      }
+    }
+    
+    // ===== STEP 3: VALIDATE MARGIN =====
+    const marginValue = $('#margin')?.value;
+    validation = validatePercentage(marginValue, 'Margin');
+    if (!validation.valid) {
+      await customAlert(validation.error, 'error');
+      $('#margin')?.focus();
+      return;
+    }
+    
+    // ===== STEP 4: VALIDATE FIRST FABRIC ROW =====
+    const firstVendor = document.querySelector('[data-fabric-vendor-id]')?.value;
     const firstFabric = document.querySelector('[data-fabric-id]')?.value;
     const firstYards = document.querySelector('[data-fabric-yds]')?.value;
     
-    if (!firstFabricVendor || !firstFabric || !firstYards) {
-        missing.push('• FIRST FABRIC ROW (Vendor, Fabric, and Yards)');
+    if (!firstVendor || !firstFabric || !firstYards) {
+      await customAlert(
+        'Cannot save! Missing required fields:\n\n• FIRST FABRIC ROW (Vendor, Fabric, and Yards)\n\nPlease complete these fields before saving.',
+        'error'
+      );
+      return;
     }
     
-    // Show error if anything is missing
-    if (missing.length > 0) {
-        alert('⚠️ Cannot save! Missing required fields:\n\n' + missing.join('\n') + '\n\nPlease complete these fields before saving.');
-        
-        // Focus on first missing field
-        if (!vendorStyle) {
-            $('#base_item_number')?.focus();
-        } else if (!styleName) {
-            $('#style_name')?.focus();
-        } else if (!firstFabricVendor) {
-            document.querySelector('[data-fabric-vendor-id]')?.focus();
+    // Validate yards is positive
+    validation = validatePositiveNumber(firstYards, 'Fabric yards', false);
+    if (!validation.valid) {
+      await customAlert(validation.error, 'error');
+      document.querySelector('[data-fabric-yds]')?.focus();
+      return;
+    }
+    
+    // ===== STEP 5: VALIDATE ALL FABRIC YARDS =====
+    const allFabricYards = document.querySelectorAll('[data-fabric-yds]');
+    for (let i = 0; i < allFabricYards.length; i++) {
+      const yards = allFabricYards[i].value;
+      if (yards) {
+        validation = validatePositiveNumber(yards, `Fabric row ${i+1} yards`, false);
+        if (!validation.valid) {
+          await customAlert(validation.error, 'error');
+          allFabricYards[i].focus();
+          return;
         }
-        
-        return; 
+      }
     }
     
+    // ===== STEP 6: VALIDATE ALL NOTION QUANTITIES =====
+    const allNotionQty = document.querySelectorAll('[data-notion-qty]');
+    for (let i = 0; i < allNotionQty.length; i++) {
+      const qty = allNotionQty[i].value;
+      if (qty) {
+        validation = validatePositiveNumber(qty, `Notion row ${i+1} quantity`, false);
+        if (!validation.valid) {
+          await customAlert(validation.error, 'error');
+          allNotionQty[i].focus();
+          return;
+        }
+      }
+    }
+    
+    console.log('✅ All validations passed, preparing to save...');
+    
+    // ========================================
+    // DUPLICATION VALIDATION
+  
     // ========================================
     // DUPLICATION VALIDATION
     // ========================================
@@ -1137,9 +1234,11 @@ updateSizeRangeDisplay();
         });
       });
     }
+    console.log('🔍 Saving... currentStyleId =', currentStyleId);
 
     const payload = {
       style: {
+        style_id: currentStyleId,
         style_name: styleName,
         vendor_style: vendorStyle,
         base_item_number: $('#base_item_number')?.value.trim() || '',
@@ -1159,6 +1258,8 @@ updateSizeRangeDisplay();
       colors: colors,
       variables: variables
     };
+    console.log('📦 Full payload:', JSON.stringify(payload, null, 2));
+
 
     // ========================================
     // SEND SAVE REQUEST
@@ -1693,7 +1794,6 @@ updateSizeRangeDisplay();
     
     isUploading = true;
     
-    // Show loading state
     const gallery = $('#imageGallery');
     const loadingDiv = document.createElement('div');
     loadingDiv.className = 'image-item';
@@ -1702,15 +1802,35 @@ updateSizeRangeDisplay();
     
     try {
       const formData = new FormData();
-      formData.append('image', file);
+
+      // Ensure file has a proper name
+      let fileToUpload = file;
+      if (!file.name || file.name === 'blob' || file.name === '') {
+        const timestamp = Date.now();
+        const ext = file.type.split('/')[1] || 'png';
+        fileToUpload = new File([file], `image-${timestamp}.${ext}`, { 
+          type: file.type || 'image/png',
+          lastModified: Date.now()
+        });
+        console.log('🔧 Created proper file object:', fileToUpload.name, fileToUpload.type, fileToUpload.size);
+      }
+
+      formData.append('image', fileToUpload);
+      formData.append('csrf_token', getCsrfToken());
+
+      // Debug: Check FormData contents
+      console.log('📦 FormData prepared:');
+      console.log('  - File name:', fileToUpload.name);
+      console.log('  - File type:', fileToUpload.type);
+      console.log('  - File size:', fileToUpload.size);
+      for (let pair of formData.entries()) {
+        console.log(`  - ${pair[0]}:`, pair[1]);
+      }
       
-      const csrfToken = getCsrfToken();
       const res = await fetch(`/api/style/${currentStyleId}/upload-image`, {
-          method: 'POST',
-          headers: {
-              'X-CSRFToken': csrfToken
-          },
-          body: formData
+        method: 'POST',
+        // Don't set Content-Type header - let browser set it automatically for FormData
+        body: formData
       });
       
       if (!res.ok) {
@@ -1721,9 +1841,7 @@ updateSizeRangeDisplay();
       const data = await res.json();
       
       if (data.success) {
-        // Remove loading div
         loadingDiv.remove();
-        // Add to gallery
         addImageToGallery(data.url, data.id, data.is_primary);
         showNotification('Image uploaded successfully', 'success');
         return true;
@@ -1738,7 +1856,6 @@ updateSizeRangeDisplay();
       isUploading = false;
     }
   }
-
   // Delete image from backend
   window.deleteImage = async function(imageId) {
     if (!confirm('Delete this image?')) return;
@@ -1782,18 +1899,121 @@ updateSizeRangeDisplay();
   });
 
   // Enable paste functionality
+  // ===== ENHANCED CLIPBOARD PASTE - WORKS WITH EXCEL =====
   document.addEventListener('paste', async function(e) {
-    if (!currentStyleId) return;
+    // Only handle paste when on the style page
+    if (!currentStyleId) {
+      console.log('No style loaded, ignoring paste');
+      return;
+    }
     
-    const items = e.clipboardData.items;
+    const items = e.clipboardData?.items;
+    if (!items) {
+      console.log('No clipboard items');
+      return;
+    }
+    
+    console.log('📋 Clipboard items:', items.length);
+    
+    let imageFile = null;
+    
+    // Try to find image in clipboard items
     for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf('image') !== -1) {
-        const blob = items[i].getAsFile();
-        await uploadImageToBackend(blob);
-        e.preventDefault();
+      const item = items[i];
+      console.log(`Item ${i}: type=${item.type}, kind=${item.kind}`);
+      
+      // Check for any image type
+      if (item.type.startsWith('image/')) {
+        e.preventDefault(); // Prevent default paste
+        
+        console.log('✅ Found image in clipboard:', item.type);
+        
+        // ===== CRITICAL: Get blob and convert to File =====
+        const blob = item.getAsFile();
+        
+        if (blob) {
+          console.log('📦 Blob received:', blob.type, blob.size, 'bytes');
+          
+          // Create proper File object with filename
+          const timestamp = Date.now();
+          const ext = blob.type.split('/')[1] || 'png';
+          const filename = `pasted-image-${timestamp}.${ext}`;
+          
+          // Convert Blob to File
+          imageFile = new File([blob], filename, { 
+            type: blob.type,
+            lastModified: Date.now()
+          });
+          
+          console.log('✅ Created File object:', imageFile.name, imageFile.type, imageFile.size);
+          // ===== END CRITICAL =====
+          
+          break; // Found image, stop looking
+        }
+      }
+    }
+    
+    if (imageFile) {
+      // Show notification
+      showNotification('Uploading pasted image...', 'info');
+      
+      try {
+        // Upload the image
+        const success = await uploadImageToBackend(imageFile);
+        
+        if (success) {
+          showNotification('✅ Image pasted and uploaded successfully!', 'success');
+        } else {
+          showNotification('❌ Failed to upload pasted image', 'error');
+        }
+      } catch (error) {
+        console.error('Paste upload error:', error);
+        showNotification('❌ Error: ' + error.message, 'error');
+      }
+    } else {
+      console.log('⚠️ No image data found in clipboard');
+      
+      // Debug: Show what was in clipboard
+      for (let i = 0; i < items.length; i++) {
+        console.log(`Clipboard item ${i}:`, items[i].type, items[i].kind);
       }
     }
   });
+
+  console.log('✅ Enhanced clipboard paste enabled (Excel compatible)');
+  // ===== END ENHANCED CLIPBOARD PASTE =====
+
+  // ============================================
+// PREVENT NEGATIVE NUMBERS IN REAL-TIME
+// ============================================
+function preventNegativeValues(input) {
+  input.addEventListener('input', function() {
+    if (this.value < 0) {
+      this.value = 0;
+    }
+  });
+  
+  input.addEventListener('keydown', function(e) {
+    if (e.key === '-' || e.key === 'Subtract') {
+      e.preventDefault();
+    }
+  });
+}
+
+// Apply on page load
+document.addEventListener('DOMContentLoaded', function() {
+  const numberInputs = document.querySelectorAll(
+    '[data-fabric-yds], [data-fabric-cost], [data-notion-qty], [data-notion-cost], [data-labor-qoh], #margin, #label_cost, #shipping_cost, #suggested_price'
+  );
+  
+  numberInputs.forEach(input => {
+    if (input.type === 'number') {
+      preventNegativeValues(input);
+    }
+  });
+  
+  console.log('✅ Negative number prevention enabled on', numberInputs.length, 'fields');
+});
 
   // Enable drag and drop on gallery
   const imageGallery = $('#imageGallery');
@@ -1899,7 +2119,6 @@ updateSizeRangeDisplay();
       vendorStyleInput.dataset.touched = '1';
       vendorStyleInput.value = vendorStyleParam;
     }
-    
     tryLoadByVendorStyle();
   }
 

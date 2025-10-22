@@ -1,10 +1,15 @@
+# ===== CLEANED IMPORTS FOR app.py =====
+# Copy lines 1-46 and replace the messy imports at the top of your app.py
+
 import pandas as pd
-from flask import Config, Flask, request, redirect, url_for
-from flask import jsonify, request
-from sqlalchemy import func
-from database import db
-#from flask import Flask, render_template, redirect, url_for, request, flash, send_from_directory
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, Response
+from sqlalchemy import func
+
+# ===== LOAD ENVIRONMENT VARIABLES =====
+from dotenv import load_dotenv
+load_dotenv()
+# ======================================
+
 from config import Config
 from database import db
 from datetime import datetime
@@ -17,7 +22,7 @@ from models import (
     Style, Fabric, FabricVendor, Notion, NotionVendor, 
     LaborOperation, CleaningCost, StyleFabric, StyleNotion, 
     StyleLabor, Color, StyleColor, Variable, StyleVariable,
-    SizeRange, GlobalSetting
+    SizeRange, GlobalSetting, StyleImage
 )
 
 
@@ -26,24 +31,62 @@ from models import (
 app = Flask(__name__)
 app.config.from_object(Config)
 
-
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
 
-
 UPLOAD_FOLDER = 'static/img'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+ALLOWED_EXCEL_EXTENSIONS = {'xlsx', 'xls'}
+MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB
+
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+def allowed_file(filename, allowed_extensions):
+    """Check if file extension is allowed"""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
 # Initialize database with app
 db.init_app(app)
 
-# Import models AFTER db is initialized
-from models import *
+# ===== VALIDATION HELPER FUNCTIONS =====
+def validate_positive_number(value, field_name, allow_zero=False):
+    """Validate that a number is positive"""
+    try:
+        num = float(value)
+        if allow_zero and num < 0:
+            return False, f"{field_name} cannot be negative"
+        elif not allow_zero and num <= 0:
+            return False, f"{field_name} must be greater than 0"
+        return True, num
+    except (ValueError, TypeError):
+        return False, f"{field_name} must be a valid number"
 
+def validate_required_field(value, field_name):
+    """Validate that a required field is not empty"""
+    if not value or not str(value).strip():
+        return False, f"{field_name} is required"
+    return True, str(value).strip()
+
+def validate_percentage(value, field_name):
+    """Validate that a percentage is between 0 and 100"""
+    try:
+        num = float(value)
+        if num < 0 or num > 100:
+            return False, f"{field_name} must be between 0 and 100"
+        return True, num
+    except (ValueError, TypeError):
+        return False, f"{field_name} must be a valid number"
+
+def validate_string_length(value, field_name, max_length):
+    """Validate string length"""
+    if len(str(value)) > max_length:
+        return False, f"{field_name} too long (max {max_length} characters)"
+    return True, str(value)
+
+# ===== END OF VALIDATION HELPERS =====
+
+# ===== YOUR ROUTES START HERE =====
+# Continue with your existing code from line 47 onwards
 # ===== MAIN APPLICATION ROUTES =====
 @app.route('/')
 def index():
@@ -186,13 +229,6 @@ def debug_cleaning():
     html += "</table>"
     html += "<br><a href='/fix-cleaning-costs'>Fix Missing Records</a>"
     return html
-@app.route('/create-complete-data')
-def create_complete_data():
-    try:
-        result = create_complete_sample()
-        return f"<h1>Success!</h1><p>{result}</p><a href='/test-complete-lookup'>Test Complete Lookup</a>"
-    except Exception as e:
-        return f"<h1>Error:</h1><p>{str(e)}</p>"
 
 @app.route('/test-complete-lookup')
 def test_complete_lookup():
@@ -248,25 +284,47 @@ def test_complete_lookup():
 @app.route('/api/style/<int:style_id>/upload-image', methods=['POST'])
 def upload_style_image(style_id):
     """Upload an image for a style"""
+    
+    # ===== DEBUG: Print what we received =====
+    print("="*60)
+    print(f"📥 UPLOAD REQUEST for style {style_id}")
+    print(f"📋 request.files keys: {list(request.files.keys())}")
+    print(f"📋 request.form keys: {list(request.form.keys())}")
+    print(f"📋 request.content_type: {request.content_type}")
+    
+    # Print details of all files in request
+    for key in request.files:
+        f = request.files[key]
+        print(f"  File '{key}': filename={f.filename}, content_type={f.content_type}")
+    
+    print("="*60)
+    # ===== END DEBUG =====
+    
     # Check if style exists
     style = Style.query.get_or_404(style_id)
     
     # Check if file is in request
     if 'image' not in request.files:
+        print("❌ ERROR: 'image' key not found in request.files")
         return jsonify({'error': 'No file provided'}), 400
     
     file = request.files['image']
     
     # Check if filename is empty
     if file.filename == '':
+        print("❌ ERROR: file.filename is empty")
         return jsonify({'error': 'No file selected'}), 400
     
+    print(f"✅ File received: {file.filename}")
+    
     # Validate and save file
-    if file and allowed_file(file.filename):
+    if file and allowed_file(file.filename, ALLOWED_IMAGE_EXTENSIONS):
         # Create unique filename with timestamp
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         original_filename = secure_filename(file.filename)
         filename = f"style_{style_id}_{timestamp}_{original_filename}"
+        
+        print(f"💾 Saving as: {filename}")
         
         # Ensure upload directory exists
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -274,6 +332,8 @@ def upload_style_image(style_id):
         # Save file to disk
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
+        
+        print(f"✅ File saved to: {filepath}")
         
         # Check if this should be the primary image (first image for this style)
         is_primary = StyleImage.query.filter_by(style_id=style_id).count() == 0
@@ -289,6 +349,8 @@ def upload_style_image(style_id):
         db.session.add(new_image)
         db.session.commit()
         
+        print(f"✅ Image record created in database, ID: {new_image.id}")
+        
         return jsonify({
             'success': True,
             'id': new_image.id,
@@ -297,6 +359,7 @@ def upload_style_image(style_id):
             'is_primary': is_primary
         }), 200
     
+    print(f"❌ ERROR: File validation failed for {file.filename}")
     return jsonify({'error': 'Invalid file type. Allowed: png, jpg, jpeg, gif'}), 400
 
 @app.route('/api/style/<int:style_id>/images', methods=['GET'])
@@ -2887,40 +2950,106 @@ def api_style_by_vendor_style():
 }), 200
 
 
+# ===== ENHANCED /api/style/save WITH FULL VALIDATION =====
+# Replace your existing api_style_save function (starting at line ~2890)
+# with this validated version
+
 @app.post("/api/style/save")
 def api_style_save():
     """
-    Upsert a Style and replace its BOM, Labor, Colors, and Variables.
-    Uses vendor_style as the unique identifier.
+    Save or update a Style with comprehensive validation.
+    Prevents duplicates, invalid data, and ensures data integrity.
     """
-    data = request.get_json(silent=True) or {}
-    s = data.get("style") or {}
     
-    style_name = (s.get("style_name") or "").strip()
-    vendor_style = (s.get("vendor_style") or "").strip()
-    
-    if not style_name:
-        return jsonify({"error": "style.style_name required"}), 400
-
     try:
-        # Upsert style by vendor_style (the unique identifier)
-        style = None
-        is_new = False
+        data = request.get_json(silent=True) or {}
+        s = data.get("style") or {}
         
+        # ===== STEP 1: VALIDATE REQUIRED FIELDS =====
+        valid, style_name = validate_required_field(s.get("style_name"), "Style Name")
+        if not valid:
+            return jsonify({"error": style_name}), 400
+        
+        vendor_style = (s.get("vendor_style") or "").strip()
+        
+        # Validate vendor_style if provided
         if vendor_style:
-            # If vendor_style provided, look for existing style by vendor_style
-            style = Style.query.filter_by(vendor_style=vendor_style).first()
+            valid, vendor_style = validate_string_length(vendor_style, "Vendor Style", 50)
+            if not valid:
+                return jsonify({"error": vendor_style}), 400
         
-        if not style:
-            # If not found by vendor_style, try by style_name
-            style = Style.query.filter(func.lower(Style.style_name) == style_name.lower()).first()
-        
-        if not style:
-            # Create new style
-            style = Style()
+        # Validate style_name length
+        valid, style_name = validate_string_length(style_name, "Style Name", 200)
+        if not valid:
+            return jsonify({"error": style_name}), 400
+       
+        # ===== STEP 2: CHECK FOR DUPLICATES =====
+        style_id = s.get("style_id")
+
+        # If style_id exists and is a number, this is an UPDATE
+        if style_id and isinstance(style_id, (int, float)) and style_id > 0:
+            # UPDATING EXISTING STYLE
+            existing_style = Style.query.get(int(style_id))
+            if not existing_style:
+                return jsonify({"error": "Style not found"}), 404
+            is_new = False
+        else:
+            # CREATING NEW STYLE - check for duplicates
+            if vendor_style:
+                duplicate = Style.query.filter_by(vendor_style=vendor_style).first()
+                if duplicate:
+                    return jsonify({"error": f"Style '{vendor_style}' already exists! Search and load it to edit."}), 400
+            
+            duplicate_name = Style.query.filter(
+                func.lower(Style.style_name) == style_name.lower()
+            ).first()
+            if duplicate_name:
+                return jsonify({"error": f"Style name '{style_name}' already exists!"}), 400
+            
+            existing_style = Style()
             is_new = True
 
-        # Update style fields
+        style = existing_style
+                
+        # ===== STEP 3: VALIDATE NUMERIC FIELDS =====
+        # Validate margin
+        margin = s.get("margin", 60.0)
+        valid, margin = validate_percentage(margin, "Margin")
+        if not valid:
+            return jsonify({"error": margin}), 400
+        
+        # Validate suggested price
+        suggested_price = s.get("suggested_price")
+        if suggested_price:
+            valid, suggested_price = validate_positive_number(suggested_price, "Suggested Price", allow_zero=True)
+            if not valid:
+                return jsonify({"error": suggested_price}), 400
+        else:
+            suggested_price = None
+        
+        # ===== STEP 4: VALIDATE FABRIC DATA =====
+        fabrics_data = data.get("fabrics") or []
+        for idx, f in enumerate(fabrics_data):
+            if f.get("name"):
+                yards = f.get("yards", 0)
+                if yards:
+                    valid, yards_val = validate_positive_number(yards, f"Fabric #{idx+1} yards", allow_zero=False)
+                    if not valid:
+                        return jsonify({"error": yards_val}), 400
+                    f["yards"] = yards_val  # Update with validated value
+        
+        # ===== STEP 5: VALIDATE NOTION DATA =====
+        notions_data = data.get("notions") or []
+        for idx, n in enumerate(notions_data):
+            if n.get("name"):
+                qty = n.get("qty", 0)
+                if qty:
+                    valid, qty_val = validate_positive_number(qty, f"Notion #{idx+1} quantity", allow_zero=False)
+                    if not valid:
+                        return jsonify({"error": qty_val}), 400
+                    n["qty"] = qty_val  # Update with validated value
+        
+        # ===== STEP 6: UPDATE STYLE FIELDS =====
         style.style_name = style_name
         style.vendor_style = vendor_style if vendor_style else None
         style.base_item_number = (s.get("base_item_number") or None)
@@ -2929,22 +3058,22 @@ def api_style_save():
         style.garment_type = (s.get("garment_type") or None)
         style.size_range = (s.get("size_range") or None)
         style.notes = (s.get("notes") or None)
-        style.base_margin_percent = float(s.get("margin") or 60.0)
-        style.suggested_price = float(s.get("suggested_price") or 0) if s.get("suggested_price") else None
+        style.base_margin_percent = margin
+        style.suggested_price = suggested_price
         
         db.session.add(style)
         db.session.flush()
-
-        # Wipe existing junctions
+        
+        # ===== STEP 7: REPLACE EXISTING RELATIONSHIPS =====
         StyleFabric.query.filter_by(style_id=style.id).delete()
         StyleNotion.query.filter_by(style_id=style.id).delete()
         StyleLabor.query.filter_by(style_id=style.id).delete()
         StyleColor.query.filter_by(style_id=style.id).delete()
         StyleVariable.query.filter_by(style_id=style.id).delete()
         db.session.flush()
-
-        # Fabrics
-        for f in data.get("fabrics") or []:
+        
+        # ===== STEP 8: ADD FABRICS =====
+        for f in fabrics_data:
             if f.get("name"):
                 fabric_name = (f["name"] or "").strip()
                 vendor_name = (f.get("vendor") or "").strip()
@@ -2983,9 +3112,9 @@ def api_style_save():
                     is_sublimation=bool(f.get("sublimation") or False)
                 )
                 db.session.add(sf)
-
-        # Notions
-        for n in data.get("notions") or []:
+        
+        # ===== STEP 9: ADD NOTIONS =====
+        for n in notions_data:
             if n.get("name"):
                 notion_name = (n["name"] or "").strip()
                 vendor_name = (n.get("vendor") or "").strip()
@@ -3023,8 +3152,8 @@ def api_style_save():
                     quantity_required=float(n.get("qty") or 0)
                 )
                 db.session.add(sn)
-
-        # Labor
+        
+        # ===== STEP 10: ADD LABOR =====
         for l in data.get("labor") or []:
             if not l.get("name"):
                 continue
@@ -3038,6 +3167,10 @@ def api_style_save():
             
             qty_or_hours = float(l.get("qty_or_hours") or 0)
             
+            # Validate labor hours/quantity
+            if qty_or_hours < 0:
+                return jsonify({"error": f"Labor {l['name']} cannot have negative hours/quantity"}), 400
+            
             if op.cost_type == 'hourly':
                 sl = StyleLabor(
                     style_id=style.id,
@@ -3049,41 +3182,67 @@ def api_style_save():
                 sl = StyleLabor(
                     style_id=style.id,
                     labor_operation_id=op.id,
-                    time_hours=None,
+                    time_hours=0,
                     quantity=int(qty_or_hours) if qty_or_hours else 1
                 )
             db.session.add(sl)
-
-        # Colors
-        for color_data in data.get("colors") or []:
-            color_id = color_data.get("color_id")
-            if color_id:
-                color = Color.query.get(color_id)
-                if color:
-                    style_color = StyleColor(
-                        style_id=style.id,
-                        color_id=color_id
-                    )
-                    db.session.add(style_color)
-
-        # Variables
-        for variable_data in data.get("variables") or []:
-            variable_id = variable_data.get("variable_id")
-            if variable_id:
-                variable = Variable.query.get(variable_id)
-                if variable:
-                    style_variable = StyleVariable(
-                        style_id=style.id,
-                        variable_id=variable_id
-                    )
-                    db.session.add(style_variable)
-
+        
+        # ===== STEP 11: ADD COLORS =====
+        for c in data.get("colors") or []:
+            if c.get("name"):
+                color_name = (c["name"] or "").strip()
+                color = Color.query.filter(
+                    func.lower(Color.name) == color_name.lower()
+                ).first()
+                
+                if not color:
+                    color = Color(name=color_name)
+                    db.session.add(color)
+                    db.session.flush()
+                
+                sc = StyleColor(style_id=style.id, color_id=color.id)
+                db.session.add(sc)
+        
+        # ===== STEP 12: ADD VARIABLES =====
+        for v in data.get("variables") or []:
+            if v.get("name"):
+                var_name = (v["name"] or "").strip()
+                variable = Variable.query.filter(
+                    func.lower(Variable.name) == var_name.lower()
+                ).first()
+                
+                if not variable:
+                    variable = Variable(name=var_name)
+                    db.session.add(variable)
+                    db.session.flush()
+                
+                sv = StyleVariable(style_id=style.id, variable_id=variable.id)
+                db.session.add(sv)
+        
+        # ===== STEP 13: COMMIT ALL CHANGES =====
         db.session.commit()
-        return jsonify({"ok": True, "new": is_new, "style_id": style.id}), 200
-
+        #Return appropriate message
+        if is_new:
+            message = "✅ New style created successfully!"
+        else:
+            message = "✅ Style updated successfully!"
+        
+        return jsonify({
+            "ok": True,
+            "new": is_new,
+            "style_id": style.id,
+            "message": message
+        }), 200
+    
+    except ValueError as e:
+        db.session.rollback()
+        return jsonify({"error": f"Invalid data: {str(e)}"}), 400
+    
     except Exception as e:
         db.session.rollback()
-        return jsonify({"ok": False, "error": str(e)}), 500
+        return jsonify({"error": f"Save failed: {str(e)}"}), 500
+
+# ===== END OF ENHANCED api_style_save =====
     
 @app.get("/api/style/search")
 def api_style_search():
@@ -3254,4 +3413,20 @@ def import_excel():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    
+    # Get debug mode from environment variable (defaults to False)
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    
+    # Safety check: Never allow debug in production
+    if debug_mode and os.environ.get('FLASK_ENV') == 'production':
+        raise ValueError("❌ CRITICAL: Cannot run with debug=True in production!")
+    
+    # Show warning if debug is enabled
+    if debug_mode:
+        print("\n" + "="*70)
+        print("⚠️  WARNING: Running in DEBUG mode!")
+        print("⚠️  This is for development only - NEVER use in production!")
+        print("⚠️  Set FLASK_DEBUG=False in .env for production")
+        print("="*70 + "\n")
+    
+    app.run(debug=debug_mode, host='0.0.0.0', port=5000)
