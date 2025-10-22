@@ -757,12 +757,6 @@ def parse_size_range(size_range):
         # Single size or comma-separated
         return [s.strip() for s in size_range.split(',')]
 
-# Helper to determine if size is extended
-def is_extended_size(size):
-    """Check if size is extended (2XL and above)"""
-    extended = ['2XL', '3XL', '4XL', '5XL']
-    return size in extended
-
 @app.route('/export-sap-format', methods=['POST'])
 def export_sap_format():
     """Export selected styles in SAP B1 format"""
@@ -791,6 +785,18 @@ def export_sap_format():
             # Get base cost
             base_cost = style.get_total_cost()
             
+            # ========================================
+            # GET DYNAMIC MARKUP FROM SIZE RANGE
+            # ========================================
+            size_range = SizeRange.query.filter_by(name=style.size_range).first()
+            extended_markup_percent = 15  # Default fallback
+            
+            if size_range:
+                extended_markup_percent = size_range.extended_markup_percent
+            
+            # Convert percentage to multiplier (20% = 1.20, 15% = 1.15)
+            extended_multiplier = 1 + (extended_markup_percent / 100)
+            
             # Parse sizes
             sizes = parse_size_range(style.size_range)
             if not sizes:
@@ -818,9 +824,11 @@ def export_sap_format():
             # Generate rows: Colors × Sizes × Variables
             for color in colors:
                 for size in sizes:
-                    # Calculate price based on size
-                    if is_extended_size(size):
-                        price = round(base_cost * 1.15, 2)  # Extended size markup
+                    # ========================================
+                    # CALCULATE PRICE WITH DYNAMIC MARKUP
+                    # ========================================
+                    if is_extended_size(size, size_range):
+                        price = round(base_cost * extended_multiplier, 2)  # Use dynamic markup
                     else:
                         price = round(base_cost, 2)  # Regular size
                     
