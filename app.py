@@ -788,9 +788,6 @@ def export_sap_format():
         
         # Generate rows for each style
         for style in styles:
-            # Get base cost
-            base_cost = style.get_total_cost()
-            
             # Parse sizes
             sizes = parse_size_range(style.size_range)
             if not sizes:
@@ -818,11 +815,11 @@ def export_sap_format():
             # Generate rows: Colors × Sizes × Variables
             for color in colors:
                 for size in sizes:
-                    # Calculate price based on size
+                    # Calculate price using the correct retail price method
                     if is_extended_size(size):
-                        price = round(base_cost * 1.15, 2)  # Extended size markup
+                        price = style.get_retail_price(1.15)  # Extended size with 15% markup
                     else:
-                        price = round(base_cost, 2)  # Regular size
+                        price = style.get_retail_price(1.0)   # Regular size
                     
                     if variables:
                         # If has variables, generate row for each variable
@@ -898,9 +895,6 @@ def export_sap_single_style():
         writer.writerow(headers)
         writer.writerow(headers)  # Duplicate header row
         
-        # Get base cost
-        base_cost = style.get_total_cost()
-        
         # ========================================
         # GET DYNAMIC MARKUP FROM SIZE RANGE
         # ========================================
@@ -944,9 +938,9 @@ def export_sap_single_style():
                 # CALCULATE PRICE WITH DYNAMIC MARKUP
                 # ========================================
                 if is_extended_size(size, size_range):
-                    price = round(base_cost * extended_multiplier, 2)  # Use dynamic markup
+                    price = style.get_retail_price(extended_multiplier)  # Use dynamic markup
                 else:
-                    price = round(base_cost, 2)  # Regular size
+                    price = style.get_retail_price(1.0)  # Regular size
                 
                 if variables:
                     # If has variables, generate row for each variable
