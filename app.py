@@ -731,40 +731,83 @@ def handle_color(color_id):
 
 # Helper function to parse size range
 def parse_size_range(size_range):
-    """Parse size range string into individual sizes"""
+    """
+    Parse size range string into individual sizes.
+    Handles various formats: XS-4XL, XXS-6XL, 32-60, 00-30, S,M,L,XL
+    """
     if not size_range:
         return []
     
     # Remove spaces and convert to uppercase
     size_range = size_range.upper().strip()
     
-    # All possible sizes in order - extended list to handle more sizes
-    all_sizes = ['XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', '6XL', '7XL', '8XL', '9XL', '10XL']
+    # Handle comma-separated sizes (e.g., "S,M,L,XL")
+    if ',' in size_range and '-' not in size_range:
+        return [s.strip() for s in size_range.split(',')]
     
-    # Parse range (e.g., "S-4XL" or "XS-XL")
+    # Handle range format (e.g., "S-4XL", "32-60", "00-30")
     if '-' in size_range:
         parts = size_range.split('-')
+        if len(parts) != 2:
+            return []
+        
         start_size = parts[0].strip()
         end_size = parts[1].strip()
         
-        try:
-            start_idx = all_sizes.index(start_size)
-            end_idx = all_sizes.index(end_size)
-            return all_sizes[start_idx:end_idx + 1]
-        except ValueError:
-            # If size not found in predefined list, try to handle numeric sizes
+        # Check if both parts are numeric (e.g., "32-60", "00-30")
+        if start_size.isdigit() and end_size.isdigit():
             try:
-                # Handle numeric sizes like "00-30" or "2-20"
-                if start_size.isdigit() and end_size.isdigit():
-                    start_num = int(start_size)
-                    end_num = int(end_size)
+                start_num = int(start_size)
+                end_num = int(end_size)
+                # Handle zero-padded numbers (e.g., "00-30" -> "00", "01", "02", ..., "30")
+                if len(start_size) > 1 and start_size.startswith('0'):
+                    return [f"{i:0{len(start_size)}d}" for i in range(start_num, end_num + 1)]
+                else:
                     return [str(i) for i in range(start_num, end_num + 1)]
-            except:
-                pass
-            return []
-    else:
-        # Single size or comma-separated
-        return [s.strip() for s in size_range.split(',')]
+            except ValueError:
+                return []
+        
+        # Handle letter-based sizes (e.g., "XS-4XL", "S-6XL")
+        else:
+            # Define common size progression for letter-based sizes
+            size_progression = [
+                'XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', '3XL', '4XL', '5XL', '6XL', '7XL', '8XL', '9XL', '10XL'
+            ]
+            
+            try:
+                start_idx = size_progression.index(start_size)
+                end_idx = size_progression.index(end_size)
+                return size_progression[start_idx:end_idx + 1]
+            except ValueError:
+                # If sizes not found in progression, try to handle custom sizes
+                # This handles cases where the range might be something like "XS-6XL" but 6XL isn't in our list
+                if start_size in size_progression:
+                    start_idx = size_progression.index(start_size)
+                    # Generate sizes up to the end size
+                    result = []
+                    current_size = start_size
+                    result.append(current_size)
+                    
+                    # Try to find the end size in our progression
+                    if end_size in size_progression:
+                        end_idx = size_progression.index(end_size)
+                        result.extend(size_progression[start_idx + 1:end_idx + 1])
+                    else:
+                        # If end size not found, generate up to a reasonable limit
+                        # This is a fallback for very large sizes
+                        current_idx = start_idx
+                        while current_idx < len(size_progression) - 1:
+                            current_idx += 1
+                            result.append(size_progression[current_idx])
+                            if size_progression[current_idx] == end_size:
+                                break
+                    
+                    return result
+                else:
+                    return []
+    
+    # Single size
+    return [size_range]
 
 # Helper to determine if size is extended
 def is_extended_size(size, size_range=None):
@@ -774,9 +817,9 @@ def is_extended_size(size, size_range=None):
     Otherwise, use legacy logic.
     """
     if size_range and size_range.extended_sizes:
-        # Parse extended sizes from the size range
-        extended_sizes = [s.strip() for s in size_range.extended_sizes.split(',')]
-        return size in extended_sizes
+        # Parse extended sizes from the size range using the same logic as parse_size_range
+        extended_sizes = parse_size_range(size_range.extended_sizes)
+        return size.upper() in [s.upper() for s in extended_sizes]
     
     # Legacy fallback: sizes like 2XL, 3XL, 4XL, 5XL are extended
     extended_patterns = ['2XL', '3XL', '4XL', '5XL', '6XL', '7XL', '8XL', '9XL', '10XL', 'XXL', 'XXXL', 'XXXXL']
@@ -811,21 +854,30 @@ def export_sap_format():
             base_cost = style.get_total_cost()
             
             # ========================================
-            # GET DYNAMIC MARKUP FROM SIZE RANGE
+            # GET DYNAMIC MARKUP AND SIZES FROM SIZE RANGE
             # ========================================
             size_range = SizeRange.query.filter_by(name=style.size_range).first()
             extended_markup_percent = 15  # Default fallback
+            sizes = []
             
             if size_range:
                 extended_markup_percent = size_range.extended_markup_percent
+                # Get sizes from the size range configuration
+                regular_sizes = parse_size_range(size_range.regular_sizes) if size_range.regular_sizes else []
+                extended_sizes = parse_size_range(size_range.extended_sizes) if size_range.extended_sizes else []
+                # Combine sizes, avoiding duplicates
+                all_sizes = regular_sizes + extended_sizes
+                sizes = list(dict.fromkeys(all_sizes))  # Remove duplicates while preserving order
+            else:
+                # Fallback: try to parse the style's size_range field directly
+                sizes = parse_size_range(style.size_range)
+            
+            # Final fallback if no sizes found
+            if not sizes:
+                sizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL']  # Default
             
             # Convert percentage to multiplier (20% = 1.20, 15% = 1.15)
             extended_multiplier = 1 + (extended_markup_percent / 100)
-            
-            # Parse sizes
-            sizes = parse_size_range(style.size_range)
-            if not sizes:
-                sizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL']  # Default
             
             # Get colors (from style_colors relationship)
             colors = [sc.color.name.upper() for sc in style.colors] if style.colors else ['BLACK']
@@ -935,21 +987,30 @@ def export_sap_single_style():
         base_cost = style.get_total_cost()
         
         # ========================================
-        # GET DYNAMIC MARKUP FROM SIZE RANGE
+        # GET DYNAMIC MARKUP AND SIZES FROM SIZE RANGE
         # ========================================
         size_range = SizeRange.query.filter_by(name=style.size_range).first()
         extended_markup_percent = 15  # Default fallback
+        sizes = []
         
         if size_range:
             extended_markup_percent = size_range.extended_markup_percent
+            # Get sizes from the size range configuration
+            regular_sizes = parse_size_range(size_range.regular_sizes) if size_range.regular_sizes else []
+            extended_sizes = parse_size_range(size_range.extended_sizes) if size_range.extended_sizes else []
+            # Combine sizes, avoiding duplicates
+            all_sizes = regular_sizes + extended_sizes
+            sizes = list(dict.fromkeys(all_sizes))  # Remove duplicates while preserving order
+        else:
+            # Fallback: try to parse the style's size_range field directly
+            sizes = parse_size_range(style.size_range)
+        
+        # Final fallback if no sizes found
+        if not sizes:
+            sizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL']  # Default
         
         # Convert percentage to multiplier (20% = 1.20, 15% = 1.15)
         extended_multiplier = 1 + (extended_markup_percent / 100)
-        
-        # Parse sizes
-        sizes = parse_size_range(style.size_range)
-        if not sizes:
-            sizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL']  # Default
         
         # Get colors (from style_colors relationship)
         colors = [sc.color.name.upper() for sc in style.colors] if style.colors else ['BLACK']
