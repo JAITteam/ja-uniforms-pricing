@@ -166,7 +166,6 @@
                 <tr>
                     <th>Name</th>
                     <th>Cost/Unit</th>
-                    <th>Unit Type</th>
                     <th>Vendor</th>
                     <th style="width: 150px;">Actions</th>
                 </tr>
@@ -176,7 +175,6 @@
                 <tr data-id="{{ notion.id }}" class="notion-row">
                     <td>{{ notion.name }}</td>
                     <td>${{ "%.2f"|format(notion.cost_per_unit) }}</td>
-                    <td>{{ notion.unit_type or 'N/A' }}</td>
                     <td>{{ notion.notion_vendor.name if notion.notion_vendor else 'N/A' }}</td>
                     <td>
                         <div class="actions">
@@ -210,7 +208,17 @@
                 <tr data-id="{{ labor.id }}" class="labor-row">
                     <td>{{ labor.name }}</td>
                     <td>{{ labor.cost_type or 'flat_rate' }}</td>
-                    <td>${{ "%.2f"|format(labor.rate) }}</td>
+                    <td>
+                        {% if labor.cost_type == 'flat_rate' %}
+                            ${{ "%.2f"|format(labor.fixed_cost or 0) }}
+                        {% elif labor.cost_type == 'hourly' %}
+                            ${{ "%.2f"|format(labor.cost_per_hour or 0) }}/hr
+                        {% elif labor.cost_type == 'per_piece' %}
+                            ${{ "%.2f"|format(labor.cost_per_piece or 0) }}/pc
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
                     <td>
                         <div class="actions">
                             <button class="btn btn-primary btn-small btn-edit" data-type="labor" data-id="{{ labor.id }}">Edit</button>
@@ -240,8 +248,8 @@
             <tbody id="cleaningTable">
                 {% for cleaning in cleaning_costs %}
                 <tr data-id="{{ cleaning.id }}" class="cleaning-row">
-                    <td>{{ cleaning.type }}</td>
-                    <td>${{ "%.2f"|format(cleaning.cost) }}</td>
+                    <td>{{ cleaning.garment_type }}</td>
+                    <td>${{ "%.2f"|format(cleaning.fixed_cost) }}</td>
                     <td>
                         <div class="actions">
                             <button class="btn btn-primary btn-small btn-edit" data-type="cleaning" data-id="{{ cleaning.id }}">Edit</button>
@@ -310,8 +318,8 @@
                 {% endfor %}
             </tbody>
         </table>
-
-        <!-- SIZE RANGES -->
+        
+         <!-- SIZE RANGES -->
         <h2>Size Ranges</h2>
         <div style="margin-bottom: 15px;">
             <input type="text" id="sizeRangeSearch" placeholder="🔍 Search size ranges..." style="width: 300px; padding: 8px; margin-bottom: 10px;">
@@ -322,7 +330,10 @@
             <thead>
                 <tr>
                     <th>Name</th>
-                    <th>Sizes</th>
+                    <th>Regular Sizes</th>
+                    <th>Extended Sizes</th>
+                    <th>Extended Markup %</th>
+                    <th>Description</th>
                     <th style="width: 150px;">Actions</th>
                 </tr>
             </thead>
@@ -330,7 +341,10 @@
                 {% for size_range in size_ranges %}
                 <tr data-id="{{ size_range.id }}" class="size-range-row">
                     <td>{{ size_range.name }}</td>
-                    <td>{{ size_range.sizes }}</td>
+                    <td>{{ size_range.regular_sizes }}</td>
+                    <td>{{ size_range.extended_sizes or 'N/A' }}</td>
+                    <td>{{ "%.1f"|format(size_range.extended_markup_percent or 0) }}%</td>
+                    <td>{{ size_range.description or '' }}</td>
                     <td>
                         <div class="actions">
                             <button class="btn btn-primary btn-small btn-edit" data-type="size_range" data-id="{{ size_range.id }}">Edit</button>
@@ -341,6 +355,7 @@
                 {% endfor %}
             </tbody>
         </table>
+
 
         <!-- GLOBAL SETTINGS -->
         <h2>Global Settings</h2>
@@ -355,8 +370,8 @@
             <tbody>
                 {% for setting in global_settings %}
                 <tr>
-                    <td>{{ setting.key }}</td>
-                    <td>{{ setting.value }}</td>
+                    <td>{{ setting.setting_key }}</td>
+                    <td>{{ setting.setting_value }}</td>
                     <td>
                         <div class="actions">
                             <button class="btn btn-primary btn-small btn-edit" data-type="global_setting" data-id="{{ setting.id }}">Edit</button>
@@ -390,13 +405,23 @@
     <div id="notification" class="notification"></div>
 
     <!-- Data injection for JavaScript (JSON format - no linting errors) -->
-    <script id="master-costs-data" type="application/json">
-{{ {
-    'fabricVendors': fabric_vendors,
-    'notionVendors': notion_vendors
-}|tojson|safe }}
+     <!-- Data injection for JavaScript -->
+
+      <script id="master-costs-data" type="application/json">
+    {
+        "fabricVendors": [
+            {% for v in fabric_vendors %}
+            {"id": {{ v.id }}, "name": {{ v.name|tojson }}}{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ],
+        "notionVendors": [
+            {% for v in notion_vendors %}
+            {"id": {{ v.id }}, "name": {{ v.name|tojson }}}{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ]
+    }
     </script>
-    
+
     <!-- Load external JavaScript -->
     <script src="{{ url_for('static', filename='js/master_costs.js') }}"></script>
 </body>
