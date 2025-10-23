@@ -731,6 +731,8 @@ def handle_color(color_id):
 
 # ===== Extended-size + Range helpers (robust) =====
 
+# ===== Extended-size + Range helpers (robust) =====
+
 def _normalize_size_token(tok: str) -> str:
     """Normalize a size label to compare safely, e.g. '3x' -> '3XL'."""
     if tok is None:
@@ -752,32 +754,18 @@ def _expand_alpha_range(a: str, b: str):
     return _ALPHA_LADDER[ia:ib+1] if ia <= ib else list(reversed(_ALPHA_LADDER[ib:ia+1]))
 
 def _expand_numeric_range(a: str, b: str):
-    """
-    Expand numeric ranges with step=2.
-      - Special case: if start token is '00', return ['00', '0', '2', '4', ...]
-        (no padding after the first '00').
-      - Otherwise, preserve zero-padding width of endpoints.
-      - Inclusive of end when the step lands on it.
-    Examples:
-      '00-30' -> ['00','0','2','4','6','8','10','12','14','16','18','20','22','24','26','28','30']
-      '00-32' -> ['00','0','2','4','6','8','10','12','14','16','18','20','22','24','26','28','30','32']
-      '32-60' -> ['32','34','36','38','40','42','44','46','48','50','52','54','56','58','60']
-    """
+    """Expand numeric ranges with step=2."""
     sa, sb = a.strip(), b.strip()
     try:
         ia, ib = int(sa), int(sb)
     except ValueError:
         return [_normalize_size_token(a), _normalize_size_token(b)]
 
-    # Special rule: starting at '00' ⇒ include '00' then unpadded evens from 0
     if sa == "00":
-        start, end = (ia, ib) if ia <= ib else (ib, ia)  # support reversed just in case
-        # Start from 0 and step by 2 up to end (inclusive if even)
+        start, end = (ia, ib) if ia <= ib else (ib, ia)
         tail = [str(n) for n in range(0, end + 1, 2)]
-        # Put '00' first; if tail starts with '0', keep both '00' and '0'
         return ["00"] + tail
 
-    # General rule (non '00' starts): preserve padding width
     width = max(len(sa), len(sb))
     step = 2
     if ia <= ib:
@@ -823,71 +811,52 @@ def is_extended_size_for_range(size_label: str, size_range_obj) -> bool:
         return False
     return _normalize_size_token(size_label) in ext_list
 
-@app.route('/export-sap-format', methods=['POST'])
-def export_sap_format():
-    """Export selected styles in SAP B1 format (bulk)"""
-    try:
-        import json
-        style_ids = json.loads(request.form.get('style_ids', '[]'))
-        if not style_ids:
-            return "No styles selected", 400
 
-        styles = Style.query.filter(Style.id.in_(style_ids)).all()
-        output = StringIO()
-        writer = csv.writer(output)
-
-        headers = ['Code', 'Name', 'U_COLOR', 'U_SIZE', 'U_VARIABLE',
-                   'U_PRICE', 'U_SHIP_COST', 'U_STYLE', 'U_CardCode', 'U_PROD_NAME']
-        writer.writerow(headers)
-        writer.writerow(headers)
-
-        for style in styles:
-            base_cost = style.get_total_cost()
-            from models import SizeRange
-            size_range_obj = SizeRange.query.filter_by(name=style.size_range).first() if style.size_range else None
-
-            extended_pct = (size_range_obj.extended_markup_percent
-                            if (size_range_obj and size_range_obj.extended_markup_percent is not None)
-                            else 15.0)
-            extended_mult = 1.0 + (float(extended_pct) / 100.0)
-
-            regular_list = expand_sizes_string(getattr(size_range_obj, 'regular_sizes', '') or '')
-            extended_list = expand_sizes_string(getattr(size_range_obj, 'extended_sizes', '') or '')
-            all_sizes = regular_list + [s for s in extended_list if s not in regular_list]
+# ===== VALIDATION HELPER =====
+def validate_style_for_export(style):
+    """
+    Validate a single style for export.
+    Returns (is_valid: bool, missing: list)
+    """
+    missing = []
+    
+    # Check vendor style
+    if not style.vendor_style or not style.vendor_style.strip():
+        missing.append('Vendor Style')
+    
+    # Check style name
+    if not style.style_name or not style.style_name.strip():
+        missing.append('Style Name')
+    
+    # Check colors - STRICT (must have at least 1)
+    has_colors = hasattr(style, 'colors') and style.colors and len(style.colors) > 0
+    if not has_colors:
+        missing.append('At least ONE Color')
+    
+    # Check size range - STRICT (must exist AND have sizes)
+    if not style.size_range or not style.size_range.strip():
+        missing.append('Size Range')
+    else:
+        # Verify size range actually has sizes defined
+        from models import SizeRange
+        size_range_obj = SizeRange.query.filter_by(name=style.size_range).first()
+        if size_range_obj:
+            regular_sizes = expand_sizes_string(getattr(size_range_obj, 'regular_sizes', '') or '')
+            extended_sizes = expand_sizes_string(getattr(size_range_obj, 'extended_sizes', '') or '')
+            all_sizes = regular_sizes + [s for s in extended_sizes if s not in regular_sizes]
+            
             if not all_sizes:
-                all_sizes = ['S', 'M', 'L', 'XL', '2XL', '3XL', '4XL']
+                missing.append('Size Range has NO sizes defined')
+        else:
+            missing.append('Size Range does not exist in system')
+    
+    return (len(missing) == 0, missing)
 
-            colors = [sc.color.name.upper() for sc in style.colors] if style.colors else ['BLACK']
-            variables = [sv.variable.name.upper() for sv in style.style_variables] if hasattr(style, 'style_variables') else []
-            vendor_code = 'V100'
-            if style.style_fabrics and style.style_fabrics[0].fabric.fabric_vendor:
-                vendor_code = style.style_fabrics[0].fabric.fabric_vendor.vendor_code
 
-            u_style = style.vendor_style.replace('-', '')
-            shipping_cost = style.shipping_cost if hasattr(style, 'shipping_cost') else 0.00
-
-            for color in colors:
-                for size in all_sizes:
-                    price = round(base_cost * extended_mult, 2) if is_extended_size_for_range(size, size_range_obj) else round(base_cost, 2)
-                    if variables:
-                        for variable in variables:
-                            writer.writerow(['', '', color, size, variable, price, shipping_cost, u_style, vendor_code, style.style_name])
-                        writer.writerow(['', '', color, size, '', price, shipping_cost, u_style, vendor_code, style.style_name])
-                    else:
-                        writer.writerow(['', '', color, size, '', price, shipping_cost, u_style, vendor_code, style.style_name])
-
-        output.seek(0)
-        filename = f"SAP_Export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        return Response(output.getvalue(), mimetype='text/csv',
-                        headers={'Content-Disposition': f'attachment; filename={filename}'})
-
-    except Exception as e:
-        import traceback
-        print(traceback.format_exc())
-        return f"Error exporting: {str(e)}", 500
+# ===== SINGLE STYLE EXPORT =====
 @app.route('/export-sap-single-style', methods=['POST'])
 def export_sap_single_style():
-    """Export a single style in SAP B1 format with dynamic extended markup"""
+    """Export a single style in SAP B1 format - STRICT VALIDATION"""
     try:
         vendor_style = request.form.get('vendor_style')
         if not vendor_style:
@@ -897,6 +866,101 @@ def export_sap_single_style():
         if not style:
             return "Style not found", 404
 
+        # ========================================
+        # STRICT VALIDATION
+        # ========================================
+        is_valid, missing = validate_style_for_export(style)
+        
+        if not is_valid:
+            error_html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Export Validation Error</title>
+                <style>
+                    body {{
+                        font-family: Arial, sans-serif;
+                        padding: 40px;
+                        background: #f5f5f5;
+                    }}
+                    .container {{
+                        max-width: 700px;
+                        margin: 0 auto;
+                        background: white;
+                        padding: 30px;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    }}
+                    h1 {{
+                        color: #dc3545;
+                        margin-bottom: 20px;
+                    }}
+                    .style-info {{
+                        background: #f8f9fa;
+                        padding: 15px;
+                        border-radius: 4px;
+                        margin-bottom: 20px;
+                    }}
+                    .error-box {{
+                        background: #fff3cd;
+                        border-left: 4px solid #ffc107;
+                        padding: 15px;
+                        margin: 20px 0;
+                    }}
+                    .missing-item {{
+                        color: #856404;
+                        margin: 5px 0;
+                        padding-left: 20px;
+                    }}
+                    .missing-item::before {{
+                        content: "⚠️ ";
+                    }}
+                    .back-btn {{
+                        display: inline-block;
+                        margin-top: 20px;
+                        padding: 10px 20px;
+                        background: #007bff;
+                        color: white;
+                        text-decoration: none;
+                        border-radius: 4px;
+                    }}
+                    .back-btn:hover {{
+                        background: #0056b3;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>❌ Cannot Export</h1>
+                    
+                    <div class="style-info">
+                        <strong>Style:</strong> {style.vendor_style}<br>
+                        <strong>Name:</strong> {style.style_name or 'N/A'}
+                    </div>
+                    
+                    <div class="error-box">
+                        <strong>Missing Required Fields:</strong>
+                        {''.join(f'<div class="missing-item">{item}</div>' for item in missing)}
+                    </div>
+                    
+                    <p><strong>All fields below are REQUIRED for export:</strong></p>
+                    <ul>
+                        <li>Vendor Style</li>
+                        <li>Style Name</li>
+                        <li>At least ONE Color</li>
+                        <li>Size Range (with sizes defined)</li>
+                    </ul>
+                    
+                    <a href="/style/new?vendor_style={vendor_style}" class="back-btn">← Edit This Style</a>
+                </div>
+            </body>
+            </html>
+            """
+            return error_html, 400
+
+        # ========================================
+        # EXPORT - NO FALLBACKS
+        # ========================================
         output = StringIO()
         writer = csv.writer(output)
 
@@ -907,7 +971,7 @@ def export_sap_single_style():
 
         base_cost = style.get_total_cost()
         from models import SizeRange
-        size_range_obj = SizeRange.query.filter_by(name=style.size_range).first() if style.size_range else None
+        size_range_obj = SizeRange.query.filter_by(name=style.size_range).first()
 
         extended_pct = (size_range_obj.extended_markup_percent
                         if (size_range_obj and size_range_obj.extended_markup_percent is not None)
@@ -917,10 +981,10 @@ def export_sap_single_style():
         regular_list = expand_sizes_string(getattr(size_range_obj, 'regular_sizes', '') or '')
         extended_list = expand_sizes_string(getattr(size_range_obj, 'extended_sizes', '') or '')
         all_sizes = regular_list + [s for s in extended_list if s not in regular_list]
-        if not all_sizes:
-            all_sizes = ['OSFM']
-
-        colors = [sc.color.name.upper() for sc in style.colors] if style.colors else ['BLACK']
+        
+        # NO FALLBACK - validation ensures sizes exist
+        colors = [sc.color.name.upper() for sc in style.colors]
+        
         variables = [sv.variable.name.upper() for sv in style.style_variables] if hasattr(style, 'style_variables') else []
         vendor_code = 'V100'
         if style.style_fabrics and style.style_fabrics[0].fabric.fabric_vendor:
@@ -945,6 +1009,217 @@ def export_sap_single_style():
 
         output.seek(0)
         filename = f"SAP_{style.vendor_style}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        return Response(output.getvalue(), mimetype='text/csv',
+                        headers={'Content-Disposition': f'attachment; filename={filename}'})
+
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return f"Error exporting: {str(e)}", 500
+
+
+# ===== BULK EXPORT =====
+@app.route('/export-sap-format', methods=['POST'])
+def export_sap_format():
+    """Export selected styles in SAP B1 format - STRICT VALIDATION"""
+    try:
+        import json
+        style_ids = json.loads(request.form.get('style_ids', '[]'))
+        if not style_ids:
+            return "No styles selected", 400
+
+        styles = Style.query.filter(Style.id.in_(style_ids)).all()
+        
+        # ========================================
+        # STRICT VALIDATION - ALL STYLES
+        # ========================================
+        invalid_styles = []
+        
+        for style in styles:
+            is_valid, missing = validate_style_for_export(style)
+            if not is_valid:
+                invalid_styles.append({
+                    'vendor_style': style.vendor_style or 'UNKNOWN',
+                    'style_name': style.style_name or 'UNKNOWN',
+                    'missing': missing
+                })
+        
+        # If ANY style is invalid, block export and show errors
+        if invalid_styles:
+            error_html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Export Validation Error</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        padding: 40px;
+                        background: #f5f5f5;
+                    }
+                    .container {
+                        max-width: 900px;
+                        margin: 0 auto;
+                        background: white;
+                        padding: 30px;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    }
+                    h1 {
+                        color: #dc3545;
+                        margin-bottom: 20px;
+                    }
+                    .summary {
+                        background: #fff3cd;
+                        border: 2px solid #ffc107;
+                        padding: 15px;
+                        margin-bottom: 30px;
+                        border-radius: 4px;
+                        font-weight: bold;
+                        text-align: center;
+                    }
+                    .error-list {
+                        background: #f8f9fa;
+                        padding: 20px;
+                        border-radius: 4px;
+                    }
+                    .style-error {
+                        margin-bottom: 20px;
+                        padding: 15px;
+                        border-left: 4px solid #dc3545;
+                        background: white;
+                    }
+                    .vendor-style {
+                        font-weight: bold;
+                        color: #333;
+                        font-size: 1.1em;
+                        margin-bottom: 5px;
+                    }
+                    .style-name {
+                        color: #666;
+                        font-size: 0.9em;
+                        margin-bottom: 10px;
+                    }
+                    .missing-item {
+                        color: #856404;
+                        margin: 3px 0;
+                        padding-left: 20px;
+                    }
+                    .missing-item::before {
+                        content: "⚠️ ";
+                    }
+                    .requirements {
+                        background: #e7f3ff;
+                        border-left: 4px solid #007bff;
+                        padding: 15px;
+                        margin: 20px 0;
+                    }
+                    .back-btn {
+                        display: inline-block;
+                        margin-top: 20px;
+                        padding: 12px 24px;
+                        background: #007bff;
+                        color: white;
+                        text-decoration: none;
+                        border-radius: 4px;
+                        font-weight: bold;
+                    }
+                    .back-btn:hover {
+                        background: #0056b3;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>❌ Export Blocked - Validation Failed</h1>
+                    
+                    <div class="summary">
+                        {len(invalid_styles)} of {len(styles)} selected style(s) are missing required fields
+                    </div>
+                    
+                    <div class="error-list">
+            """
+            
+            for inv in invalid_styles:
+                error_html += f"""
+                        <div class="style-error">
+                            <div class="vendor-style">{inv['vendor_style']}</div>
+                            <div class="style-name">{inv['style_name']}</div>
+                            {''.join(f'<div class="missing-item">{item}</div>' for item in inv['missing'])}
+                        </div>
+                """
+            
+            error_html += """
+                    </div>
+                    
+                    <div class="requirements">
+                        <strong>🔒 All fields below are REQUIRED for export:</strong>
+                        <ul>
+                            <li><strong>Vendor Style</strong> - Must be filled</li>
+                            <li><strong>Style Name</strong> - Must be filled</li>
+                            <li><strong>At least ONE Color</strong> - Add colors to the style</li>
+                            <li><strong>Size Range</strong> - Must be selected with sizes defined</li>
+                        </ul>
+                    </div>
+                    
+                    <p>Please complete ALL required fields for ALL selected styles before exporting.</p>
+                    
+                    <a href="/view-all-styles" class="back-btn">← Back to All Styles</a>
+                </div>
+            </body>
+            </html>
+            """
+            
+            return error_html, 400
+        
+        # ========================================
+        # ALL VALIDATED - EXPORT (NO FALLBACKS)
+        # ========================================
+        output = StringIO()
+        writer = csv.writer(output)
+
+        headers = ['Code', 'Name', 'U_COLOR', 'U_SIZE', 'U_VARIABLE',
+                   'U_PRICE', 'U_SHIP_COST', 'U_STYLE', 'U_CardCode', 'U_PROD_NAME']
+        writer.writerow(headers)
+        writer.writerow(headers)
+
+        for style in styles:
+            base_cost = style.get_total_cost()
+            from models import SizeRange
+            size_range_obj = SizeRange.query.filter_by(name=style.size_range).first()
+
+            extended_pct = (size_range_obj.extended_markup_percent
+                            if (size_range_obj and size_range_obj.extended_markup_percent is not None)
+                            else 15.0)
+            extended_mult = 1.0 + (float(extended_pct) / 100.0)
+
+            regular_list = expand_sizes_string(getattr(size_range_obj, 'regular_sizes', '') or '')
+            extended_list = expand_sizes_string(getattr(size_range_obj, 'extended_sizes', '') or '')
+            all_sizes = regular_list + [s for s in extended_list if s not in regular_list]
+
+            # NO FALLBACKS - validation ensures these exist
+            colors = [sc.color.name.upper() for sc in style.colors]
+            
+            variables = [sv.variable.name.upper() for sv in style.style_variables] if hasattr(style, 'style_variables') else []
+            vendor_code = 'V100'
+            if style.style_fabrics and style.style_fabrics[0].fabric.fabric_vendor:
+                vendor_code = style.style_fabrics[0].fabric.fabric_vendor.vendor_code
+
+            u_style = style.vendor_style.replace('-', '')
+            shipping_cost = style.shipping_cost if hasattr(style, 'shipping_cost') else 0.00
+
+            for color in colors:
+                for size in all_sizes:
+                    price = round(base_cost * extended_mult, 2) if is_extended_size_for_range(size, size_range_obj) else round(base_cost, 2)
+                    if variables:
+                        for variable in variables:
+                            writer.writerow(['', '', color, size, variable, price, shipping_cost, u_style, vendor_code, style.style_name])
+                        writer.writerow(['', '', color, size, '', price, shipping_cost, u_style, vendor_code, style.style_name])
+                    else:
+                        writer.writerow(['', '', color, size, '', price, shipping_cost, u_style, vendor_code, style.style_name])
+
+        output.seek(0)
+        filename = f"SAP_Export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         return Response(output.getvalue(), mimetype='text/csv',
                         headers={'Content-Disposition': f'attachment; filename={filename}'})
 
