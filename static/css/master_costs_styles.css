@@ -1203,3 +1203,75 @@ tbody tr:hover .row-actions {
 .gradient-gray .search-box svg {
     color: rgba(0, 0, 0, 0.6) !important;
 }
+/* ===== LARGER, BOLDER TABLE TEXT ===== */
+
+/* Make all table headers bigger and bolder */
+.modern-table th {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: #374151 !important;
+    letter-spacing: 0.5px;
+}
+
+/* Make table cell text bigger and darker */
+.modern-table td {
+    font-size: 15px !important;
+    color: #1F2937 !important;
+    line-height: 1.6;
+}
+
+/* Make bold items in tables even bolder */
+.modern-table td strong {
+    font-weight: 700 !important;
+    color: #111827 !important;
+}
+
+/* Make code text bigger */
+.modern-table td code {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    padding: 4px 8px;
+}
+
+/* Make price text bigger */
+.modern-table .price {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+}
+
+/* Make badge text more readable */
+.modern-table .badge {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    padding: 5px 12px;
+}
+
+/* Make percentage values stand out */
+.modern-table td:contains('%') {
+    font-weight: 600 !important;
+}
+
+/* Specific fix for markup percentages */
+.modern-table tbody tr td:nth-child(4) {
+    font-weight: 600 !important;
+    font-size: 15px !important;
+}
+
+/* Make text descriptions more readable */
+.modern-table .text-muted {
+    font-size: 14px !important;
+    color: #6B7280 !important;
+}
+
+/* Increase row height for better readability */
+.modern-table tbody tr {
+    height: 56px;
+}
+
+.modern-table td {
+    padding: 16px !important;
+}
+
+.modern-table th {
+    padding: 14px 16px !important;
+}
