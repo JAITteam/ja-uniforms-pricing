@@ -1,378 +1,379 @@
 {% extends "base.html" %}
 {% block title %}Dashboard - J.A Uniforms{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard_modern.css') }}">
+{% endblock %}
+
 {% block content %}
 
-<style>
-  /* Additional Dashboard Styles */
-  .stats-bar {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
-  }
-  
-  .stat-card {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 1.25rem;
-    text-align: center;
-    transition: transform 0.2s, box-shadow 0.2s;
-  }
-  
-  .stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  }
-  
-  .stat-number {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--primary);
-    display: block;
-    margin: 0.5rem 0;
-  }
-  
-  .stat-label {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-    font-weight: 500;
-  }
-  
-  .primary-actions {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
-  }
-  
-  .action-card-compact {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 1.5rem;
-    text-align: center;
-    transition: all 0.2s;
-    cursor: pointer;
-  }
-  
-  .action-card-compact:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-    border-color: var(--primary);
-  }
-  
-  .action-icon-compact {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 1rem;
-    font-size: 1.5rem;
-  }
-  
-  .action-card-compact h4 {
-    font-size: 1rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--text-primary);
-  }
-  
-  .action-card-compact p {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    margin-bottom: 1rem;
-  }
-  
-  .action-card-compact .btn {
-    width: 100%;
-    padding: 0.625rem;
-  }
-  
-  .sidebar-card {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 1.25rem;
-    margin-bottom: 1rem;
-  }
-  
-  .sidebar-card h3 {
-    font-size: 1rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-    color: var(--text-primary);
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  
-  .recent-item {
-    padding: 0.75rem 0;
-    border-bottom: 1px solid var(--gray-100);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .recent-item:last-child {
-    border-bottom: none;
-  }
-  
-  .recent-item:hover {
-    background: var(--gray-50);
-    margin: 0 -0.5rem;
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-    border-radius: var(--radius);
-    cursor: pointer;
-  }
-  
-  .recent-item-name {
-    font-weight: 500;
-    color: var(--text-primary);
-  }
-  
-  .recent-item-time {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-  }
-  
-  .management-links {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-  
-  .management-link {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.625rem;
-    border-radius: var(--radius);
-    color: var(--text-primary);
-    text-decoration: none;
-    transition: background 0.2s;
-  }
-  
-  .management-link:hover {
-    background: var(--gray-50);
-    color: var(--primary);
-  }
-  
-  .analytics-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-  }
-  
-  .analytics-card {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 1.25rem;
-  }
-  
-  .analytics-value {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: var(--primary);
-  }
-  
-  .analytics-label {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
-    margin-top: 0.25rem;
-  }
-</style>
-
-<div class="container-fluid" style="max-width: 1400px; padding: 2rem;">
-  
-  <!-- STATS BAR - DYNAMIC DATA -->
-  <div class="stats-bar">
-    <div class="stat-card">
-      <span class="stat-number">{{ total_styles }}</span>
-      <span class="stat-label">Total Styles</span>
-    </div>
-    <div class="stat-card">
-      <span class="stat-number">{{ total_fabrics }}</span>
-      <span class="stat-label">Fabrics</span>
-    </div>
-    <div class="stat-card">
-      <span class="stat-number">{{ total_notions }}</span>
-      <span class="stat-label">Notions</span>
-    </div>
-    <div class="stat-card">
-      <span class="stat-number">{{ total_fabric_vendors }}</span>
-      <span class="stat-label">Fabric Vendors</span>
-    </div>
-    <div class="stat-card">
-      <span class="stat-number">{{ total_notion_vendors }}</span>
-      <span class="stat-label">Notion Vendors</span>
-    </div>
-  </div>
-  
-  <!-- PRIMARY ACTIONS -->
-  <div class="primary-actions">
-    <div class="action-card-compact" onclick="window.location.href='/style/new'">
-      <div class="action-icon-compact" style="background: #dbeafe;">
-        <svg width="24" height="24" fill="#2563eb" viewBox="0 0 16 16">
-          <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
-        </svg>
-      </div>
-      <h4>Create New Style</h4>
-      <p>Build from scratch</p>
-      <a href="/style/new" class="btn btn-primary btn-sm">Open Wizard</a>
+<div class="dashboard-container">
+    
+    <!-- WELCOME BANNER -->
+    <div class="welcome-banner">
+        <div class="welcome-content">
+            <h1 id="greeting">Good morning, Admin! ☀️</h1>
+            <p class="subtitle">
+                <span id="current-date">Friday, October 24, 2025</span> • 
+                <span id="last-updated">Last updated: just now</span>
+            </p>
+        </div>
+        <div class="welcome-actions">
+            <button class="btn-more-actions" id="more-actions-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="1"/>
+                    <circle cx="12" cy="5" r="1"/>
+                    <circle cx="12" cy="19" r="1"/>
+                </svg>
+                More
+            </button>
+        </div>
     </div>
     
-    <div class="action-card-compact" onclick="window.location.href='/view-all-styles'">
-      <div class="action-icon-compact" style="background: #dcfce7;">
-        <svg width="24" height="24" fill="#16a34a" viewBox="0 0 16 16">
-          <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
-        </svg>
-      </div>
-      <h4>Browse Catalog</h4>
-      <p>View all styles</p>
-      <a href="/view-all-styles" class="btn btn-success btn-sm">View All</a>
-    </div>
-    
-    <div class="action-card-compact" onclick="window.location.href='/master-costs'">
-      <div class="action-icon-compact" style="background: #fef3c7;">
-        <svg width="24" height="24" fill="#ea580c" viewBox="0 0 16 16">
-          <path d="M9.405 1.05c-.413-1.4-2.397-1.4-2.81 0l-.1.34a1.464 1.464 0 0 1-2.105.872l-.31-.17c-1.283-.698-2.686.705-1.987 1.987l.169.311c.446.82.023 1.841-.872 2.105l-.34.1c-1.4.413-1.4 2.397 0 2.81l.34.1a1.464 1.464 0 0 1 .872 2.105l-.17.31c-.698 1.283.705 2.686 1.987 1.987l.311-.169a1.464 1.464 0 0 1 2.105.872l.1.34c.413 1.4 2.397 1.4 2.81 0l.1-.34a1.464 1.464 0 0 1 2.105-.872l.31.17c1.283.698 2.686-.705 1.987-1.987l-.169-.311a1.464 1.464 0 0 1 .872-2.105l.34-.1c1.4-.413 1.4-2.397 0-2.81l-.34-.1a1.464 1.464 0 0 1-.872-2.105l.17-.31c.698-1.283-.705-2.686-1.987-1.987l-.311.169a1.464 1.464 0 0 1-2.105-.872l-.1-.34zM8 10.93a2.929 2.929 0 1 1 0-5.86 2.929 2.929 0 0 1 0 5.858z"/>
-        </svg>
-      </div>
-      <h4>Master Costs</h4>
-      <p>Manage pricing</p>
-      <a href="/master-costs" class="btn btn-warning text-dark btn-sm">Settings</a>
-    </div>
-    
-    <div class="action-card-compact" onclick="window.location.href='/import-excel'">
-      <div class="action-icon-compact" style="background: #e0e7ff;">
-        <svg width="24" height="24" fill="#6366f1" viewBox="0 0 16 16">
-          <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-          <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
-        </svg>
-      </div>
-      <h4>Import Excel</h4>
-      <p>Bulk upload</p>
-      <a href="/import-excel" class="btn btn-secondary btn-sm">Import</a>
-    </div>
-  </div>
-  
-  <!-- MAIN CONTENT GRID -->
-  <div class="row g-3">
-    <!-- LEFT COLUMN -->
-    <div class="col-lg-8">
-      <!-- Recent Activity - DYNAMIC -->
-      <div class="sidebar-card">
-        <h3>
-          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-            <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
-            <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
-          </svg>
-          Recent Styles
-        </h3>
-        {% if recent_styles %}
-          {% for style in recent_styles %}
-          <div class="recent-item" onclick="window.location.href='/style/new?vendor_style={{ style.vendor_style }}'">
-            <div>
-              <div class="recent-item-name">{{ style.vendor_style }} {{ style.style_name }}</div>
-              <div class="recent-item-time">Recently updated</div>
+    <!-- MAIN CONTENT GRID (Recent Styles + Management) -->
+    <div class="main-content-grid">
+        
+        <!-- RECENT STYLES CARD -->
+        <div class="recent-styles-card">
+            <div class="card-header-modern">
+                <span class="icon">⏱️</span>
+                <h2>Recent Styles</h2>
+                <div class="live-badge">Live</div>
             </div>
-            <span style="color: var(--primary); cursor: pointer;">Edit →</span>
-          </div>
-          {% endfor %}
-        {% else %}
-          <p style="color: var(--text-secondary); text-align: center; padding: 2rem;">No styles yet. Create your first style!</p>
-        {% endif %}
-        <a href="/view-all-styles" style="display: block; text-align: center; margin-top: 1rem; color: var(--primary); font-weight: 500;">View All Styles →</a>
-      </div>
-      
-      <!-- Analytics - DYNAMIC -->
-      <div class="analytics-grid">
-        <div class="analytics-card">
-          <div class="analytics-value">${{ "%.2f"|format(avg_cost) }}</div>
-          <div class="analytics-label">Avg Cost Per Style</div>
+            
+            <div id="recent-styles-list">
+                {% if recent_styles %}
+                    {% for style in recent_styles %}
+                    <div class="recent-style-item" data-style-id="{{ style.id }}">
+                        <div class="style-info">
+                            <div class="style-name">📋 {{ style.vendor_style }} - {{ style.style_name }}</div>
+                            <div class="style-time" data-timestamp="{{ style.updated_at.timestamp() * 1000 if style.updated_at else 0 }}">
+                                Recently updated
+                            </div>
+                        </div>
+                        <div class="style-actions">
+                            <button class="btn-edit-quick" onclick="window.location.href='/style/new?vendor_style={{ style.vendor_style }}'">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                </svg>
+                                Edit
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="text-align: center; padding: 40px; color: #6B7280;">
+                        <p>No recent styles yet. Create your first style!</p>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <a href="/view-all-styles" class="view-all-link">
+                View All {{ total_styles }} Styles →
+            </a>
         </div>
-        <div class="analytics-card">
-          <div class="analytics-value">{{ price_range }}</div>
-          <div class="analytics-label">Price Range</div>
+        
+        <!-- MANAGEMENT CARD -->
+        <div class="management-card">
+            <div class="card-header-modern">
+                <span class="icon">🔧</span>
+                <h2>Quick Management</h2>
+            </div>
+            
+            <div class="management-links-grid">
+                <a href="/master-costs#fabric-vendors" class="management-link">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8z"/>
+                        <path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
+                    </svg>
+                    Fabric Vendors
+                </a>
+                
+                <a href="/master-costs#colors-section" class="management-link">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <circle cx="8" cy="8" r="7"/>
+                    </svg>
+                    Colors
+                </a>
+                
+                <a href="/master-costs#notion-vendors" class="management-link">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8z"/>
+                        <path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/>
+                    </svg>
+                    Notion Vendors
+                </a>
+                
+                <a href="/master-costs#variables-section" class="management-link">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
+                    </svg>
+                    Variables
+                </a>
+                
+                <a href="/master-costs#size-ranges-section" class="management-link">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M3 2.5a2.5 2.5 0 0 1 5 0 2.5 2.5 0 0 1 5 0v.006H15a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1v7.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 14.5V7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h2z"/>
+                    </svg>
+                    Size Ranges
+                </a>
+                
+                <a href="/master-costs#global-settings-section" class="management-link">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492z"/>
+                        <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319z"/>
+                    </svg>
+                    Global Settings
+                </a>
+            </div>
+            
+            <div class="system-overview">
+                <h3>📦 System Overview</h3>
+                <div class="system-stat">
+                    <span>Fabrics:</span>
+                    <strong>{{ total_fabrics }}</strong>
+                </div>
+                <div class="system-stat">
+                    <span>Notions:</span>
+                    <strong>{{ total_notions }}</strong>
+                </div>
+                <div class="system-stat">
+                    <span>Fabric Vendors:</span>
+                    <strong>{{ total_fabric_vendors }}</strong>
+                </div>
+                <div class="system-stat">
+                    <span>Notion Vendors:</span>
+                    <strong>{{ total_notion_vendors }}</strong>
+                </div>
+            </div>
         </div>
-        <div class="analytics-card">
-          <div class="analytics-value">{{ top_fabric }}</div>
-          <div class="analytics-label">Top Fabric</div>
-        </div>
-      </div>
+        
     </div>
     
-    <!-- RIGHT COLUMN -->
-    <div class="col-lg-4">
-      <!-- Management Tools -->
-      <div class="sidebar-card">
-        <h3>
-          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-            <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
-            <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319z"/>
-          </svg>
-          Management
-        </h3>
-        <div class="management-links">
-          <a href="/master-costs#fabric-vendors" class="management-link">
-            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022zM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816zM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275zM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>
-            </svg>
-            Fabric Vendors
-          </a>
-          <a href="/master-costs#notion-vendors" class="management-link">
-            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M15 14s1 0 1-1-1-4-5-4-5 3-5 4 1 1 1 1h8zm-7.978-1A.261.261 0 0 1 7 12.996c.001-.264.167-1.03.76-1.72C8.312 10.629 9.282 10 11 10c1.717 0 2.687.63 3.24 1.276.593.69.758 1.457.76 1.72l-.008.002a.274.274 0 0 1-.014.002H7.022zM11 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm3-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM6.936 9.28a5.88 5.88 0 0 0-1.23-.247A7.35 7.35 0 0 0 5 9c-4 0-5 3-5 4 0 .667.333 1 1 1h4.216A2.238 2.238 0 0 1 5 13c0-1.01.377-2.042 1.09-2.904.243-.294.526-.569.846-.816zM4.92 10A5.493 5.493 0 0 0 4 13H1c0-.26.164-1.03.76-1.724.545-.636 1.492-1.256 3.16-1.275zM1.5 5.5a3 3 0 1 1 6 0 3 3 0 0 1-6 0zm3-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>
-            </svg>
-            Notion Vendors
-          </a>
-          <a href="/master-costs#colors-section" class="management-link">
-            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-            </svg>
-            Colors
-          </a>
-          <a href="/master-costs#variables-section" class="management-link">
-            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2zm3.496 6.033a.237.237 0 0 1-.24-.247C5.35 4.091 6.737 3.5 8.005 3.5c1.396 0 2.672.73 2.672 2.24 0 1.08-.635 1.594-1.244 2.057-.737.559-1.01.768-1.01 1.486v.105a.25.25 0 0 1-.25.25h-.81a.25.25 0 0 1-.25-.246l-.004-.217c-.038-.927.495-1.498 1.168-1.987.59-.444.965-.736.965-1.371 0-.825-.628-1.168-1.314-1.168-.803 0-1.253.478-1.342 1.134-.018.137-.128.25-.266.25h-.825zm2.325 6.443c-.584 0-1.009-.394-1.009-.927 0-.552.425-.94 1.01-.94.609 0 1.028.388 1.028.94 0 .533-.42.927-1.029.927z"/>
-            </svg>
-            Variables
-          </a>
-          <a href="/master-costs#size-ranges-section" class="management-link">
-            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M3 2.5a2.5 2.5 0 0 1 5 0 2.5 2.5 0 0 1 5 0v.006c0 .07 0 .27-.038.494H15a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1v7.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 14.5V7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h2.038A2.968 2.968 0 0 1 3 2.506V2.5zm1.068.5H7v-.5a1.5 1.5 0 1 0-3 0c0 .085.002.274.045.43a.522.522 0 0 0 .023.07zM9 3h2.932a.56.56 0 0 0 .023-.07c.043-.156.045-.345.045-.43a1.5 1.5 0 0 0-3 0V3zM1 4v2h6V4H1zm8 0v2h6V4H9zm5 3H9v8h4.5a.5.5 0 0 0 .5-.5V7zm-7 8V7H2v7.5a.5.5 0 0 0 .5.5H7z"/>
-            </svg>
-            Size Ranges
-          </a>
-          <a href="/master-costs#global-settings-section" class="management-link">
-            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
-              <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319z"/>
-            </svg>
-            Global Settings
-          </a>
+    <!-- ACTION BUTTONS GRID -->
+    <div class="action-buttons-grid">
+        
+        <div class="action-card-modern" onclick="window.location.href='/style/new'">
+            <div class="action-icon-modern">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+            </div>
+            <h3>New Style</h3>
+            <p>Create uniform</p>
+            <button class="action-btn">
+                Open Wizard →
+            </button>
         </div>
-      </div>
-      
-      <!-- Quick Tips -->
-      <div class="sidebar-card" style="background: var(--gray-50);">
-        <h3>💡 Quick Tips</h3>
-        <ul style="font-size: 0.875rem; color: var(--text-secondary); padding-left: 1.25rem; margin: 0;">
-          <li style="margin-bottom: 0.5rem;">Dashboard updates automatically with your data</li>
-          <li style="margin-bottom: 0.5rem;">Update Master Costs to adjust all prices</li>
-          <li style="margin-bottom: 0.5rem;">Management links jump to specific sections</li>
-          <li>Click Recent Styles for quick edits</li>
-        </ul>
-      </div>
+        
+        <div class="action-card-modern green" onclick="window.location.href='/import-excel'">
+            <div class="action-icon-modern">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+            </div>
+            <h3>Import Excel</h3>
+            <p>Bulk upload</p>
+            <button class="action-btn">
+                Upload File →
+            </button>
+        </div>
+        
+        <div class="action-card-modern orange" id="export-all-btn">
+            <div class="action-icon-modern">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+            </div>
+            <h3>Export All</h3>
+            <p>Download SAP CSV</p>
+            <button class="action-btn">
+                Export Now →
+            </button>
+        </div>
+        
+        <div class="action-card-modern purple" onclick="scrollToAnalytics()">
+            <div class="action-icon-modern">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="12" y1="20" x2="12" y2="10"/>
+                    <line x1="18" y1="20" x2="18" y2="4"/>
+                    <line x1="6" y1="20" x2="6" y2="16"/>
+                </svg>
+            </div>
+            <h3>Analytics</h3>
+            <p>View insights</p>
+            <button class="action-btn">
+                View Charts →
+            </button>
+        </div>
+        
     </div>
-  </div>
-  
+    
+    <!-- STATS CARDS GRID -->
+    <div class="stats-grid">
+        
+        <div class="stat-card-modern blue">
+            <div class="stat-icon">📋</div>
+            <div class="stat-value" id="stat-total-styles">{{ total_styles }}</div>
+            <div class="stat-label">Styles</div>
+        </div>
+        
+        <div class="stat-card-modern green">
+            <div class="stat-icon">💰</div>
+            <div class="stat-value" id="stat-avg-cost">${{ "%.2f"|format(avg_cost) }}</div>
+            <div class="stat-label">Avg Cost</div>
+        </div>
+        
+        <div class="stat-card-modern orange">
+            <div class="stat-icon">🆕</div>
+            <div class="stat-value">3</div>
+            <div class="stat-label">This Week</div>
+        </div>
+        
+        <div class="stat-card-modern pink">
+            <div class="stat-icon">📈</div>
+            <div class="stat-value">{{ price_range }}</div>
+            <div class="stat-label">Range</div>
+        </div>
+        
+        <div class="stat-card-modern purple">
+            <div class="stat-icon">🏆</div>
+            <div class="stat-value">{{ top_fabric if top_fabric != 'N/A' else '—' }}</div>
+            <div class="stat-label">Top Fabric</div>
+        </div>
+        
+        <div class="stat-card-modern cyan">
+            <div class="stat-icon">💵</div>
+            <div class="stat-value">${{ "%.0f"|format(total_styles * avg_cost) }}</div>
+            <div class="stat-label">Portfolio</div>
+        </div>
+        
+        <div class="stat-card-modern indigo">
+            <div class="stat-icon">📊</div>
+            <div class="stat-value">+9.4%</div>
+            <div class="stat-label">Growth</div>
+        </div>
+        
+    </div>
+    
+    <!-- ANALYTICS SECTION -->
+    <div class="analytics-section" id="analytics-section">
+        <div class="analytics-header">
+            <h2>
+                <span>📊</span>
+                Live Analytics & Insights
+            </h2>
+        </div>
+        
+        <div class="analytics-grid">
+            
+            <!-- Cost Distribution -->
+            <div class="analytics-widget">
+                <div class="widget-header">
+                    <span class="widget-icon">💰</span>
+                    <h3>Cost Distribution</h3>
+                </div>
+                <div class="widget-content">
+                    <div class="chart-placeholder">
+                        Bar chart showing style count per price range
+                        <br><small>(Chart.js integration coming soon)</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Top Fabrics -->
+            <div class="analytics-widget">
+                <div class="widget-header">
+                    <span class="widget-icon">🧵</span>
+                    <h3>Top Fabrics</h3>
+                </div>
+                <div class="widget-content">
+                    <div class="chart-placeholder">
+                        Horizontal bar chart of most-used fabrics
+                        <br><small>(Chart.js integration coming soon)</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Compare Styles -->
+            <div class="analytics-widget">
+                <div class="widget-header">
+                    <span class="widget-icon">🔄</span>
+                    <h3>Compare Styles</h3>
+                </div>
+                <div class="widget-content">
+                    <div class="chart-placeholder">
+                        Interactive comparison table
+                        <br><small>(Feature coming soon)</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cost Breakdown -->
+            <div class="analytics-widget">
+                <div class="widget-header">
+                    <span class="widget-icon">🥧</span>
+                    <h3>Cost Breakdown</h3>
+                </div>
+                <div class="widget-content">
+                    <div class="chart-placeholder">
+                        Pie chart: Fabric, Labor, Notions, Labels
+                        <br><small>(Chart.js integration coming soon)</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Activity Trend -->
+            <div class="analytics-widget">
+                <div class="widget-header">
+                    <span class="widget-icon">📈</span>
+                    <h3>Activity Trend</h3>
+                </div>
+                <div class="widget-content">
+                    <div class="chart-placeholder">
+                        Line graph: Styles created over time
+                        <br><small>(Chart.js integration coming soon)</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Insights -->
+            <div class="analytics-widget">
+                <div class="widget-header">
+                    <span class="widget-icon">💡</span>
+                    <h3>Quick Insights</h3>
+                </div>
+                <div class="widget-content">
+                    <ul class="insight-list">
+                        <li>Trending: +3 styles this week</li>
+                        <li>Avg profit margin: 60%</li>
+                        <li>Most active: This week</li>
+                        <li>Price sweet spot: $35-$45</li>
+                        <li>Review high-cost styles</li>
+                    </ul>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    
 </div>
 
+<script>
+// Scroll to analytics section
+function scrollToAnalytics() {
+    document.getElementById('analytics-section').scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/dashboard_modern.js') }}"></script>
 {% endblock %}

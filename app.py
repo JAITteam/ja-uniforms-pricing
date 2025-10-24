@@ -285,7 +285,26 @@ def test_complete_lookup():
         return "<h1>No style found!</h1><a href='/create-complete-data'>Create Sample Data First</a>"
 
 # ===== ADMIN ROUTES (Future expansion) =====
+@app.route('/api/recent-styles')
+def api_recent_styles():
+    styles = Style.query.order_by(Style.updated_at.desc()).limit(5).all()
+    return jsonify([{
+        'id': s.id,
+        'vendor_style': s.vendor_style,
+        'style_name': s.style_name,
+        'updated_at': s.updated_at.isoformat() if s.updated_at else None
+    } for s in styles])
 
+@app.route('/api/dashboard-stats')
+def api_dashboard_stats():
+    total_styles = Style.query.count()
+    styles = Style.query.all()
+    avg_cost = sum(s.total_cost for s in styles) / len(styles) if styles else 0
+    
+    return jsonify({
+        'total_styles': total_styles,
+        'avg_cost': avg_cost
+    })
 
 @app.route('/api/style/<int:style_id>/upload-image', methods=['POST'])
 def upload_style_image(style_id):

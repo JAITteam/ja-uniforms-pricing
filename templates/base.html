@@ -9,6 +9,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
+    
+    <!-- ADD THIS LINE! -->
+    {% block extra_css %}{% endblock %}
 </head>
 
 <body>
@@ -44,6 +47,9 @@
         };
     })();
     </script>
+    
+    <!-- ADD THIS LINE BEFORE navbar.js! -->
+    {% block extra_js %}{% endblock %}
     
     <!-- Custom Alert Modal -->
     <div id="customAlertModal" class="custom-alert-modal">
