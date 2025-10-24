@@ -1,115 +1,192 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Master Cost Lists</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Master Cost Lists | JA Uniforms</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; padding: 30px; background-color: #f5f5f5; }
-        .container { max-width: 1400px; margin: 0 auto; background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1 { font-size: 32px; margin-bottom: 10px; color: #333; }
-        .subtitle { color: #666; margin-bottom: 30px; font-size: 14px; }
-        h2 { font-size: 24px; margin-top: 40px; margin-bottom: 15px; color: #333; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        thead { background-color: #e8f4f8; }
-        .notions thead { background-color: #f3e8f8; }
-        .labor thead { background-color: #fef3e8; }
-        .cleaning thead { background-color: #e8f8f0; }
-        .vendors thead { background-color: #ffe8e8; }
-        th { text-align: left; padding: 12px; font-weight: 600; color: #333; border: 1px solid #ddd; }
-        td { padding: 12px; border: 1px solid #ddd; }
-        tbody tr:hover { background-color: #f9f9f9; }
-        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 5px; transition: all 0.2s; }
-        .btn-primary { background-color: #007bff; color: white; }
-        .btn-primary:hover { background-color: #0056b3; }
-        .btn-success { background-color: #28a745; color: white; }
-        .btn-success:hover { background-color: #218838; }
-        .btn-danger { background-color: #dc3545; color: white; }
-        .btn-danger:hover { background-color: #c82333; }
-        .btn-secondary { background-color: #6c757d; color: white; text-decoration: none; display: inline-block; }
-        .btn-secondary:hover { background-color: #545b62; }
-        .btn-small { padding: 4px 8px; font-size: 12px; }
-        .actions { display: flex; gap: 5px; }
-        .add-row-btn { margin: 10px 0 20px 0; }
-        input, select { width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
-        input:focus, select:focus { outline: none; border-color: #007bff; box-shadow: 0 0 0 2px rgba(0,123,255,0.1); }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; }
-        .modal-content { background-color: white; margin: 100px auto; padding: 30px; width: 500px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .modal-header { margin-bottom: 20px; }
-        .modal-header h3 { margin: 0; color: #333; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
-        .modal-footer { margin-top: 20px; text-align: right; }
-        .notification { position: fixed; top: 20px; right: 20px; padding: 15px 20px; border-radius: 4px; color: white; display: none; z-index: 2000; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
-        .notification.success { background-color: #28a745; }
-        .notification.error { background-color: #dc3545; }
-        .back-button { margin-top: 40px; }
-        .warning-box { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
-        .vendor-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px; }
-    </style>
+    
+    <!-- Feather Icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- External CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/master_costs_styles.css') }}">
 </head>
 <body>
-    <div class="container">
-        <h1>Master Cost Lists</h1>
-        <p class="subtitle">These costs apply to ALL styles. When you update a price here, it automatically updates all styles that use this item.</p>
+    
+    <!-- Main Container -->
+    <div class="main-container">
         
-        <div class="warning-box">
-            <strong>⚠️ Important:</strong> Changes to master costs will immediately affect the pricing of all existing uniform styles in your system.
-        </div>
-        
-        <!-- VENDORS SECTION -->
-        <h2>Vendors</h2>
-        <div class="vendor-grid">
-            <!-- FABRIC VENDORS -->
-            <div id="fabric-vendors">
-                <h3>Fabric Vendors</h3>
-                <button class="btn btn-success add-row-btn btn-add-modal" data-type="fabric_vendor">+ Add Fabric Vendor</button>
-                <table class="vendors">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Code</th>
-                            <th style="width: 120px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for vendor in fabric_vendors %}
-                        <tr>
-                            <td>{{ vendor.name }}</td>
-                            <td>{{ vendor.vendor_code or '' }}</td>
-                            <td>
-                                <div class="actions">
-                                    <button class="btn btn-primary btn-small btn-edit" data-type="fabric_vendor" data-id="{{ vendor.id }}">Edit</button>
-                                    <button class="btn btn-danger btn-small btn-delete" data-type="fabric_vendor" data-id="{{ vendor.id }}">Delete</button>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <!-- Header Section -->
+        <header class="page-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <div class="page-icon">
+                        <i data-feather="database"></i>
+                    </div>
+                    <div class="header-text">
+                        <h1>Master Cost Lists</h1>
+                        <p class="subtitle">Centralized pricing that automatically updates all uniform styles</p>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <a href="/" class="btn-back">
+                        <i data-feather="arrow-left"></i>
+                        <span>Back to Dashboard</span>
+                    </a>
+                </div>
             </div>
             
-            <!-- NOTION VENDORS -->
-            <div id="notion-vendors">
-                <h3>Notion Vendors</h3>
-                <button class="btn btn-success add-row-btn btn-add-modal" data-type="notion_vendor">+ Add Notion Vendor</button>
-                <table class="vendors">
+            <!-- Warning Banner -->
+            <div class="warning-banner">
+                <i data-feather="alert-circle"></i>
+                <span><strong>Important:</strong> Changes here will immediately affect pricing across all uniform styles in your system.</span>
+            </div>
+        </header>
+
+        <!-- Vendors Grid -->
+        <section class="section-card">
+            <div class="section-header">
+                <div class="section-title">
+                    <i data-feather="users"></i>
+                    <h2>Vendors</h2>
+                </div>
+            </div>
+            
+            <div class="vendors-grid">
+                <!-- Fabric Vendors -->
+                <div class="vendor-card">
+                    <div class="card-header gradient-red">
+                        <div class="card-title">
+                            <i data-feather="package"></i>
+                            <h3>Fabric Vendors</h3>
+                        </div>
+                        <button class="btn-add" data-type="fabric_vendor">
+                            <i data-feather="plus"></i>
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th data-sort="name">Name <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                                    <th data-sort="code">Code <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for vendor in fabric_vendors %}
+                                <tr data-id="{{ vendor.id }}">
+                                    <td>{{ vendor.name }}</td>
+                                    <td>{{ vendor.vendor_code or '' }}</td>
+                                    <td class="actions-cell">
+                                        <div class="row-actions">
+                                            <button class="icon-btn icon-edit" data-type="fabric_vendor" data-id="{{ vendor.id }}" title="Edit">
+                                                <i data-feather="edit-2"></i>
+                                            </button>
+                                            <button class="icon-btn icon-delete" data-type="fabric_vendor" data-id="{{ vendor.id }}" title="Delete">
+                                                <i data-feather="trash-2"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Notion Vendors -->
+                <div class="vendor-card">
+                    <div class="card-header gradient-purple">
+                        <div class="card-title">
+                            <i data-feather="box"></i>
+                            <h3>Notion Vendors</h3>
+                        </div>
+                        <button class="btn-add" data-type="notion_vendor">
+                            <i data-feather="plus"></i>
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th data-sort="name">Name <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                                    <th data-sort="code">Code <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for vendor in notion_vendors %}
+                                <tr data-id="{{ vendor.id }}">
+                                    <td>{{ vendor.name }}</td>
+                                    <td>{{ vendor.vendor_code or '' }}</td>
+                                    <td class="actions-cell">
+                                        <div class="row-actions">
+                                            <button class="icon-btn icon-edit" data-type="notion_vendor" data-id="{{ vendor.id }}" title="Edit">
+                                                <i data-feather="edit-2"></i>
+                                            </button>
+                                            <button class="icon-btn icon-delete" data-type="notion_vendor" data-id="{{ vendor.id }}" title="Delete">
+                                                <i data-feather="trash-2"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Fabrics Section -->
+        <section class="section-card">
+            <div class="card-header gradient-blue">
+                <div class="card-title">
+                    <i data-feather="layers"></i>
+                    <h2>Fabrics</h2>
+                    <span class="item-count" id="fabricCount">{{ fabrics|length }} items</span>
+                </div>
+                <div class="header-actions">
+                    <div class="search-box">
+                        <i data-feather="search"></i>
+                        <input type="text" id="fabricSearch" placeholder="Search fabrics..." autocomplete="off">
+                    </div>
+                    <button class="btn-add" data-type="fabric">
+                        <i data-feather="plus"></i>
+                        <span>Add Fabric</span>
+                    </button>
+                </div>
+            </div>
+            <div class="table-container scrollable">
+                <table class="modern-table">
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th>Code</th>
-                            <th style="width: 120px;">Actions</th>
+                            <th data-sort="name">Name <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="code">Fabric Code <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="cost">Cost/Yard <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="vendor">Vendor <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for vendor in notion_vendors %}
-                        <tr>
-                            <td>{{ vendor.name }}</td>
-                            <td>{{ vendor.vendor_code or '' }}</td>
-                            <td>
-                                <div class="actions">
-                                    <button class="btn btn-primary btn-small btn-edit" data-type="notion_vendor" data-id="{{ vendor.id }}">Edit</button>
-                                    <button class="btn btn-danger btn-small btn-delete" data-type="notion_vendor" data-id="{{ vendor.id }}">Delete</button>
+                    <tbody id="fabricTable">
+                        {% for fabric in fabrics %}
+                        <tr data-id="{{ fabric.id }}" class="fabric-row">
+                            <td><strong>{{ fabric.name }}</strong></td>
+                            <td><code>{{ fabric.fabric_code or '-' }}</code></td>
+                            <td><span class="price">${{ "%.2f"|format(fabric.cost_per_yard) }}</span></td>
+                            <td>{{ fabric.fabric_vendor.name if fabric.fabric_vendor else '-' }}</td>
+                            <td class="actions-cell">
+                                <div class="row-actions">
+                                    <button class="icon-btn icon-edit" data-type="fabric" data-id="{{ fabric.id }}" title="Edit">
+                                        <i data-feather="edit-2"></i>
+                                    </button>
+                                    <button class="icon-btn icon-delete" data-type="fabric" data-id="{{ fabric.id }}" title="Delete">
+                                        <i data-feather="trash-2"></i>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -117,300 +194,386 @@
                     </tbody>
                 </table>
             </div>
-        </div>
+        </section>
 
-        <!-- FABRICS -->
-        <h2>Fabrics</h2>
-        <div style="margin-bottom: 15px;">
-            <input type="text" id="fabricSearch" placeholder="🔍 Search fabrics..." style="width: 300px; padding: 8px; margin-bottom: 10px;">
-            <span id="fabricCount" style="margin-left: 15px; color: #666;"></span>
-        </div>
-        <button class="btn btn-success add-row-btn btn-add-modal" data-type="fabric">+ Add Fabric</button>
-        <table class="fabrics">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Code</th>
-                    <th>Cost/Yard</th>
-                    <th>Vendor</th>
-                    <th style="width: 150px;">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="fabricsTable">
-                {% for fabric in fabrics %}
-                <tr data-id="{{ fabric.id }}" class="fabric-row">
-                    <td>{{ fabric.name }}</td>
-                    <td>{{ fabric.fabric_code or '' }}</td>
-                    <td>${{ "%.2f"|format(fabric.cost_per_yard) }}</td>
-                    <td>{{ fabric.fabric_vendor.name if fabric.fabric_vendor else 'N/A' }}</td>
-                    <td>
-                        <div class="actions">
-                            <button class="btn btn-primary btn-small btn-edit" data-type="fabric" data-id="{{ fabric.id }}">Edit</button>
-                            <button class="btn btn-danger btn-small btn-delete" data-type="fabric" data-id="{{ fabric.id }}">Delete</button>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        
-        <!-- NOTIONS -->
-        <h2>Notions</h2>
-        <div style="margin-bottom: 15px;">
-            <input type="text" id="notionSearch" placeholder="🔍 Search notions..." style="width: 300px; padding: 8px; margin-bottom: 10px;">
-            <span id="notionCount" style="margin-left: 15px; color: #666;"></span>
-        </div>
-        <button class="btn btn-success add-row-btn btn-add-modal" data-type="notion">+ Add Notion</button>
-        <table class="notions">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Cost/Unit</th>
-                    <th>Vendor</th>
-                    <th style="width: 150px;">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="notionsTable">
-                {% for notion in notions %}
-                <tr data-id="{{ notion.id }}" class="notion-row">
-                    <td>{{ notion.name }}</td>
-                    <td>${{ "%.2f"|format(notion.cost_per_unit) }}</td>
-                    <td>{{ notion.notion_vendor.name if notion.notion_vendor else 'N/A' }}</td>
-                    <td>
-                        <div class="actions">
-                            <button class="btn btn-primary btn-small btn-edit" data-type="notion" data-id="{{ notion.id }}">Edit</button>
-                            <button class="btn btn-danger btn-small btn-delete" data-type="notion" data-id="{{ notion.id }}">Delete</button>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        
-        <!-- LABOR -->
-        <h2>Labor Operations</h2>
-        <div style="margin-bottom: 15px;">
-            <input type="text" id="laborSearch" placeholder="🔍 Search labor operations..." style="width: 300px; padding: 8px; margin-bottom: 10px;">
-            <span id="laborCount" style="margin-left: 15px; color: #666;"></span>
-        </div>
-        <button class="btn btn-success add-row-btn btn-add-modal" data-type="labor">+ Add Labor Operation</button>
-        <table class="labor">
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Cost Type</th>
-                    <th>Rate</th>
-                    <th style="width: 150px;">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="laborTable">
-                {% for labor in labor_costs %}
-                <tr data-id="{{ labor.id }}" class="labor-row">
-                    <td>{{ labor.name }}</td>
-                    <td>{{ labor.cost_type or 'flat_rate' }}</td>
-                    <td>
-                        {% if labor.cost_type == 'flat_rate' %}
-                            ${{ "%.2f"|format(labor.fixed_cost or 0) }}
-                        {% elif labor.cost_type == 'hourly' %}
-                            ${{ "%.2f"|format(labor.cost_per_hour or 0) }}/hr
-                        {% elif labor.cost_type == 'per_piece' %}
-                            ${{ "%.2f"|format(labor.cost_per_piece or 0) }}/pc
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </td>
-                    <td>
-                        <div class="actions">
-                            <button class="btn btn-primary btn-small btn-edit" data-type="labor" data-id="{{ labor.id }}">Edit</button>
-                            <button class="btn btn-danger btn-small btn-delete" data-type="labor" data-id="{{ labor.id }}">Delete</button>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        
-        <!-- CLEANING -->
-        <h2>Cleaning Costs</h2>
-        <div style="margin-bottom: 15px;">
-            <input type="text" id="cleaningSearch" placeholder="🔍 Search cleaning costs..." style="width: 300px; padding: 8px; margin-bottom: 10px;">
-            <span id="cleaningCount" style="margin-left: 15px; color: #666;"></span>
-        </div>
-        <button class="btn btn-success add-row-btn btn-add-modal" data-type="cleaning">+ Add Cleaning Cost</button>
-        <table class="cleaning">
-            <thead>
-                <tr>
-                    <th>Type</th>
-                    <th>Cost</th>
-                    <th style="width: 150px;">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="cleaningTable">
-                {% for cleaning in cleaning_costs %}
-                <tr data-id="{{ cleaning.id }}" class="cleaning-row">
-                    <td>{{ cleaning.garment_type }}</td>
-                    <td>${{ "%.2f"|format(cleaning.fixed_cost) }}</td>
-                    <td>
-                        <div class="actions">
-                            <button class="btn btn-primary btn-small btn-edit" data-type="cleaning" data-id="{{ cleaning.id }}">Edit</button>
-                            <button class="btn btn-danger btn-small btn-delete" data-type="cleaning" data-id="{{ cleaning.id }}">Delete</button>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <!-- Notions Section -->
+        <section class="section-card">
+            <div class="card-header gradient-purple">
+                <div class="card-title">
+                    <i data-feather="grid"></i>
+                    <h2>Notions</h2>
+                    <span class="item-count" id="notionCount">{{ notions|length }} items</span>
+                </div>
+                <div class="header-actions">
+                    <div class="search-box">
+                        <i data-feather="search"></i>
+                        <input type="text" id="notionSearch" placeholder="Search notions..." autocomplete="off">
+                    </div>
+                    <button class="btn-add" data-type="notion">
+                        <i data-feather="plus"></i>
+                        <span>Add Notion</span>
+                    </button>
+                </div>
+            </div>
+            <div class="table-container scrollable">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="name">Name <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="cost">Cost/Unit <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="unit">Unit Type <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="vendor">Vendor <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody id="notionTable">
+                        {% for notion in notions %}
+                        <tr data-id="{{ notion.id }}" class="notion-row">
+                            <td><strong>{{ notion.name }}</strong></td>
+                            <td><span class="price">${{ "%.2f"|format(notion.cost_per_unit) }}</span></td>
+                            <td><span class="badge">{{ notion.unit_type or 'each' }}</span></td>
+                            <td>{{ notion.notion_vendor.name if notion.notion_vendor else '-' }}</td>
+                            <td class="actions-cell">
+                                <div class="row-actions">
+                                    <button class="icon-btn icon-edit" data-type="notion" data-id="{{ notion.id }}" title="Edit">
+                                        <i data-feather="edit-2"></i>
+                                    </button>
+                                    <button class="icon-btn icon-delete" data-type="notion" data-id="{{ notion.id }}" title="Delete">
+                                        <i data-feather="trash-2"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
-        
-        <!-- COLORS -->
-        <h2>Colors</h2>
-        <div style="margin-bottom: 15px;">
-            <input type="text" id="colorSearch" placeholder="🔍 Search colors..." style="width: 300px; padding: 8px; margin-bottom: 10px;">
-            <span id="colorCount" style="margin-left: 15px; color: #666;"></span>
-        </div>
-        <button class="btn btn-success add-row-btn btn-add-modal" data-type="color">+ Add Color</button>
-        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;">
-            <table>
-                <thead style="position: sticky; top: 0; z-index: 10;">
-                    <tr>
-                        <th>Name</th>
-                        <th style="width: 150px;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="colorsTable">
-                    {% for color in colors %}
-                    <tr data-id="{{ color.id }}" class="color-row">
-                        <td>{{ color.name }}</td>
-                        <td>
-                            <div class="actions">
-                                <button class="btn btn-primary btn-small btn-edit" data-type="color" data-id="{{ color.id }}">Edit</button>
-                                <button class="btn btn-danger btn-small btn-delete" data-type="color" data-id="{{ color.id }}">Delete</button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        <!-- Labor Operations Section -->
+        <section class="section-card">
+            <div class="card-header gradient-orange">
+                <div class="card-title">
+                    <i data-feather="tool"></i>
+                    <h2>Labor Operations</h2>
+                    <span class="item-count" id="laborCount">{{ labor_costs|length }} items</span>
+                </div>
+                <div class="header-actions">
+                    <div class="search-box">
+                        <i data-feather="search"></i>
+                        <input type="text" id="laborSearch" placeholder="Search labor..." autocomplete="off">
+                    </div>
+                    <button class="btn-add" data-type="labor">
+                        <i data-feather="plus"></i>
+                        <span>Add Labor</span>
+                    </button>
+                </div>
+            </div>
+            <div class="table-container scrollable">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="name">Name <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="type">Cost Type <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="rate">Rate <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody id="laborTable">
+                        {% for labor in labor_costs %}
+                        <tr data-id="{{ labor.id }}" class="labor-row">
+                            <td><strong>{{ labor.name }}</strong></td>
+                            <td><span class="badge badge-{{ labor.cost_type }}">{{ labor.cost_type or 'flat_rate' }}</span></td>
+                            <td>
+                                {% if labor.cost_type == 'flat_rate' %}
+                                    <span class="price">${{ "%.2f"|format(labor.fixed_cost or 0) }}</span>
+                                {% elif labor.cost_type == 'hourly' %}
+                                    <span class="price">${{ "%.2f"|format(labor.cost_per_hour or 0) }}/hr</span>
+                                {% elif labor.cost_type == 'per_piece' %}
+                                    <span class="price">${{ "%.2f"|format(labor.cost_per_piece or 0) }}/pc</span>
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td class="actions-cell">
+                                <div class="row-actions">
+                                    <button class="icon-btn icon-edit" data-type="labor" data-id="{{ labor.id }}" title="Edit">
+                                        <i data-feather="edit-2"></i>
+                                    </button>
+                                    <button class="icon-btn icon-delete" data-type="labor" data-id="{{ labor.id }}" title="Delete">
+                                        <i data-feather="trash-2"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
-        <!-- VARIABLES -->
-        <h2>Variables</h2>
-        <div style="margin-bottom: 15px;">
-            <input type="text" id="variableSearch" placeholder="🔍 Search variables..." style="width: 300px; padding: 8px; margin-bottom: 10px;">
-            <span id="variableCount" style="margin-left: 15px; color: #666;"></span>
-        </div>
-        <button class="btn btn-success add-row-btn btn-add-modal" data-type="variable">+ Add Variable</button>
-        <table>
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th style="width: 150px;">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="variablesTable">
-                {% for variable in variables %}
-                <tr data-id="{{ variable.id }}" class="variable-row">
-                    <td>{{ variable.name }}</td>
-                    <td>
-                        <div class="actions">
-                            <button class="btn btn-primary btn-small btn-edit" data-type="variable" data-id="{{ variable.id }}">Edit</button>
-                            <button class="btn btn-danger btn-small btn-delete" data-type="variable" data-id="{{ variable.id }}">Delete</button>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        
-         <!-- SIZE RANGES -->
-        <h2>Size Ranges</h2>
-        <div style="margin-bottom: 15px;">
-            <input type="text" id="sizeRangeSearch" placeholder="🔍 Search size ranges..." style="width: 300px; padding: 8px; margin-bottom: 10px;">
-            <span id="sizeRangeCount" style="margin-left: 15px; color: #666;"></span>
-        </div>
-        <button class="btn btn-success add-row-btn btn-add-modal" data-type="size_range">+ Add Size Range</button>
-        <table>
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Regular Sizes</th>
-                    <th>Extended Sizes</th>
-                    <th>Extended Markup %</th>
-                    <th>Description</th>
-                    <th style="width: 150px;">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="sizeRangesTable">
-                {% for size_range in size_ranges %}
-                <tr data-id="{{ size_range.id }}" class="size-range-row">
-                    <td>{{ size_range.name }}</td>
-                    <td>{{ size_range.regular_sizes }}</td>
-                    <td>{{ size_range.extended_sizes or 'N/A' }}</td>
-                    <td>{{ "%.1f"|format(size_range.extended_markup_percent or 0) }}%</td>
-                    <td>{{ size_range.description or '' }}</td>
-                    <td>
-                        <div class="actions">
-                            <button class="btn btn-primary btn-small btn-edit" data-type="size_range" data-id="{{ size_range.id }}">Edit</button>
-                            <button class="btn btn-danger btn-small btn-delete" data-type="size_range" data-id="{{ size_range.id }}">Delete</button>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <!-- Cleaning Costs Section -->
+        <section class="section-card">
+            <div class="card-header gradient-green">
+                <div class="card-title">
+                    <i data-feather="droplet"></i>
+                    <h2>Cleaning Costs</h2>
+                    <span class="item-count" id="cleaningCount">{{ cleaning_costs|length }} items</span>
+                </div>
+                <div class="header-actions">
+                    <div class="search-box">
+                        <i data-feather="search"></i>
+                        <input type="text" id="cleaningSearch" placeholder="Search cleaning..." autocomplete="off">
+                    </div>
+                    <button class="btn-add" data-type="cleaning">
+                        <i data-feather="plus"></i>
+                        <span>Add Cleaning</span>
+                    </button>
+                </div>
+            </div>
+            <div class="table-container scrollable">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="type">Garment Type <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="cost">Cost <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody id="cleaningTable">
+                        {% for cleaning in cleaning_costs %}
+                        <tr data-id="{{ cleaning.id }}" class="cleaning-row">
+                            <td><strong>{{ cleaning.garment_type }}</strong></td>
+                            <td><span class="price">${{ "%.2f"|format(cleaning.fixed_cost) }}</span></td>
+                            <td class="actions-cell">
+                                <div class="row-actions">
+                                    <button class="icon-btn icon-edit" data-type="cleaning" data-id="{{ cleaning.id }}" title="Edit">
+                                        <i data-feather="edit-2"></i>
+                                    </button>
+                                    <button class="icon-btn icon-delete" data-type="cleaning" data-id="{{ cleaning.id }}" title="Delete">
+                                        <i data-feather="trash-2"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
+        <!-- Colors Section -->
+        <section class="section-card">
+            <div class="card-header gradient-pink">
+                <div class="card-title">
+                    <i data-feather="aperture"></i>
+                    <h2>Colors</h2>
+                    <span class="item-count" id="colorCount">{{ colors|length }} items</span>
+                </div>
+                <div class="header-actions">
+                    <div class="search-box">
+                        <i data-feather="search"></i>
+                        <input type="text" id="colorSearch" placeholder="Search colors..." autocomplete="off">
+                    </div>
+                    <button class="btn-add" data-type="color">
+                        <i data-feather="plus"></i>
+                        <span>Add Color</span>
+                    </button>
+                </div>
+            </div>
+            <div class="table-container scrollable">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="name">Color Name <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody id="colorsTable">
+                        {% for color in colors %}
+                        <tr data-id="{{ color.id }}" class="color-row">
+                            <td><strong>{{ color.name }}</strong></td>
+                            <td class="actions-cell">
+                                <div class="row-actions">
+                                    <button class="icon-btn icon-edit" data-type="color" data-id="{{ color.id }}" title="Edit">
+                                        <i data-feather="edit-2"></i>
+                                    </button>
+                                    <button class="icon-btn icon-delete" data-type="color" data-id="{{ color.id }}" title="Delete">
+                                        <i data-feather="trash-2"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
-        <!-- GLOBAL SETTINGS -->
-        <h2>Global Settings</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Setting</th>
-                    <th>Value</th>
-                    <th style="width: 150px;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for setting in global_settings %}
-                <tr>
-                    <td>{{ setting.setting_key }}</td>
-                    <td>{{ setting.setting_value }}</td>
-                    <td>
-                        <div class="actions">
-                            <button class="btn btn-primary btn-small btn-edit" data-type="global_setting" data-id="{{ setting.id }}">Edit</button>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <!-- Variables Section -->
+        <section class="section-card">
+            <div class="card-header gradient-cyan">
+                <div class="card-title">
+                    <i data-feather="tag"></i>
+                    <h2>Variables</h2>
+                    <span class="item-count" id="variableCount">{{ variables|length }} items</span>
+                </div>
+                <div class="header-actions">
+                    <div class="search-box">
+                        <i data-feather="search"></i>
+                        <input type="text" id="variableSearch" placeholder="Search variables..." autocomplete="off">
+                    </div>
+                    <button class="btn-add" data-type="variable">
+                        <i data-feather="plus"></i>
+                        <span>Add Variable</span>
+                    </button>
+                </div>
+            </div>
+            <div class="table-container scrollable">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="name">Variable Name <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody id="variablesTable">
+                        {% for variable in variables %}
+                        <tr data-id="{{ variable.id }}" class="variable-row">
+                            <td><strong>{{ variable.name }}</strong></td>
+                            <td class="actions-cell">
+                                <div class="row-actions">
+                                    <button class="icon-btn icon-edit" data-type="variable" data-id="{{ variable.id }}" title="Edit">
+                                        <i data-feather="edit-2"></i>
+                                    </button>
+                                    <button class="icon-btn icon-delete" data-type="variable" data-id="{{ variable.id }}" title="Delete">
+                                        <i data-feather="trash-2"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
-        <div class="back-button">
-            <a href="/" class="btn btn-secondary">← Back to Dashboard</a>
-        </div>
+        <!-- Size Ranges Section -->
+        <section class="section-card">
+            <div class="card-header gradient-indigo">
+                <div class="card-title">
+                    <i data-feather="maximize-2"></i>
+                    <h2>Size Ranges</h2>
+                    <span class="item-count" id="sizeRangeCount">{{ size_ranges|length }} items</span>
+                </div>
+                <div class="header-actions">
+                    <div class="search-box">
+                        <i data-feather="search"></i>
+                        <input type="text" id="sizeRangeSearch" placeholder="Search sizes..." autocomplete="off">
+                    </div>
+                    <button class="btn-add" data-type="size_range">
+                        <i data-feather="plus"></i>
+                        <span>Add Size Range</span>
+                    </button>
+                </div>
+            </div>
+            <div class="table-container scrollable">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="name">Name <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="regular">Regular Sizes <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="extended">Extended Sizes <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="markup">Markup % <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="description">Description <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody id="sizeRangesTable">
+                        {% for size_range in size_ranges %}
+                        <tr data-id="{{ size_range.id }}" class="size-range-row">
+                            <td><strong>{{ size_range.name }}</strong></td>
+                            <td><code>{{ size_range.regular_sizes }}</code></td>
+                            <td><code>{{ size_range.extended_sizes or '-' }}</code></td>
+                            <td><span class="badge">{{ "%.1f"|format(size_range.extended_markup_percent or 0) }}%</span></td>
+                            <td><span class="text-muted">{{ size_range.description or '-' }}</span></td>
+                            <td class="actions-cell">
+                                <div class="row-actions">
+                                    <button class="icon-btn icon-edit" data-type="size_range" data-id="{{ size_range.id }}" title="Edit">
+                                        <i data-feather="edit-2"></i>
+                                    </button>
+                                    <button class="icon-btn icon-delete" data-type="size_range" data-id="{{ size_range.id }}" title="Delete">
+                                        <i data-feather="trash-2"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Global Settings Section -->
+        <section class="section-card">
+            <div class="card-header gradient-gray">
+                <div class="card-title">
+                    <i data-feather="settings"></i>
+                    <h2>Global Settings</h2>
+                    <span class="item-count">{{ global_settings|length }} items</span>
+                </div>
+            </div>
+            <div class="table-container">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="key">Setting <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="value">Value <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for setting in global_settings %}
+                        <tr data-id="{{ setting.id }}">
+                            <td><strong>{{ setting.setting_key }}</strong></td>
+                            <td><span class="price">{{ setting.setting_value }}</span></td>
+                            <td class="actions-cell">
+                                <div class="row-actions">
+                                    <button class="icon-btn icon-edit" data-type="global_setting" data-id="{{ setting.id }}" title="Edit">
+                                        <i data-feather="edit-2"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
     </div>
 
     <!-- Modal -->
     <div id="modal" class="modal">
+        <div class="modal-overlay"></div>
         <div class="modal-content">
             <div class="modal-header">
                 <h3 id="modalTitle">Add Item</h3>
+                <button class="modal-close" onclick="closeModal()">
+                    <i data-feather="x"></i>
+                </button>
             </div>
-            <div id="modalBody"></div>
+            <div id="modalBody" class="modal-body"></div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" id="modalCancelBtn">Cancel</button>
-                <button type="button" class="btn btn-primary" id="modalSaveBtn">Save</button>
+                <button type="button" class="btn btn-primary" id="modalSaveBtn">Save Changes</button>
             </div>
         </div>
     </div>
 
-    <!-- Notification -->
-    <div id="notification" class="notification"></div>
+    <!-- Notification Toast -->
+    <div id="notification" class="notification">
+        <div class="notification-content">
+            <i data-feather="check-circle"></i>
+            <span id="notificationText">Success!</span>
+        </div>
+    </div>
 
-    <!-- Data injection for JavaScript (JSON format - no linting errors) -->
-     <!-- Data injection for JavaScript -->
-
-      <script id="master-costs-data" type="application/json">
+    <!-- Data Injection -->
+    <script id="master-costs-data" type="application/json">
     {
         "fabricVendors": [
             {% for v in fabric_vendors %}
@@ -425,7 +588,13 @@
     }
     </script>
 
-    <!-- Load external JavaScript -->
+    <!-- External JavaScript -->
     <script src="{{ url_for('static', filename='js/master_costs.js') }}"></script>
+    
+    <!-- Initialize Feather Icons -->
+    <script>
+        feather.replace();
+    </script>
+
 </body>
 </html>

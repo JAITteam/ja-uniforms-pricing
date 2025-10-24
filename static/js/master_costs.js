@@ -36,6 +36,10 @@ function openModal(type, id = null) {
     const modal = document.getElementById('modal');
     const modalTitle = document.getElementById('modalTitle');
     const modalBody = document.getElementById('modalBody');
+    modal.classList.add('active'); // Add this line!
+    modal.setAttribute('data-type', type);
+    modal.style.display = 'flex';
+
     
     modalTitle.textContent = id ? 'Edit ' + capitalize(type.replace('_', ' ')) : 'Add ' + capitalize(type.replace('_', ' '));
     
@@ -239,7 +243,10 @@ function openModal(type, id = null) {
 }
 
 function closeModal() {
-    document.getElementById('modal').style.display = 'none';
+    const modal = document.getElementById('modal');
+    modal.classList.remove('active');
+    modal.removeAttribute('data-type');
+    modal.style.display = 'none';
     currentEditType = '';
     currentEditId = null;
 }
@@ -389,8 +396,11 @@ function setupTableFilter(searchId, rowClass, countId) {
 
 // Handle all "Add" buttons
 document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('btn-add-modal') || e.target.closest('.btn-add-modal')) {
-        const button = e.target.classList.contains('btn-add-modal') ? e.target : e.target.closest('.btn-add-modal');
+    if (e.target.classList.contains('btn-add-modal') || e.target.closest('.btn-add-modal') || 
+        e.target.classList.contains('btn-add') || e.target.closest('.btn-add')) {
+        const button = e.target.classList.contains('btn-add-modal') || e.target.classList.contains('btn-add') 
+            ? e.target 
+            : e.target.closest('.btn-add-modal') || e.target.closest('.btn-add');
         const type = button.dataset.type;
         openModal(type);
     }
@@ -398,8 +408,11 @@ document.addEventListener('click', function(e) {
 
 // Handle all "Edit" buttons
 document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('btn-edit') || e.target.closest('.btn-edit')) {
-        const button = e.target.classList.contains('btn-edit') ? e.target : e.target.closest('.btn-edit');
+    if (e.target.classList.contains('btn-edit') || e.target.closest('.btn-edit') ||
+        e.target.classList.contains('icon-edit') || e.target.closest('.icon-edit')) {
+        const button = e.target.classList.contains('btn-edit') || e.target.classList.contains('icon-edit')
+            ? e.target 
+            : e.target.closest('.btn-edit') || e.target.closest('.icon-edit');
         const type = button.dataset.type;
         const id = button.dataset.id;
         openModal(type, id);
@@ -408,8 +421,11 @@ document.addEventListener('click', function(e) {
 
 // Handle all "Delete" buttons
 document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('btn-delete') || e.target.closest('.btn-delete')) {
-        const button = e.target.classList.contains('btn-delete') ? e.target : e.target.closest('.btn-delete');
+    if (e.target.classList.contains('btn-delete') || e.target.closest('.btn-delete') ||
+        e.target.classList.contains('icon-delete') || e.target.closest('.icon-delete')) {
+        const button = e.target.classList.contains('btn-delete') || e.target.classList.contains('icon-delete')
+            ? e.target 
+            : e.target.closest('.btn-delete') || e.target.closest('.icon-delete');
         const type = button.dataset.type;
         const id = button.dataset.id;
         
@@ -460,3 +476,91 @@ window.addEventListener('click', function(event) {
 });
 
 console.log('✅ Master costs page JavaScript loaded with event delegation');
+
+// ============================================
+// COLUMN SORTING (NEW FEATURE)
+// ============================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    
+    document.querySelectorAll('.modern-table th[data-sort]').forEach(header => {
+        header.addEventListener('click', function() {
+            const table = this.closest('table');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const columnIndex = Array.from(this.parentElement.children).indexOf(this);
+            
+            const isAscending = this.classList.contains('sorted-asc');
+            
+            table.querySelectorAll('th').forEach(th => {
+                th.classList.remove('sorted', 'sorted-asc', 'sorted-desc');
+            });
+            
+            if (isAscending) {
+                this.classList.add('sorted', 'sorted-desc');
+            } else {
+                this.classList.add('sorted', 'sorted-asc');
+            }
+            
+            rows.sort((a, b) => {
+                let aCell = a.cells[columnIndex];
+                let bCell = b.cells[columnIndex];
+                
+                if (!aCell || !bCell) return 0;
+                
+                const aValue = aCell.textContent.trim();
+                const bValue = bCell.textContent.trim();
+                
+                const aNum = parseFloat(aValue.replace(/[$,%]/g, ''));
+                const bNum = parseFloat(bValue.replace(/[$,%]/g, ''));
+                
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return isAscending ? bNum - aNum : aNum - bNum;
+                }
+                
+                return isAscending ? 
+                    bValue.localeCompare(aValue) : 
+                    aValue.localeCompare(bValue);
+            });
+            
+            rows.forEach(row => tbody.appendChild(row));
+            
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+            }
+        });
+    });
+});
+
+function refreshIcons() {
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+}
+// ============================================
+// SEARCH ICON TOGGLE
+// ============================================
+
+document.querySelectorAll('.search-box').forEach(searchBox => {
+    searchBox.addEventListener('click', function(e) {
+        // Don't toggle if clicking inside input
+        if (e.target.tagName === 'INPUT') return;
+        
+        this.classList.toggle('active');
+        const input = this.querySelector('input');
+        
+        if (this.classList.contains('active')) {
+            input.focus();
+        } else {
+            input.value = '';
+            input.dispatchEvent(new Event('input')); // Trigger filter reset
+        }
+    });
+    
+    // Close search when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!searchBox.contains(e.target)) {
+            searchBox.classList.remove('active');
+        }
+    });
+});
