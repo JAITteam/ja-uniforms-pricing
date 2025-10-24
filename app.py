@@ -22,8 +22,13 @@ from models import (
     Style, Fabric, FabricVendor, Notion, NotionVendor, 
     LaborOperation, CleaningCost, StyleFabric, StyleNotion, 
     StyleLabor, Color, StyleColor, Variable, StyleVariable,
-    SizeRange, GlobalSetting, StyleImage
+    SizeRange, GlobalSetting, StyleImage, get_eastern_time
 )
+import pytz
+
+def get_eastern_time():
+    eastern = pytz.timezone('America/New_York')
+    return datetime.now(eastern)
 
 
 
@@ -100,7 +105,8 @@ def index():
     total_notion_vendors = NotionVendor.query.count()
     
     # Get recent styles (last 4)
-    recent_styles = Style.query.order_by(Style.id.desc()).limit(4).all()
+    #ecent_styles = Style.query.order_by(Style.id.desc()).limit(4).all()
+    recent_styles = Style.query.order_by(Style.updated_at.desc()).limit(4).all()
     
     # Calculate analytics
     styles = Style.query.all()
@@ -2332,6 +2338,7 @@ def api_style_save():
                     n["qty"] = qty_val  # Update with validated value
         
         # ===== STEP 6: UPDATE STYLE FIELDS =====
+        style.updated_at = get_eastern_time()
         style.style_name = style_name
         style.vendor_style = vendor_style if vendor_style else None
         style.base_item_number = (s.get("base_item_number") or None)

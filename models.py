@@ -1,7 +1,11 @@
 from database import db
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+import pytz
 
+def get_eastern_time():
+    """Get current system time"""
+    return datetime.now()
 # ===== AUTHENTICATION =====
 class User(db.Model):
     __tablename__ = 'users'
@@ -28,7 +32,7 @@ class FabricVendor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     vendor_code = db.Column(db.String(20), unique=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_eastern_time)
 
 class NotionVendor(db.Model):
     __tablename__ = 'notion_vendors'
@@ -36,7 +40,8 @@ class NotionVendor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     vendor_code = db.Column(db.String(20), unique=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=get_eastern_time, onupdate=get_eastern_time)
+
 
 # ===== PRODUCT TABLES =====
 class Fabric(db.Model):
@@ -105,7 +110,8 @@ class SizeRange(db.Model):
     extended_sizes = db.Column(db.String(100))
     extended_markup_percent = db.Column(db.Float, default=15.0)
     description = db.Column(db.String(200))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    #created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_eastern_time)
     
     def __repr__(self):
         return f'<SizeRange {self.name}>'
@@ -128,7 +134,8 @@ class Style(db.Model):
     suggested_price = db.Column(db.Float)  # ADD THIS
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    #updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=get_eastern_time, onupdate=get_eastern_time)
     last_modified_by = db.Column(db.String(100), default='Admin')
     is_active = db.Column(db.Boolean, default=True)
     is_favorite = db.Column(db.Boolean, default=False)

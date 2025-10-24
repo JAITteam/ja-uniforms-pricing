@@ -261,6 +261,7 @@
             </tbody>
         </table>
 
+        
         <!-- COLORS -->
         <h2>Colors</h2>
         <div style="margin-bottom: 15px;">
@@ -268,27 +269,29 @@
             <span id="colorCount" style="margin-left: 15px; color: #666;"></span>
         </div>
         <button class="btn btn-success add-row-btn btn-add-modal" data-type="color">+ Add Color</button>
-        <table>
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th style="width: 150px;">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="colorsTable">
-                {% for color in colors %}
-                <tr data-id="{{ color.id }}" class="color-row">
-                    <td>{{ color.name }}</td>
-                    <td>
-                        <div class="actions">
-                            <button class="btn btn-primary btn-small btn-edit" data-type="color" data-id="{{ color.id }}">Edit</button>
-                            <button class="btn btn-danger btn-small btn-delete" data-type="color" data-id="{{ color.id }}">Delete</button>
-                        </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;">
+            <table>
+                <thead style="position: sticky; top: 0; z-index: 10;">
+                    <tr>
+                        <th>Name</th>
+                        <th style="width: 150px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="colorsTable">
+                    {% for color in colors %}
+                    <tr data-id="{{ color.id }}" class="color-row">
+                        <td>{{ color.name }}</td>
+                        <td>
+                            <div class="actions">
+                                <button class="btn btn-primary btn-small btn-edit" data-type="color" data-id="{{ color.id }}">Edit</button>
+                                <button class="btn btn-danger btn-small btn-delete" data-type="color" data-id="{{ color.id }}">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
         <!-- VARIABLES -->
         <h2>Variables</h2>
