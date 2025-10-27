@@ -191,71 +191,32 @@ function openModal(type, id = null) {
         formHtml = `
             <div class="form-group">
                 <label>Setting Value *</label>
-                <input type="number" id="setting_value" step="0.01" required placeholder="e.g., 0.20">
+                <input type="number" id="setting_value" required step="0.01">
             </div>
             <div class="form-group">
                 <label>Description</label>
-                <textarea id="description" rows="2" placeholder="Description of this setting"></textarea>
+                <textarea id="description" rows="2"></textarea>
             </div>
         `;
     }
-
+    
     modalBody.innerHTML = formHtml;
     
-    // If editing, load current values
     if (id) {
-        const endpoint = type.replace(/_/g, '-');
-        const pluralMap = {
-            'size-range': 'size-ranges',
-            'fabric-vendor': 'fabric-vendors',
-            'notion-vendor': 'notion-vendors',
-            'global-setting': 'global-settings'
-        };
-        const apiEndpoint = pluralMap[endpoint] || endpoint + 's';
-        
-        fetch(`/api/${apiEndpoint}/${id}`)
-            .then(response => response.json())
-            .then(data => {
-                // Populate form fields with existing data
-                Object.keys(data).forEach(key => {
-                    const field = document.getElementById(key);
-                    if (field) {
-                        if (field.type === 'checkbox') {
-                            field.checked = data[key];
-                        } else {
-                            field.value = data[key] || '';
-                        }
-                    }
-                });
-                
-                // For labor, show the correct cost type group
-                if (type === 'labor' && data.cost_type) {
-                    updateLaborFields();
-                }
-            })
-            .catch(error => {
-                console.error('Error loading data:', error);
-                showNotification('Error loading data: ' + error.message, 'error');
-            });
+        loadItemData(type, id);
     }
     
-    modal.style.display = 'block';
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
 }
 
 function closeModal() {
     const modal = document.getElementById('modal');
     modal.classList.remove('active');
-    modal.removeAttribute('data-type');
     modal.style.display = 'none';
     currentEditType = '';
     currentEditId = null;
-}
-
-function updateLaborFields() {
-    const costType = document.getElementById('cost_type').value;
-    document.getElementById('flat_rate_group').style.display = costType === 'flat_rate' ? 'block' : 'none';
-    document.getElementById('hourly_group').style.display = costType === 'hourly' ? 'block' : 'none';
-    document.getElementById('per_piece_group').style.display = costType === 'per_piece' ? 'block' : 'none';
 }
 
 function saveModal() {
@@ -263,115 +224,172 @@ function saveModal() {
     const modalBody = document.getElementById('modalBody');
     const inputs = modalBody.querySelectorAll('input, select, textarea');
     
+    let valid = true;
     inputs.forEach(input => {
-        if (input.type === 'checkbox') {
-            formData[input.id] = input.checked;
-        } else if (input.value) {
+        if (input.required && !input.value) {
+            input.style.borderColor = '#EF4444';
+            valid = false;
+        } else {
+            input.style.borderColor = '';
             formData[input.id] = input.value;
         }
     });
     
-    const endpoint = currentEditType.replace(/_/g, '-');
-    const pluralMap = {
-        'size-range': 'size-ranges',
-        'fabric-vendor': 'fabric-vendors',
-        'notion-vendor': 'notion-vendors',
-        'global-setting': 'global-settings'
-    };
-    const apiEndpoint = pluralMap[endpoint] || endpoint + 's';
-    
-    const url = currentEditId ? `/api/${apiEndpoint}/${currentEditId}` : `/api/${apiEndpoint}`;
-    const method = currentEditId ? 'PUT' : 'POST';
-    
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    const headers = {'Content-Type': 'application/json'};
-    if (csrfToken) {
-        headers['X-CSRFToken'] = csrfToken;
+    if (!valid) {
+        showNotification('Please fill in all required fields', 'error');
+        return;
     }
+    
+    const endpoint = currentEditType.replace(/_/g, '-');
+    const method = currentEditId ? 'PUT' : 'POST';
+    const url = currentEditId 
+        ? `/api/${endpoint}s/${currentEditId}`
+        : `/api/${endpoint}s`;
     
     fetch(url, {
         method: method,
-        headers: headers,
+        headers: {
+            'Content-Type': 'application/json',
+        },
         body: JSON.stringify(formData)
     })
-    .then(response => {
-        console.log('Response status:', response.status);
-        if (!response.ok) {
-            return response.text().then(text => {
-                throw new Error(`HTTP ${response.status}: ${text}`);
-            });
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Saved successfully!', 'success');
+            closeModal();
+            setTimeout(() => location.reload(), 500);
+        } else {
+            showNotification('Save failed: ' + (data.error || 'Unknown error'), 'error');
         }
-        return response.json();
-    })
-    .then(() => {
-        showNotification('Saved successfully!', 'success');
-        closeModal();
-        setTimeout(() => location.reload(), 1000);
     })
     .catch(error => {
-        console.error('Save error:', error);
-        showNotification('Error saving: ' + error.message, 'error');
+        showNotification('Save failed: ' + error.message, 'error');
     });
 }
 
-// ============================================
-// EDIT/DELETE FUNCTIONS - Now handled by event delegation above
-// ============================================
-// All edit/delete functionality is now handled by event listeners
-// No individual functions needed anymore!
-
-function deleteItem(type, id) {
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    const headers = {};
-    if (csrfToken) {
-        headers['X-CSRFToken'] = csrfToken;
-    }
+function loadItemData(type, id) {
+    const endpoint = type.replace(/_/g, '-');
     
-    fetch(`/api/${type}s/${id}`, {
+    fetch(`/api/${endpoint}s/${id}`)
+        .then(response => response.json())
+        .then(data => {
+            Object.keys(data).forEach(key => {
+                const input = document.getElementById(key);
+                if (input) {
+                    input.value = data[key] || '';
+                }
+            });
+            
+            if (type === 'labor') {
+                updateLaborFields();
+            }
+        })
+        .catch(error => {
+            console.error('Error loading data:', error);
+            showNotification('Error loading data', 'error');
+        });
+}
+
+function deleteItem(endpoint, id) {
+    const url = `/api/${endpoint}s/${id}`;
+    
+    fetch(url, {
         method: 'DELETE',
-        headers: headers
+        headers: {
+            'Content-Type': 'application/json',
+        }
     })
     .then(response => response.json())
-    .then(() => {
-        showNotification('Deleted successfully!', 'success');
-        setTimeout(() => location.reload(), 500);
+    .then(data => {
+        if (data.success) {
+            showNotification('Deleted successfully!', 'success');
+            setTimeout(() => location.reload(), 500);
+        } else {
+            showNotification('Delete failed: ' + (data.error || 'Unknown error'), 'error');
+        }
     })
     .catch(error => {
-        showNotification('Error deleting: ' + error, 'error');
+        showNotification('Delete failed: ' + error.message, 'error');
     });
 }
 
 // ============================================
-// UTILITY FUNCTIONS
+// CUSTOM CONFIRMATION MODAL INTEGRATION
 // ============================================
 
-function showNotification(message, type) {
-    const notification = document.getElementById('notification');
-    notification.textContent = message;
-    notification.className = 'notification ' + type;
-    notification.style.display = 'block';
+function showDeleteConfirmation(message, onConfirm, onCancel) {
+    // Smart title detection from message
+    let title = 'Confirm Action';
+    const msgLower = message.toLowerCase();
     
-    setTimeout(() => {
-        notification.style.display = 'none';
-    }, 3000);
+    if (msgLower.includes('notion vendor')) {
+        title = 'Delete Notion Vendor?';
+    } else if (msgLower.includes('fabric vendor')) {
+        title = 'Delete Fabric Vendor?';
+    } else if (msgLower.includes('fabric')) {
+        title = 'Delete Fabric?';
+    } else if (msgLower.includes('notion')) {
+        title = 'Delete Notion?';
+    } else if (msgLower.includes('labor')) {
+        title = 'Delete Labor Cost?';
+    } else if (msgLower.includes('cleaning')) {
+        title = 'Delete Cleaning Cost?';
+    } else if (msgLower.includes('delete')) {
+        const match = message.match(/Delete[^?]*/i);
+        title = match ? match[0] + '?' : 'Confirm Delete';
+    }
+    
+    // Use new beautiful modal
+    confirmDelete({
+        title: title,
+        message: message,
+        onConfirm: onConfirm
+    });
+}
+
+function showNotification(message, type = 'success') {
+    const notification = document.getElementById('notification');
+    const notificationText = document.getElementById('notificationText');
+    
+    if (notification && notificationText) {
+        notificationText.textContent = message;
+        notification.classList.remove('error');
+        if (type === 'error') {
+            notification.classList.add('error');
+        }
+        notification.classList.add('show');
+        
+        setTimeout(() => {
+            notification.classList.remove('show');
+        }, 3000);
+    }
 }
 
 function capitalize(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+function updateLaborFields() {
+    const costType = document.getElementById('cost_type')?.value;
+    
+    document.getElementById('flat_rate_group').style.display = costType === 'flat_rate' ? 'block' : 'none';
+    document.getElementById('hourly_group').style.display = costType === 'hourly' ? 'block' : 'none';
+    document.getElementById('per_piece_group').style.display = costType === 'per_piece' ? 'block' : 'none';
+}
+
 // ============================================
-// TABLE FILTER FUNCTION
+// TABLE FILTER SETUP
 // ============================================
 
-function setupTableFilter(searchId, rowClass, countId) {
-    const searchInput = document.getElementById(searchId);
+function setupTableFilter(searchInputId, rowClass, countElementId) {
+    const searchInput = document.getElementById(searchInputId);
     if (!searchInput) return;
     
     const updateCount = () => {
         const rows = document.querySelectorAll('.' + rowClass);
-        const visible = Array.from(rows).filter(r => r.style.display !== 'none').length;
-        const countEl = document.getElementById(countId);
+        const visible = Array.from(rows).filter(row => row.style.display !== 'none').length;
+        const countEl = document.getElementById(countElementId);
         if (countEl) countEl.textContent = 'Showing ' + visible + ' of ' + rows.length;
     };
     
@@ -419,10 +437,15 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Handle all "Delete" buttons
+// Handle all "Delete" buttons - FIXED VERSION
 document.addEventListener('click', function(e) {
+    // Prevent event from bubbling
     if (e.target.classList.contains('btn-delete') || e.target.closest('.btn-delete') ||
         e.target.classList.contains('icon-delete') || e.target.closest('.icon-delete')) {
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
         const button = e.target.classList.contains('btn-delete') || e.target.classList.contains('icon-delete')
             ? e.target 
             : e.target.closest('.btn-delete') || e.target.closest('.icon-delete');
@@ -442,11 +465,20 @@ document.addEventListener('click', function(e) {
         };
         
         const typeName = typeMap[type] || type;
+        const endpoint = type.replace(/_/g, '-');
         
-        if (confirm(`Delete this ${typeName}? This may affect existing styles.`)) {
-            const endpoint = type.replace(/_/g, '-');
-            deleteItem(endpoint, id);
-        }
+        // CRITICAL FIX: Show confirmation and ONLY delete after OK is clicked
+        showDeleteConfirmation(
+            `Delete this ${typeName}? This may affect existing styles.`,
+            function() {
+                // This function ONLY runs when OK is clicked
+                deleteItem(endpoint, id);
+            },
+            function() {
+                // This function ONLY runs when Cancel is clicked
+                console.log('Delete cancelled');
+            }
+        );
     }
 });
 

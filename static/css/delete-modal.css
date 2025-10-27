@@ -1,0 +1,264 @@
+/* ============================================
+   DELETE MODAL STYLES
+   Matches your existing UI design system
+   ============================================ */
+
+.delete-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    display: none;
+}
+
+.delete-modal.active {
+    display: flex !important;
+}
+
+/* Overlay */
+.delete-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.3s ease;
+}
+
+/* Modal Content Container */
+.delete-modal-content {
+    position: relative;
+    background: #ffffff;
+    border-radius: 12px;
+    width: 520px;
+    max-width: 90%;
+    max-height: 90vh;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 1;
+}
+
+/* Header with Gradient - Default Pink/Red */
+.delete-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    background: linear-gradient(135deg, #F093FB 0%, #F5576C 100%);
+    position: relative;
+}
+
+/* Different Gradients for Different Types */
+.delete-modal-content[data-type="fabric_vendor"] .delete-modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.delete-modal-content[data-type="notion_vendor"] .delete-modal-header {
+    background: linear-gradient(135deg, #F093FB 0%, #F5576C 100%);
+}
+
+.delete-modal-content[data-type="fabric"] .delete-modal-header {
+    background: linear-gradient(135deg, #4FACFE 0%, #00F2FE 100%);
+}
+
+.delete-modal-content[data-type="notion"] .delete-modal-header {
+    background: linear-gradient(135deg, #A8EDEA 0%, #FED6E3 100%);
+}
+
+.delete-modal-content[data-type="labor"] .delete-modal-header {
+    background: linear-gradient(135deg, #FFD89B 0%, #19547B 100%);
+}
+
+.delete-modal-content[data-type="cleaning"] .delete-modal-header {
+    background: linear-gradient(135deg, #81FBB8 0%, #28C76F 100%);
+}
+
+.delete-modal-content[data-type="color"] .delete-modal-header {
+    background: linear-gradient(135deg, #FFD3A5 0%, #FD6585 100%);
+}
+
+.delete-modal-content[data-type="variable"] .delete-modal-header {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.delete-modal-content[data-type="size_range"] .delete-modal-header {
+    background: linear-gradient(135deg, #A18CD1 0%, #FBC2EB 100%);
+}
+
+.delete-modal-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(255,255,255,0.3) 50%, 
+        transparent 100%);
+}
+
+.delete-modal-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.delete-modal-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    color: white;
+    flex-shrink: 0;
+}
+
+.delete-modal-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: white;
+    margin: 0;
+}
+
+/* Close Button */
+.delete-modal-close {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    cursor: pointer;
+    color: white;
+    transition: all 0.2s;
+    backdrop-filter: blur(10px);
+}
+
+.delete-modal-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+/* Body */
+.delete-modal-body {
+    padding: 24px;
+}
+
+.delete-modal-body p {
+    font-size: 16px;
+    color: #374151;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* Footer */
+.delete-modal-footer {
+    padding: 16px 24px 24px 24px;
+    border-top: 1px solid #E5E7EB;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background: #F9FAFB;
+}
+
+/* Buttons */
+.delete-modal-btn {
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+}
+
+.delete-modal-btn-cancel {
+    background: #FFFFFF;
+    color: #6B7280;
+    border: 2px solid #E5E7EB;
+}
+
+.delete-modal-btn-cancel:hover {
+    background: #F9FAFB;
+    border-color: #6B7280;
+}
+
+.delete-modal-btn-delete {
+    background: #DC2626;
+    color: white;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.delete-modal-btn-delete:hover {
+    background: #B91C1C;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(220, 38, 38, 0.4);
+}
+
+.delete-modal-btn-delete:active {
+    transform: translateY(0);
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes modalSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .delete-modal-content {
+        width: 95%;
+        margin: 0 16px;
+    }
+    
+    .delete-modal-header {
+        padding: 20px;
+    }
+    
+    .delete-modal-body {
+        padding: 20px;
+    }
+    
+    .delete-modal-footer {
+        flex-direction: column;
+    }
+    
+    .delete-modal-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}

@@ -7,6 +7,50 @@
 
 <!-- Master Costs Styles -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/master_costs_styles.css') }}">
+
+<style>
+    /* Minimize the gap between navbar and content */
+    body {
+        padding-top: 80px !important; /* Space for fixed navbar */
+    }
+    
+    .main-container {
+        margin-top: -70px !important; /* Pull content closer to navbar */
+        padding: 8px 24px !important;
+    }
+    
+    .page-header {
+        padding: 8px 16px !important;
+        margin-bottom: 8px !important;
+    }
+    
+    .header-content {
+        margin-bottom: 6px !important;
+    }
+    
+    .header-text h1 {
+        font-size: 20px !important;
+        margin-bottom: 2px !important;
+    }
+    
+    .header-text .subtitle {
+        font-size: 12px !important;
+    }
+    
+    .warning-banner {
+        padding: 6px 12px !important;
+        font-size: 12px !important;
+    }
+    
+    .section-card {
+        margin-bottom: 10px !important;
+    }
+    
+    .vendors-grid {
+        padding: 10px !important;
+        gap: 10px !important;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -18,19 +62,10 @@
         <header class="page-header">
             <div class="header-content">
                 <div class="header-left">
-                    <div class="page-icon">
-                        <i data-feather="database"></i>
-                    </div>
                     <div class="header-text">
                         <h1>Master Cost Lists</h1>
                         <p class="subtitle">Centralized pricing that automatically updates all uniform styles</p>
                     </div>
-                </div>
-                <div class="header-right">
-                    <a href="/" class="btn-back">
-                        <i data-feather="arrow-left"></i>
-                        <span>Back to Dashboard</span>
-                    </a>
                 </div>
             </div>
             
@@ -43,13 +78,6 @@
 
         <!-- Vendors Grid -->
         <section class="section-card" id="fabric-vendors">
-            <div class="section-header">
-                <div class="section-title">
-                    <i data-feather="users"></i>
-                    <h2>Vendors</h2>
-                </div>
-            </div>
-            
             <div class="vendors-grid">
                 <!-- Fabric Vendors -->
                 <div class="vendor-card" id="notion-vendors">
@@ -66,8 +94,8 @@
                         <table class="modern-table">
                             <thead>
                                 <tr>
-                                    <th data-sort="name">Name <i data-feather="chevrons-down" class="sort-icon"></i></th>
-                                    <th data-sort="code">Code <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                                    <th data-sort="name">Name <i data-feather="arrow-up-down" class="sort-icon"></i></th>
+                                    <th data-sort="code">Code <i data-feather="arrow-up-down" class="sort-icon"></i></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -107,8 +135,8 @@
                         <table class="modern-table">
                             <thead>
                                 <tr>
-                                    <th data-sort="name">Name <i data-feather="chevrons-down" class="sort-icon"></i></th>
-                                    <th data-sort="code">Code <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                                    <th data-sort="name">Name <i data-feather="arrow-up-down" class="sort-icon"></i></th>
+                                    <th data-sort="code">Code <i data-feather="arrow-up-down" class="sort-icon"></i></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -158,10 +186,10 @@
                 <table class="modern-table">
                     <thead>
                         <tr>
-                            <th data-sort="name">Name <i data-feather="chevrons-down" class="sort-icon"></i></th>
-                            <th data-sort="code">Fabric Code <i data-feather="chevrons-down" class="sort-icon"></i></th>
-                            <th data-sort="cost">Cost/Yard <i data-feather="chevrons-down" class="sort-icon"></i></th>
-                            <th data-sort="vendor">Vendor <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="name">Name <i data-feather="arrow-up-down" class="sort-icon"></i></th>
+                            <th data-sort="code">Fabric Code <i data-feather="arrow-up-down" class="sort-icon"></i></th>
+                            <th data-sort="cost">Cost/Yard <i data-feather="arrow-up-down" class="sort-icon"></i></th>
+                            <th data-sort="vendor">Vendor <i data-feather="arrow-up-down" class="sort-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody id="fabricTable">
@@ -211,10 +239,10 @@
                 <table class="modern-table">
                     <thead>
                         <tr>
-                            <th data-sort="name">Name <i data-feather="chevrons-down" class="sort-icon"></i></th>
-                            <th data-sort="cost">Cost/Unit <i data-feather="chevrons-down" class="sort-icon"></i></th>
-                            <th data-sort="unit">Unit Type <i data-feather="chevrons-down" class="sort-icon"></i></th>
-                            <th data-sort="vendor">Vendor <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="name">Name <i data-feather="arrow-up-down" class="sort-icon"></i></th>
+                            <th data-sort="cost">Cost/Unit <i data-feather="arrow-up-down" class="sort-icon"></i></th>
+                            <th data-sort="unit">Unit Type <i data-feather="arrow-up-down" class="sort-icon"></i></th>
+                            <th data-sort="vendor">Vendor <i data-feather="arrow-up-down" class="sort-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody id="notionTable">
@@ -264,9 +292,9 @@
                 <table class="modern-table">
                     <thead>
                         <tr>
-                            <th data-sort="name">Name <i data-feather="chevrons-down" class="sort-icon"></i></th>
-                            <th data-sort="type">Cost Type <i data-feather="chevrons-down" class="sort-icon"></i></th>
-                            <th data-sort="rate">Rate <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="name">Name <i data-feather="arrow-up-down" class="sort-icon"></i></th>
+                            <th data-sort="type">Cost Type <i data-feather="arrow-up-down" class="sort-icon"></i></th>
+                            <th data-sort="rate">Rate <i data-feather="arrow-up-down" class="sort-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody id="laborTable">
@@ -325,8 +353,8 @@
                 <table class="modern-table">
                     <thead>
                         <tr>
-                            <th data-sort="type">Garment Type <i data-feather="chevrons-down" class="sort-icon"></i></th>
-                            <th data-sort="cost">Cost <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="type">Garment Type <i data-feather="arrow-up-down" class="sort-icon"></i></th>
+                            <th data-sort="cost">Cost <i data-feather="arrow-up-down" class="sort-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody id="cleaningTable">
@@ -374,7 +402,7 @@
                 <table class="modern-table">
                     <thead>
                         <tr>
-                            <th data-sort="name">Color Name <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="name">Color Name <i data-feather="arrow-up-down" class="sort-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody id="colorsTable">
@@ -421,7 +449,7 @@
                 <table class="modern-table">
                     <thead>
                         <tr>
-                            <th data-sort="name">Variable Name <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="name">Variable Name <i data-feather="arrow-up-down" class="sort-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody id="variablesTable">
@@ -468,11 +496,11 @@
                 <table class="modern-table">
                     <thead>
                         <tr>
-                            <th data-sort="name">Name <i data-feather="chevrons-down" class="sort-icon"></i></th>
-                            <th data-sort="regular">Regular Sizes <i data-feather="chevrons-down" class="sort-icon"></i></th>
-                            <th data-sort="extended">Extended Sizes <i data-feather="chevrons-down" class="sort-icon"></i></th>
-                            <th data-sort="markup">Markup % <i data-feather="chevrons-down" class="sort-icon"></i></th>
-                            <th data-sort="description">Description <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="name">Name <i data-feather="arrow-up-down" class="sort-icon"></i></th>
+                            <th data-sort="regular">Regular Sizes <i data-feather="arrow-up-down" class="sort-icon"></i></th>
+                            <th data-sort="extended">Extended Sizes <i data-feather="arrow-up-down" class="sort-icon"></i></th>
+                            <th data-sort="markup">Markup % <i data-feather="arrow-up-down" class="sort-icon"></i></th>
+                            <th data-sort="description">Description <i data-feather="arrow-up-down" class="sort-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody id="sizeRangesTable">
@@ -513,8 +541,8 @@
                 <table class="modern-table">
                     <thead>
                         <tr>
-                            <th data-sort="key">Setting <i data-feather="chevrons-down" class="sort-icon"></i></th>
-                            <th data-sort="value">Value <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="key">Setting <i data-feather="arrow-up-down" class="sort-icon"></i></th>
+                            <th data-sort="value">Value <i data-feather="arrow-up-down" class="sort-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody>
