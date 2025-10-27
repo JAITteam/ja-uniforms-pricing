@@ -442,30 +442,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // Capture dropdown options once at page load for dynamic row creation
-  const fabricVendorOptions = Array.from($('[data-fabric-vendor-id]').options).map(opt => ({
-    value: opt.value,
-    text: opt.text
-  }));
+  const fabricVendorSelect = document.querySelector('[data-fabric-vendor-id]');
+  const fabricVendorOptions = fabricVendorSelect 
+    ? Array.from(fabricVendorSelect.options).map(opt => ({
+        value: opt.value,
+        text: opt.text
+      }))
+    : [];
 
-  const notionVendorOptions = Array.from($('[data-notion-vendor-id]').options).map(opt => ({
-    value: opt.value,
-    text: opt.text
-  }));
+  const notionVendorSelect = document.querySelector('[data-notion-vendor-id]');
+  const notionVendorOptions = notionVendorSelect
+    ? Array.from(notionVendorSelect.options).map(opt => ({
+        value: opt.value,
+        text: opt.text
+      }))
+    : [];
 
-  const fabricOptions = Array.from($('[data-fabric-id]').options).map(opt => ({
-    value: opt.value,
-    text: opt.text,
-    cost: opt.dataset.cost || '',
-    vendor: opt.dataset.vendor || '',
-    fabricCode: opt.dataset.fabricCode || ''
-  }));
+  const fabricSelect = document.querySelector('[data-fabric-id]');
+  const fabricOptions = fabricSelect
+    ? Array.from(fabricSelect.options).map(opt => ({
+        value: opt.value,
+        text: opt.text,
+        cost: opt.dataset.cost || '',
+        vendor: opt.dataset.vendor || '',
+        fabricCode: opt.dataset.fabricCode || ''
+      }))
+    : [];
 
-  const notionOptions = Array.from($('[data-notion-id]').options).map(opt => ({
-    value: opt.value,
-    text: opt.text,
-    cost: opt.dataset.cost || '',
-    vendor: opt.dataset.vendor || ''
-  }));
+  const notionSelect = document.querySelector('[data-notion-id]');
+  const notionOptions = notionSelect
+    ? Array.from(notionSelect.options).map(opt => ({
+        value: opt.value,
+        text: opt.text,
+        cost: opt.dataset.cost || '',
+        vendor: opt.dataset.vendor || ''
+      }))
+    : [];
 
   // Auto Vendor Style
   function buildVendorStyle(){

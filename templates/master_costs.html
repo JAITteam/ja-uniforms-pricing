@@ -1,23 +1,15 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Master Cost Lists | JA Uniforms</title>
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    
-    <!-- Feather Icons -->
-    <script src="https://unpkg.com/feather-icons"></script>
-    
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- External CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/master_costs_styles.css') }}">
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Master Cost Lists | JA Uniforms{% endblock %}
+
+{% block extra_css %}
+<!-- Feather Icons -->
+<script src="https://unpkg.com/feather-icons"></script>
+
+<!-- Master Costs Styles -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/master_costs_styles.css') }}">
+{% endblock %}
+
+{% block content %}
     
     <!-- Main Container -->
     <div class="main-container">
@@ -74,8 +66,8 @@
                         <table class="modern-table">
                             <thead>
                                 <tr>
-                                    <th data-sort="name">Name <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
-                                    <th data-sort="code">Code <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                                    <th data-sort="name">Name <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                                    <th data-sort="code">Code <i data-feather="chevrons-down" class="sort-icon"></i></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -115,8 +107,8 @@
                         <table class="modern-table">
                             <thead>
                                 <tr>
-                                    <th data-sort="name">Name <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
-                                    <th data-sort="code">Code <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                                    <th data-sort="name">Name <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                                    <th data-sort="code">Code <i data-feather="chevrons-down" class="sort-icon"></i></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -166,10 +158,10 @@
                 <table class="modern-table">
                     <thead>
                         <tr>
-                            <th data-sort="name">Name <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
-                            <th data-sort="code">Fabric Code <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
-                            <th data-sort="cost">Cost/Yard <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
-                            <th data-sort="vendor">Vendor <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="name">Name <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="code">Fabric Code <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="cost">Cost/Yard <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="vendor">Vendor <i data-feather="chevrons-down" class="sort-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody id="fabricTable">
@@ -219,10 +211,10 @@
                 <table class="modern-table">
                     <thead>
                         <tr>
-                            <th data-sort="name">Name <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
-                            <th data-sort="cost">Cost/Unit <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
-                            <th data-sort="unit">Unit Type <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
-                            <th data-sort="vendor">Vendor <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="name">Name <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="cost">Cost/Unit <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="unit">Unit Type <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="vendor">Vendor <i data-feather="chevrons-down" class="sort-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody id="notionTable">
@@ -272,9 +264,9 @@
                 <table class="modern-table">
                     <thead>
                         <tr>
-                            <th data-sort="name">Name <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
-                            <th data-sort="type">Cost Type <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
-                            <th data-sort="rate">Rate <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="name">Name <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="type">Cost Type <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="rate">Rate <i data-feather="chevrons-down" class="sort-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody id="laborTable">
@@ -333,8 +325,8 @@
                 <table class="modern-table">
                     <thead>
                         <tr>
-                            <th data-sort="type">Garment Type <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
-                            <th data-sort="cost">Cost <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="type">Garment Type <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="cost">Cost <i data-feather="chevrons-down" class="sort-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody id="cleaningTable">
@@ -382,7 +374,7 @@
                 <table class="modern-table">
                     <thead>
                         <tr>
-                            <th data-sort="name">Color Name <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="name">Color Name <i data-feather="chevrons-down" class="sort-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody id="colorsTable">
@@ -429,7 +421,7 @@
                 <table class="modern-table">
                     <thead>
                         <tr>
-                            <th data-sort="name">Variable Name <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="name">Variable Name <i data-feather="chevrons-down" class="sort-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody id="variablesTable">
@@ -476,11 +468,11 @@
                 <table class="modern-table">
                     <thead>
                         <tr>
-                            <th data-sort="name">Name <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
-                            <th data-sort="regular">Regular Sizes <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
-                            <th data-sort="extended">Extended Sizes <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
-                            <th data-sort="markup">Markup % <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
-                            <th data-sort="description">Description <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="name">Name <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="regular">Regular Sizes <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="extended">Extended Sizes <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="markup">Markup % <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="description">Description <i data-feather="chevrons-down" class="sort-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody id="sizeRangesTable">
@@ -521,8 +513,8 @@
                 <table class="modern-table">
                     <thead>
                         <tr>
-                            <th data-sort="key">Setting <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
-                            <th data-sort="value">Value <i data-feather="chevrons-up-down" class="sort-icon"></i></th>
+                            <th data-sort="key">Setting <i data-feather="chevrons-down" class="sort-icon"></i></th>
+                            <th data-sort="value">Value <i data-feather="chevrons-down" class="sort-icon"></i></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -588,13 +580,14 @@
     }
     </script>
 
-    <!-- External JavaScript -->
-    <script src="{{ url_for('static', filename='js/master_costs.js') }}"></script>
-    
-    <!-- Initialize Feather Icons -->
-    <script>
-        feather.replace();
-    </script>
+{% endblock %}
 
-</body>
-</html>
+{% block extra_js %}
+<!-- External JavaScript -->
+<script src="{{ url_for('static', filename='js/master_costs.js') }}"></script>
+
+<!-- Initialize Feather Icons -->
+<script>
+    feather.replace();
+</script>
+{% endblock %}
