@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account - J.A. Uniforms</title>
+    
+    <!-- Feather Icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
+    
+    <!-- Auth CSS (same as login) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+    
+    <!-- Dynamic Color System -->
+    <script>
+        // 🎨 12 Beautiful Professional Gradient Combinations
+        const colorThemes = [
+            {
+                gradient: 'linear-gradient(135deg, #2c3e50 0%, #3498db 50%, #2980b9 100%)',
+                primary: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
+                accent: '#3498db',
+                pulse: 'rgba(52, 152, 219, 0.4)',
+                shadow: 'rgba(52, 152, 219, 0.3)',
+                filled: 'rgba(52, 152, 219, 0.05)'
+            },
+            {
+                gradient: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%)',
+                primary: 'linear-gradient(135deg, #7e22ce 0%, #6b21a8 100%)',
+                accent: '#7e22ce',
+                pulse: 'rgba(126, 34, 206, 0.4)',
+                shadow: 'rgba(126, 34, 206, 0.3)',
+                filled: 'rgba(126, 34, 206, 0.05)'
+            },
+            {
+                gradient: 'linear-gradient(135deg, #134e4a 0%, #0d9488 50%, #14b8a6 100%)',
+                primary: 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
+                accent: '#0d9488',
+                pulse: 'rgba(13, 148, 136, 0.4)',
+                shadow: 'rgba(13, 148, 136, 0.3)',
+                filled: 'rgba(13, 148, 136, 0.05)'
+            },
+            {
+                gradient: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%)',
+                primary: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                accent: '#3b82f6',
+                pulse: 'rgba(59, 130, 246, 0.4)',
+                shadow: 'rgba(59, 130, 246, 0.3)',
+                filled: 'rgba(59, 130, 246, 0.05)'
+            },
+            {
+                gradient: 'linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%)',
+                primary: 'linear-gradient(135deg, #475569 0%, #334155 100%)',
+                accent: '#475569',
+                pulse: 'rgba(71, 85, 105, 0.4)',
+                shadow: 'rgba(71, 85, 105, 0.3)',
+                filled: 'rgba(71, 85, 105, 0.05)'
+            },
+            {
+                gradient: 'linear-gradient(135deg, #0e7490 0%, #06b6d4 50%, #22d3ee 100%)',
+                primary: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+                accent: '#06b6d4',
+                pulse: 'rgba(6, 182, 212, 0.4)',
+                shadow: 'rgba(6, 182, 212, 0.3)',
+                filled: 'rgba(6, 182, 212, 0.05)'
+            },
+            {
+                gradient: 'linear-gradient(135deg, #312e81 0%, #4f46e5 50%, #6366f1 100%)',
+                primary: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
+                accent: '#4f46e5',
+                pulse: 'rgba(79, 70, 229, 0.4)',
+                shadow: 'rgba(79, 70, 229, 0.3)',
+                filled: 'rgba(79, 70, 229, 0.05)'
+            },
+            {
+                gradient: 'linear-gradient(135deg, #065f46 0%, #059669 50%, #10b981 100%)',
+                primary: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                accent: '#059669',
+                pulse: 'rgba(5, 150, 105, 0.4)',
+                shadow: 'rgba(5, 150, 105, 0.3)',
+                filled: 'rgba(5, 150, 105, 0.05)'
+            },
+            {
+                gradient: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
+                primary: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                accent: '#1e293b',
+                pulse: 'rgba(30, 41, 59, 0.4)',
+                shadow: 'rgba(30, 41, 59, 0.3)',
+                filled: 'rgba(30, 41, 59, 0.05)'
+            },
+            {
+                gradient: 'linear-gradient(135deg, #0c4a6e 0%, #0284c7 50%, #38bdf8 100%)',
+                primary: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                accent: '#0284c7',
+                pulse: 'rgba(2, 132, 199, 0.4)',
+                shadow: 'rgba(2, 132, 199, 0.3)',
+                filled: 'rgba(2, 132, 199, 0.05)'
+            },
+            {
+                gradient: 'linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #8b5cf6 100%)',
+                primary: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                accent: '#7c3aed',
+                pulse: 'rgba(124, 58, 237, 0.4)',
+                shadow: 'rgba(124, 58, 237, 0.3)',
+                filled: 'rgba(124, 58, 237, 0.05)'
+            },
+            {
+                gradient: 'linear-gradient(135deg, #1e293b 0%, #475569 50%, #64748b 100%)',
+                primary: 'linear-gradient(135deg, #475569 0%, #334155 100%)',
+                accent: '#475569',
+                pulse: 'rgba(71, 85, 105, 0.4)',
+                shadow: 'rgba(71, 85, 105, 0.3)',
+                filled: 'rgba(71, 85, 105, 0.05)'
+            }
+        ];
+        
+        // Pick random theme
+        const theme = colorThemes[Math.floor(Math.random() * colorThemes.length)];
+        
+        // Apply theme
+        document.documentElement.style.setProperty('--dynamic-gradient', theme.gradient);
+        document.documentElement.style.setProperty('--primary-color', theme.primary);
+        document.documentElement.style.setProperty('--accent-color', theme.accent);
+        document.documentElement.style.setProperty('--pulse-color', theme.pulse);
+        document.documentElement.style.setProperty('--shadow-color', theme.shadow);
+        document.documentElement.style.setProperty('--filled-bg', theme.filled);
+    </script>
+</head>
+<body>
+    <div class="auth-container" style="background: var(--dynamic-gradient); background-size: 200% 200%; animation: gradientShift 15s ease infinite;">
+        <div class="auth-blob auth-blob-1"></div>
+        <div class="auth-blob auth-blob-2"></div>
+        <div class="auth-blob auth-blob-3"></div>
+
+        <div class="auth-card">
+            <!-- Left Side - Logo -->
+            <div class="auth-left">
+                <div class="auth-logo">
+                    <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="J.A. Uniforms Logo" class="logo-img">
+                </div>
+                <div class="auth-brand">
+                    <div class="auth-brand-name">J.A. Uniforms</div>
+                    <div class="auth-brand-tagline">Professional Uniform Solutions</div>
+                </div>
+            </div>
+
+            <!-- Right Side - Form -->
+            <div class="auth-right">
+                <div class="auth-header">
+                    <h1 class="auth-title">Create Account</h1>
+                </div>
+
+                <div class="success-message" id="successMessage">
+                    <i data-feather="check-circle"></i>
+                    <span>Registration successful! Redirecting to login...</span>
+                </div>
+
+                <div class="error-message" id="errorMessage">
+                    <i data-feather="alert-circle"></i>
+                    <span id="errorText">Please check your information and try again.</span>
+                </div>
+
+                <form class="auth-form" id="registrationForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">First Name</label>
+                            <div class="form-input-wrapper">
+                                <i data-feather="user" class="form-input-icon"></i>
+                                <input type="text" class="form-input" id="firstName" placeholder="John" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Last Name</label>
+                            <div class="form-input-wrapper">
+                                <i data-feather="user" class="form-input-icon"></i>
+                                <input type="text" class="form-input" id="lastName" placeholder="Doe" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <div class="form-input-wrapper">
+                            <i data-feather="mail" class="form-input-icon"></i>
+                            <input type="email" class="form-input" id="email" placeholder="john.doe@jauniforms.com" required>
+                        </div>
+                        <div class="email-hint">
+                            <i data-feather="info" style="width: 14px; height: 14px;"></i>
+                            <span>We'll send a verification code to this email</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <div class="form-input-wrapper">
+                            <i data-feather="lock" class="form-input-icon"></i>
+                            <input type="password" class="form-input" id="password" placeholder="Create a strong password" required>
+                            <button type="button" class="password-toggle" onclick="togglePassword('password')">
+                                <i data-feather="eye" id="password-eye"></i>
+                            </button>
+                        </div>
+                        <div class="password-strength">
+                            <div class="password-strength-bar" id="strengthBar"></div>
+                        </div>
+                        <div class="password-strength-text" id="strengthText"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Confirm Password</label>
+                        <div class="form-input-wrapper">
+                            <i data-feather="lock" class="form-input-icon"></i>
+                            <input type="password" class="form-input" id="confirmPassword" placeholder="Re-enter your password" required>
+                            <button type="button" class="password-toggle" onclick="togglePassword('confirmPassword')">
+                                <i data-feather="eye" id="confirmPassword-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="auth-submit-btn">
+                        <span>Create Account</span>
+                        <i data-feather="arrow-right" style="width: 20px; height: 20px;"></i>
+                    </button>
+                </form>
+
+                <div class="auth-footer">
+                    <p class="auth-footer-text">
+                        Already have an account? 
+                        <a href="{{ url_for('login') }}" class="auth-footer-link">Sign In</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Verification Modal -->
+    <div class="modal-overlay" id="verificationModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon" id="modalIcon">
+                    <i data-feather="mail"></i>
+                </div>
+                <h2 class="modal-title" id="modalTitle">Verify Your Email</h2>
+                <p class="modal-subtitle" id="modalSubtitle">
+                    We've sent a 6-digit verification code to<br>
+                    <span class="modal-email" id="modalEmail">john.doe@example.com</span>
+                </p>
+            </div>
+
+            <div class="error-message" id="modalError">
+                <i data-feather="alert-circle"></i>
+                <span id="modalErrorText">Invalid verification code. Please try again.</span>
+            </div>
+
+            <div class="verification-inputs" id="verificationInputs">
+                <input type="text" class="verification-input" maxlength="1" pattern="[0-9]" inputmode="numeric">
+                <input type="text" class="verification-input" maxlength="1" pattern="[0-9]" inputmode="numeric">
+                <input type="text" class="verification-input" maxlength="1" pattern="[0-9]" inputmode="numeric">
+                <input type="text" class="verification-input" maxlength="1" pattern="[0-9]" inputmode="numeric">
+                <input type="text" class="verification-input" maxlength="1" pattern="[0-9]" inputmode="numeric">
+                <input type="text" class="verification-input" maxlength="1" pattern="[0-9]" inputmode="numeric">
+            </div>
+
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-primary" id="verifyBtn">Verify Email</button>
+                <button class="modal-btn modal-btn-secondary" id="changeEmailBtn">Change Email</button>
+            </div>
+
+            <div class="resend-code">
+                <span>Didn't receive the code? </span>
+                <a href="#" class="resend-link" id="resendLink">
+                    Resend Code <span class="resend-timer" id="resendTimer"></span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/register.js') }}"></script>
+    <script>
+        feather.replace();
+        
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(inputId + '-eye');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.setAttribute('data-feather', 'eye-off');
+            } else {
+                input.type = 'password';
+                icon.setAttribute('data-feather', 'eye');
+            }
+            feather.replace();
+        }
+    </script>
+</body>
+</html>

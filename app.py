@@ -2,8 +2,9 @@
 # Copy lines 1-46 and replace the messy imports at the top of your app.py
 
 import pandas as pd
-from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, Response
+from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, Response, flash
 from sqlalchemy import func
+from flask_mail import Mail, Message
 
 # ===== LOAD ENVIRONMENT VARIABLES =====
 from dotenv import load_dotenv
@@ -12,32 +13,50 @@ load_dotenv()
 
 from config import Config
 from database import db
-from datetime import datetime
+import random
+import string
+from datetime import datetime, timedelta
 import os
 import csv
 from io import StringIO
 from werkzeug.utils import secure_filename
 from flask_wtf.csrf import CSRFProtect
+from flask_login import login_user, logout_user, current_user, login_required
+from auth import init_auth, admin_required, login_required_custom
 from models import (
-    Style, Fabric, FabricVendor, Notion, NotionVendor, 
+    Style, Fabric, User, FabricVendor, Notion, NotionVendor, 
     LaborOperation, CleaningCost, StyleFabric, StyleNotion, 
     StyleLabor, Color, StyleColor, Variable, StyleVariable,
-    SizeRange, GlobalSetting, StyleImage, get_eastern_time
+    SizeRange, GlobalSetting, StyleImage
 )
 import pytz
 
-def get_eastern_time():
-    eastern = pytz.timezone('America/New_York')
-    return datetime.now(eastern)
 
+# Initialize Mail
+mail = Mail()
+# Store verification codes
+verification_codes = {}
 
 
 # Initialize Flask app
 app = Flask(__name__)
 app.config.from_object(Config)
+# ===== ADD EMAIL CONFIGURATION HERE =====
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'it@jauniforms.com'
+app.config['MAIL_PASSWORD'] = 'xbwpikuegurlwnlc'  # ← Paste the password from Google
+app.config['MAIL_DEFAULT_SENDER'] = 'it@jauniforms.com'
+# =========================================
+mail.init_app(app)
+
 
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
+
+init_auth(app)
+
 
 UPLOAD_FOLDER = 'static/img'
 ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
@@ -52,6 +71,70 @@ def allowed_file(filename, allowed_extensions):
 
 # Initialize database with app
 db.init_app(app)
+
+# ===== HELPER FUNCTIONS (already provided in your document) =====
+def generate_verification_code():
+    """Generate a 6-digit verification code"""
+    return ''.join(random.choices(string.digits, k=6))
+
+
+def send_verification_email(email, code):
+    """Send verification code to email"""
+    msg = Message(
+        'J.A. Uniforms - Email Verification Code',
+        recipients=[email]
+    )
+    msg.body = f'''
+Hello,
+
+Your verification code for J.A. Uniforms Pricing Tool is:
+
+{code}
+
+This code will expire in 10 minutes.
+
+If you didn't request this code, please ignore this email.
+
+Best regards,
+J.A. Uniforms Team
+    '''
+    
+    msg.html = f'''
+<html>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); padding: 30px; border-radius: 10px; text-align: center;">
+            <h1 style="color: white; margin: 0;">J.A. Uniforms</h1>
+            <p style="color: white; margin: 10px 0 0 0;">Pricing Management System</p>
+        </div>
+        
+        <div style="padding: 30px; background: #f9f9f9; border-radius: 10px; margin-top: 20px;">
+            <h2 style="color: #2c3e50;">Email Verification Code</h2>
+            <p>Hello,</p>
+            <p>Your verification code for J.A. Uniforms Pricing Tool is:</p>
+            
+            <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
+                <h1 style="color: #3498db; font-size: 36px; letter-spacing: 8px; margin: 0;">{code}</h1>
+            </div>
+            
+            <p style="color: #666; font-size: 14px;">This code will expire in 10 minutes.</p>
+            <p style="color: #666; font-size: 14px;">If you didn't request this code, please ignore this email.</p>
+        </div>
+        
+        <div style="text-align: center; margin-top: 20px; color: #999; font-size: 12px;">
+            <p>© 2025 J.A. Uniforms. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+    '''
+    
+    try:
+        mail.send(msg)
+        return True
+    except Exception as e:
+        print(f"Error sending email: {e}")
+        return False
 
 # ===== VALIDATION HELPER FUNCTIONS =====
 def validate_positive_number(value, field_name, allow_zero=False):
@@ -91,9 +174,203 @@ def validate_string_length(value, field_name, max_length):
 # ===== END OF VALIDATION HELPERS =====
 
 # ===== YOUR ROUTES START HERE =====
-# Continue with your existing code from line 47 onwards
+@app.route('/admin/delete-user/<email>')
+def delete_user(email):
+    """Temporary route to delete users - REMOVE IN PRODUCTION"""
+    user = User.query.filter_by(username=email).first()
+    if user:
+        db.session.delete(user)
+        db.session.commit()
+        return f"User {email} deleted"
+    return "User not found"
+@app.route('/api/send-verification-code', methods=['POST'])
+def send_verification_code():
+    """API endpoint to send verification code"""
+    data = request.get_json()
+    email = data.get('email')
+    
+    if not email:
+        return jsonify({'success': False, 'error': 'Email is required'}), 400
+    
+    # Validate email domain
+    if not email.endswith('@jauniforms.com'):
+        return jsonify({'success': False, 'error': 'Only company emails are allowed'}), 400
+    
+    # Check if user exists
+    if User.query.filter_by(username=email).first():
+        return jsonify({'success': False, 'error': 'Email already registered'}), 400
+    
+    # Generate and store verification code
+    code = generate_verification_code()
+    verification_codes[email] = {
+        'code': code,
+        'expires': datetime.now() + timedelta(minutes=10)
+    }
+    
+    # Send email
+    if send_verification_email(email, code):
+        return jsonify({'success': True, 'message': 'Verification code sent successfully'}), 200
+    else:
+        return jsonify({'success': False, 'error': 'Failed to send email'}), 500
+
+# Add these routes AFTER your register route
+
+@app.route('/api/verify-code', methods=['POST'])
+@csrf.exempt
+def verify_code():
+    """Verify the email verification code"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        code = data.get('code')
+        
+        if email not in verification_codes:
+            return jsonify({'success': False, 'error': 'No verification code found'}), 200
+        
+        stored = verification_codes[email]
+        
+        # Check if code expired
+        if datetime.now() > stored['expires']:
+            del verification_codes[email]
+            return jsonify({'success': False, 'error': 'Code expired. Please register again'}), 200
+        
+        # Check if code matches
+        if stored['code'] != code:
+            return jsonify({'success': False, 'error': 'Invalid verification code'}), 200
+        
+        # Create user account
+        user_data = stored['user_data']
+        user = User(username=email)
+        user.set_password(user_data['password'])
+        db.session.add(user)
+        db.session.commit()
+        
+        # Clean up
+        del verification_codes[email]
+        
+        return jsonify({
+            'success': True,
+            'message': 'Email verified successfully',
+            'redirect': '/login'
+        }), 200
+        
+    except Exception as e:
+        print(f"Verification error: {e}")
+        return jsonify({'success': False, 'error': 'Verification failed'}), 200
+
+
+@app.route('/api/resend-verification-code', methods=['POST'])
+@csrf.exempt
+def resend_verification_code():
+    """Resend verification code"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        
+        if email not in verification_codes:
+            return jsonify({'success': False, 'error': 'No registration found'}), 200
+        
+        # Generate new code
+        new_code = generate_verification_code()
+        verification_codes[email]['code'] = new_code
+        verification_codes[email]['expires'] = datetime.now() + timedelta(minutes=10)
+        
+        # Send new email
+        if send_verification_email(email, new_code):
+            return jsonify({'success': True, 'message': 'New code sent'}), 200
+        else:
+            return jsonify({'success': False, 'error': 'Error sending email'}), 200
+            
+    except Exception as e:
+        print(f"Resend error: {e}")
+        return jsonify({'success': False, 'error': 'Failed to resend code'}), 200
+    
+
+# ===== AUTHENTICATION ROUTES =====
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    # Don't redirect if already logged in - let them see the login page
+    # if current_user.is_authenticated:
+    #     return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        email = request.form.get('username')
+        password = request.form.get('password')
+        
+        if not email.endswith('@jauniforms.com'):
+            flash('Only company emails (@jauniforms.com) are allowed', 'danger')
+            return render_template('login.html')
+        
+        user = User.query.filter_by(username=email).first()
+        
+        if user and user.check_password(password):
+            login_user(user)
+            flash(f'Welcome back, {user.username}!', 'success')
+            next_page = request.args.get('next')
+            return redirect(next_page or url_for('index'))
+        else:
+            flash('Invalid email or password', 'danger')
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    """Logout route"""
+    logout_user()
+    flash('You have been logged out successfully.', 'info')
+    return redirect(url_for('login'))
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    """Main registration page - single page with modal verification"""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        try:
+            # Get form data
+            first_name = request.form.get('firstName')
+            last_name = request.form.get('lastName')
+            email = request.form.get('email')
+            password = request.form.get('password')
+            
+            # Validation
+            if not email or not email.endswith('@jauniforms.com'):
+                return jsonify({'success': False, 'error': 'Only company emails (@jauniforms.com) are allowed'}), 200
+            
+            if User.query.filter_by(username=email).first():
+                return jsonify({'success': False, 'error': 'Email already registered'}), 200
+            
+            # Store user data temporarily
+            verification_codes[email] = {
+                'code': generate_verification_code(),
+                'expires': datetime.now() + timedelta(minutes=10),
+                'user_data': {
+                    'first_name': first_name,
+                    'last_name': last_name,
+                    'password': password
+                }
+            }
+            
+            # Send verification email
+            if send_verification_email(email, verification_codes[email]['code']):
+                return jsonify({'success': True, 'message': 'Verification code sent'}), 200
+            else:
+                return jsonify({'success': False, 'error': 'Error sending email'}), 200
+                
+        except Exception as e:
+            print(f"Registration error: {e}")
+            return jsonify({'success': False, 'error': 'Registration failed'}), 200
+    
+    return render_template('register.html')
+
+
+
 # ===== MAIN APPLICATION ROUTES =====
+
 @app.route('/')
+@login_required
 def index():
     """Dashboard with real-time stats"""
     
@@ -754,7 +1031,7 @@ def handle_color(color_id):
         db.session.commit()
         return jsonify({'success': True})
 
-# ===== Extended-size + Range helpers (robust) =====
+
 
 # ===== Extended-size + Range helpers (robust) =====
 
@@ -2357,7 +2634,6 @@ def api_style_save():
                     n["qty"] = qty_val  # Update with validated value
         
         # ===== STEP 6: UPDATE STYLE FIELDS =====
-        style.updated_at = get_eastern_time()
         style.style_name = style_name
         style.vendor_style = vendor_style if vendor_style else None
         style.base_item_number = (s.get("base_item_number") or None)

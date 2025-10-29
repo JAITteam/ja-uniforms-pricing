@@ -1,48 +1,283 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - J.A Uniforms Pricing Tool</title>
+    
+    <!-- Feather Icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
+    
+    <!-- Auth CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+</head>
+<body>
+    <!-- Dynamic Color System (same as register) -->
+    <script>
+    // 🎨 12 Color Themes with Full Palette
+    const colorThemes = [
+        {
+            gradient: 'linear-gradient(135deg, #2c3e50 0%, #3498db 50%, #2980b9 100%)',
+            primary: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
+            accent: '#3498db',
+            pulse: 'rgba(52, 152, 219, 0.4)',
+            shadow: 'rgba(52, 152, 219, 0.3)',
+            filled: 'rgba(52, 152, 219, 0.05)'
+        },
+        {
+            gradient: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%)',
+            primary: 'linear-gradient(135deg, #7e22ce 0%, #6b21a8 100%)',
+            accent: '#7e22ce',
+            pulse: 'rgba(126, 34, 206, 0.4)',
+            shadow: 'rgba(126, 34, 206, 0.3)',
+            filled: 'rgba(126, 34, 206, 0.05)'
+        },
+        {
+            gradient: 'linear-gradient(135deg, #134e4a 0%, #0d9488 50%, #14b8a6 100%)',
+            primary: 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
+            accent: '#0d9488',
+            pulse: 'rgba(13, 148, 136, 0.4)',
+            shadow: 'rgba(13, 148, 136, 0.3)',
+            filled: 'rgba(13, 148, 136, 0.05)'
+        },
+        {
+            gradient: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%)',
+            primary: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+            accent: '#3b82f6',
+            pulse: 'rgba(59, 130, 246, 0.4)',
+            shadow: 'rgba(59, 130, 246, 0.3)',
+            filled: 'rgba(59, 130, 246, 0.05)'
+        },
+        {
+            gradient: 'linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%)',
+            primary: 'linear-gradient(135deg, #475569 0%, #334155 100%)',
+            accent: '#475569',
+            pulse: 'rgba(71, 85, 105, 0.4)',
+            shadow: 'rgba(71, 85, 105, 0.3)',
+            filled: 'rgba(71, 85, 105, 0.05)'
+        },
+        {
+            gradient: 'linear-gradient(135deg, #0e7490 0%, #06b6d4 50%, #22d3ee 100%)',
+            primary: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+            accent: '#06b6d4',
+            pulse: 'rgba(6, 182, 212, 0.4)',
+            shadow: 'rgba(6, 182, 212, 0.3)',
+            filled: 'rgba(6, 182, 212, 0.05)'
+        },
+        {
+            gradient: 'linear-gradient(135deg, #312e81 0%, #4f46e5 50%, #6366f1 100%)',
+            primary: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
+            accent: '#4f46e5',
+            pulse: 'rgba(79, 70, 229, 0.4)',
+            shadow: 'rgba(79, 70, 229, 0.3)',
+            filled: 'rgba(79, 70, 229, 0.05)'
+        },
+        {
+            gradient: 'linear-gradient(135deg, #065f46 0%, #059669 50%, #10b981 100%)',
+            primary: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+            accent: '#059669',
+            pulse: 'rgba(5, 150, 105, 0.4)',
+            shadow: 'rgba(5, 150, 105, 0.3)',
+            filled: 'rgba(5, 150, 105, 0.05)'
+        },
+        {
+            gradient: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
+            primary: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+            accent: '#1e293b',
+            pulse: 'rgba(30, 41, 59, 0.4)',
+            shadow: 'rgba(30, 41, 59, 0.3)',
+            filled: 'rgba(30, 41, 59, 0.05)'
+        },
+        {
+            gradient: 'linear-gradient(135deg, #0c4a6e 0%, #0284c7 50%, #38bdf8 100%)',
+            primary: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+            accent: '#0284c7',
+            pulse: 'rgba(2, 132, 199, 0.4)',
+            shadow: 'rgba(2, 132, 199, 0.3)',
+            filled: 'rgba(2, 132, 199, 0.05)'
+        },
+        {
+            gradient: 'linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #8b5cf6 100%)',
+            primary: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+            accent: '#7c3aed',
+            pulse: 'rgba(124, 58, 237, 0.4)',
+            shadow: 'rgba(124, 58, 237, 0.3)',
+            filled: 'rgba(124, 58, 237, 0.05)'
+        },
+        {
+            gradient: 'linear-gradient(135deg, #1e293b 0%, #475569 50%, #64748b 100%)',
+            primary: 'linear-gradient(135deg, #475569 0%, #334155 100%)',
+            accent: '#475569',
+            pulse: 'rgba(71, 85, 105, 0.4)',
+            shadow: 'rgba(71, 85, 105, 0.3)',
+            filled: 'rgba(71, 85, 105, 0.05)'
+        }
+    ];
+    
+    // Pick random theme
+    const theme = colorThemes[Math.floor(Math.random() * colorThemes.length)];
+    
+    // Apply ALL theme colors
+    document.documentElement.style.setProperty('--dynamic-gradient', theme.gradient);
+    document.documentElement.style.setProperty('--primary-color', theme.primary);
+    document.documentElement.style.setProperty('--accent-color', theme.accent);
+    document.documentElement.style.setProperty('--pulse-color', theme.pulse);
+    document.documentElement.style.setProperty('--shadow-color', theme.shadow);
+    document.documentElement.style.setProperty('--filled-bg', theme.filled);
+</script>
+    <div class="auth-container" style="background: var(--dynamic-gradient, linear-gradient(135deg, #2c3e50 0%, #3498db 50%, #2980b9 100%)); background-size: 200% 200%; animation: gradientShift 15s ease infinite;">
+        <!-- Animated Background Blobs -->
+        <div class="auth-blob auth-blob-1"></div>
+        <div class="auth-blob auth-blob-2"></div>
+        <div class="auth-blob auth-blob-3"></div>
 
-{% block title %}Login - J.A Uniforms Pricing Tool{% endblock %}
-
-{% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6 col-lg-4">
-        <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h4 class="mb-0 text-center">Login</h4>
+        <!-- Auth Card -->
+        <div class="auth-card">
+            <!-- Left Section: Logo -->
+            <div class="auth-left">
+                <div class="auth-logo">
+                    <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="J.A. Uniforms Logo" class="logo-img">
+                </div>
+                <div class="auth-brand">
+                    <div class="auth-brand-name">J.A. Uniforms</div>
+                    <div class="auth-brand-tagline">Pricing Management System</div>
+                </div>
             </div>
-            <div class="card-body">
-                {% if error %}
-                    <div class="alert alert-danger" role="alert">
-                        {{ error }}
+
+            <!-- Right Section: Form -->
+            <div class="auth-right">
+                <!-- Header -->
+                <div class="auth-header">
+                    <h1 class="auth-title">Welcome Back!</h1>
+                    <p class="auth-subtitle">Sign in to your account</p>
+                </div>
+
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="auth-alert auth-alert-{{ category }}">
+                                {% if category == 'success' %}
+                                    <i data-feather="check-circle"></i>
+                                {% elif category == 'danger' %}
+                                    <i data-feather="alert-circle"></i>
+                                {% elif category == 'warning' %}
+                                    <i data-feather="alert-triangle"></i>
+                                {% else %}
+                                    <i data-feather="info"></i>
+                                {% endif %}
+                                <span>{{ message }}</span>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Login Form -->
+                <form method="POST" action="{{ url_for('login') }}" class="auth-form">
+                    <!-- CSRF Protection -->
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                    <!-- Email Input -->
+                    <div class="form-group">
+                        <label for="username" class="form-label">Email Address</label>
+                        <div class="form-input-wrapper">
+                            <i data-feather="mail" class="form-input-icon"></i>
+                            <input 
+                                type="email" 
+                                class="form-input" 
+                                id="username" 
+                                name="username" 
+                                placeholder="abc@jauniforms.com"
+                                autocomplete="email"
+                                required 
+                                autofocus
+                            />
+                        </div>
                     </div>
-                {% endif %}
-                
-                <form method="POST">
-                    {{ form.hidden_tag() }}
-                    
-                    <div class="mb-3">
-                        {{ form.username.label(class="form-label") }}
-                        {{ form.username(class="form-control") }}
+
+                    <!-- Password Input -->
+                    <div class="form-group">
+                        <label for="password" class="form-label">Password</label>
+                        <div class="form-input-wrapper">
+                            <i data-feather="lock" class="form-input-icon"></i>
+                            <input 
+                                type="password" 
+                                class="form-input" 
+                                id="password" 
+                                name="password" 
+                                placeholder="Enter your password"
+                                autocomplete="current-password"
+                                required
+                            />
+                            <button type="button" class="password-toggle" onclick="togglePassword('password')">
+                                <i data-feather="eye" id="password-eye"></i>
+                            </button>
+                        </div>
                     </div>
-                    
-                    <div class="mb-3">
-                        {{ form.password.label(class="form-label") }}
-                        {{ form.password(class="form-control") }}
+
+                    <!-- Remember Me Checkbox -->
+                    <div class="form-checkbox-group">
+                        <input type="checkbox" id="remember" name="remember" class="form-checkbox">
+                        <label for="remember" class="form-checkbox-label">Remember me for 30 days</label>
                     </div>
-                    
-                    <div class="d-grid">
-                        {{ form.submit(class="btn btn-primary") }}
-                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="auth-submit-btn">
+                        <span>Sign In</span>
+                        <i data-feather="arrow-right" style="width: 20px; height: 20px;"></i>
+                    </button>
                 </form>
-                
-                <div class="mt-4 text-center text-muted">
-                    <small>
-                        <strong>Demo Accounts:</strong><br>
-                        Admin: ruben / admin123<br>
-                        Employee: employee / view123
-                    </small>
+
+                <!-- Footer Link -->
+                <div class="auth-footer">
+                    <p class="auth-footer-text">
+                        Don't have an account?
+                        <a href="{{ url_for('register') }}" class="auth-footer-link">Register here</a>
+                    </p>
                 </div>
             </div>
         </div>
     </div>
-</div>
-{% endblock %}
+
+    <!-- Initialize Feather Icons -->
+    <script>
+        feather.replace();
+        
+        // Password Toggle Function
+        function togglePassword(inputId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(inputId + '-eye');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.setAttribute('data-feather', 'eye-off');
+            } else {
+                input.type = 'password';
+                icon.setAttribute('data-feather', 'eye');
+            }
+            feather.replace();
+        }
+
+        // Auto-hide flash messages after 5 seconds
+        setTimeout(() => {
+            const alerts = document.querySelectorAll('.auth-alert');
+            alerts.forEach(alert => {
+                alert.style.animation = 'slideUp 0.3s ease-out';
+                setTimeout(() => alert.remove(), 300);
+            });
+        }, 5000);
+
+        // Add slideUp animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideUp {
+                to {
+                    opacity: 0;
+                    transform: translateY(-10px);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

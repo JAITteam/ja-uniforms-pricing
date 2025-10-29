@@ -3,7 +3,7 @@
     <div class="navbar-container">
 
         <!-- Logo / Home Link -->
-        <a href="/" class="navbar-logo">
+        <a href="{% if current_user.is_authenticated %}/{% else %}#{% endif %}" class="navbar-logo">
             <img src="{{ url_for('static', filename='img/logo.svg') }}" 
                 alt="JA Uniforms" 
                 class="logo-image"
@@ -17,6 +17,9 @@
             </div>
             <span class="logo-text" style="display: none;">JA UNIFORMS</span>
         </a>
+        
+        <!-- Only show navigation when user is logged in -->
+        {% if current_user.is_authenticated %}
         
         <!-- Main Navigation Links -->
         <ul class="navbar-menu">
@@ -139,10 +142,13 @@
             </svg>
         </button>
         
+        {% endif %}
+        
     </div>
 </nav>
 
-<!-- Mobile Menu Overlay -->
+<!-- Mobile Menu Overlay - Only show when logged in -->
+{% if current_user.is_authenticated %}
 <div class="mobile-menu-overlay" id="mobileMenuOverlay">
     <div class="mobile-menu-content">
         <div class="mobile-menu-header">
@@ -199,3 +205,4 @@
         </nav>
     </div>
 </div>
+{% endif %}

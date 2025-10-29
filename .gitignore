@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 *.pyc
 venv/
+.venv/          # ← ADD THIS LINE
 .env
 
 # Database
@@ -20,3 +21,6 @@ backups/
 # OS
 .DS_Store
 Thumbs.db
+
+# Instance folder
+instance/

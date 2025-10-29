@@ -1,13 +1,14 @@
 from database import db
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
 import pytz
 
 def get_eastern_time():
     """Get current system time"""
     return datetime.now()
 # ===== AUTHENTICATION =====
-class User(db.Model):
+class User(UserMixin, db.Model):
     __tablename__ = 'users'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -24,6 +25,9 @@ class User(db.Model):
     
     def is_admin(self):
         return self.role == 'admin'
+    
+    def __repr__(self):
+        return f'<User {self.username}>'
 
 # ===== VENDOR TABLES =====
 class FabricVendor(db.Model):
