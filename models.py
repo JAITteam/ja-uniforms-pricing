@@ -14,7 +14,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(120), nullable=False)
-    role = db.Column(db.String(20), default='viewer')  # 'admin' or 'viewer'
+    role = db.Column(db.String(20), default='user', nullable=False) 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def set_password(self, password):
@@ -114,8 +114,8 @@ class SizeRange(db.Model):
     extended_sizes = db.Column(db.String(100))
     extended_markup_percent = db.Column(db.Float, default=15.0)
     description = db.Column(db.String(200))
-    #created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    created_at = db.Column(db.DateTime, default=get_eastern_time)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    #created_at = db.Column(db.DateTime, default=get_eastern_time)
     
     def __repr__(self):
         return f'<SizeRange {self.name}>'
@@ -138,8 +138,7 @@ class Style(db.Model):
     suggested_price = db.Column(db.Float)  # ADD THIS
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    #updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=get_eastern_time, onupdate=get_eastern_time)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_modified_by = db.Column(db.String(100), default='Admin')
     is_active = db.Column(db.Boolean, default=True)
     is_favorite = db.Column(db.Boolean, default=False)

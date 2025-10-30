@@ -4,7 +4,7 @@ __pycache__/
 *$py.class
 *.pyc
 venv/
-.venv/          # ← ADD THIS LINE
+.venv/     
 .env
 
 # Database

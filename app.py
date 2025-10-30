@@ -2,7 +2,7 @@
 # Copy lines 1-46 and replace the messy imports at the top of your app.py
 
 import pandas as pd
-from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, Response, flash
+from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, Response, flash, session
 from sqlalchemy import func
 from flask_mail import Mail, Message
 
@@ -77,6 +77,15 @@ def generate_verification_code():
     """Generate a 6-digit verification code"""
     return ''.join(random.choices(string.digits, k=6))
 
+def require_admin_for_write():
+    """Check if current request is a write operation and require admin"""
+    if request.method in ['POST', 'PUT', 'DELETE', 'PATCH']:
+        if not current_user.is_authenticated:
+            return jsonify({'error': 'Authentication required'}), 401
+        if not current_user.is_admin():
+            return jsonify({'error': 'Admin access required'}), 403
+    return None
+
 
 def send_verification_email(email, code):
     """Send verification code to email"""
@@ -91,7 +100,7 @@ Your verification code for J.A. Uniforms Pricing Tool is:
 
 {code}
 
-This code will expire in 10 minutes.
+This code will expire in 2 minutes.
 
 If you didn't request this code, please ignore this email.
 
@@ -117,7 +126,7 @@ J.A. Uniforms Team
                 <h1 style="color: #3498db; font-size: 36px; letter-spacing: 8px; margin: 0;">{code}</h1>
             </div>
             
-            <p style="color: #666; font-size: 14px;">This code will expire in 10 minutes.</p>
+            <p style="color: #666; font-size: 14px;">This code will expire in 2 minutes.</p>
             <p style="color: #666; font-size: 14px;">If you didn't request this code, please ignore this email.</p>
         </div>
         
@@ -174,15 +183,9 @@ def validate_string_length(value, field_name, max_length):
 # ===== END OF VALIDATION HELPERS =====
 
 # ===== YOUR ROUTES START HERE =====
-@app.route('/admin/delete-user/<email>')
-def delete_user(email):
-    """Temporary route to delete users - REMOVE IN PRODUCTION"""
-    user = User.query.filter_by(username=email).first()
-    if user:
-        db.session.delete(user)
-        db.session.commit()
-        return f"User {email} deleted"
-    return "User not found"
+# ===== DELETING USERS ======
+
+
 @app.route('/api/send-verification-code', methods=['POST'])
 def send_verification_code():
     """API endpoint to send verification code"""
@@ -204,7 +207,7 @@ def send_verification_code():
     code = generate_verification_code()
     verification_codes[email] = {
         'code': code,
-        'expires': datetime.now() + timedelta(minutes=10)
+        'expires': datetime.now() + timedelta(minutes=2)
     }
     
     # Send email
@@ -242,6 +245,13 @@ def verify_code():
         user_data = stored['user_data']
         user = User(username=email)
         user.set_password(user_data['password'])
+
+        if email == 'it@jauniforms.com':
+            user.role = 'admin'
+        else:
+            user.role = 'user'
+
+
         db.session.add(user)
         db.session.commit()
         
@@ -273,7 +283,7 @@ def resend_verification_code():
         # Generate new code
         new_code = generate_verification_code()
         verification_codes[email]['code'] = new_code
-        verification_codes[email]['expires'] = datetime.now() + timedelta(minutes=10)
+        verification_codes[email]['expires'] = datetime.now() + timedelta(minutes=2)
         
         # Send new email
         if send_verification_email(email, new_code):
@@ -318,6 +328,9 @@ def login():
 def logout():
     """Logout route"""
     logout_user()
+    # Clear all existing flash messages
+    session.pop('_flashes', None)
+    # Add only logout message
     flash('You have been logged out successfully.', 'info')
     return redirect(url_for('login'))
 
@@ -345,7 +358,7 @@ def register():
             # Store user data temporarily
             verification_codes[email] = {
                 'code': generate_verification_code(),
-                'expires': datetime.now() + timedelta(minutes=10),
+                'expires': datetime.now() + timedelta(minutes=2),
                 'user_data': {
                     'first_name': first_name,
                     'last_name': last_name,
@@ -438,129 +451,6 @@ def view_style(vendor_style):
         return render_template('style_detail.html', style=style)
     return f"<h1>Style '{vendor_style}' not found</h1><a href='/'>Back to Search</a>"
 
-# ===== DATABASE SETUP AND TEST ROUTES =====
-@app.route('/test-db')
-def test_db():
-    try:
-        db.create_all()
-        return "<h1>Database connected successfully!</h1><p>All tables created!</p><a href='/create-complete-data'>Create Complete Sample Data</a>"
-    except Exception as e:
-        return f"<h1>Database error:</h1><p>{str(e)}</p>"
-@app.route('/fix-cleaning-costs')
-def fix_cleaning_costs():
-    """Add missing cleaning cost records"""
-    
-    all_cleaning_costs = [
-        {'garment_type': 'APRON', 'avg_minutes': 3, 'fixed_cost': 0.96},
-        {'garment_type': 'VEST', 'avg_minutes': 4, 'fixed_cost': 1.28},
-        {'garment_type': 'SS TOP/SS DRESS', 'avg_minutes': 5, 'fixed_cost': 1.60},
-        {'garment_type': 'LS TOP/LS DRESS', 'avg_minutes': 7, 'fixed_cost': 2.24},
-        {'garment_type': 'SHORTS/SKIRTS', 'avg_minutes': 4, 'fixed_cost': 1.28},
-        {'garment_type': 'PANTS', 'avg_minutes': 5, 'fixed_cost': 1.60},
-        {'garment_type': 'SS JACKET/LINED SS DRESS', 'avg_minutes': 10, 'fixed_cost': 3.20},
-        {'garment_type': 'LS JACKET/LINED LS DRESS', 'avg_minutes': 12, 'fixed_cost': 3.84},
-    ]
-    
-    added = 0
-    for item in all_cleaning_costs:
-        existing = CleaningCost.query.filter_by(garment_type=item['garment_type']).first()
-        if not existing:
-            cc = CleaningCost(
-                garment_type=item['garment_type'],
-                avg_minutes=item['avg_minutes'],
-                fixed_cost=item['fixed_cost']
-            )
-            db.session.add(cc)
-            added += 1
-    
-    db.session.commit()
-    return f"<h1>Added {added} missing cleaning costs!</h1><a href='/master-costs'>View Master Costs</a>"
-
-@app.route('/debug-cleaning')
-def debug_cleaning():
-    """Debug cleaning costs"""
-    cleaning_costs = CleaningCost.query.all()
-    
-    html = "<h1>Cleaning Costs in Database</h1>"
-    html += f"<p>Total records: {len(cleaning_costs)}</p>"
-    html += "<table border='1' cellpadding='10'>"
-    html += "<tr><th>ID</th><th>Garment Type</th><th>Minutes</th><th>Cost</th></tr>"
-    
-    for cc in cleaning_costs:
-        html += f"<tr><td>{cc.id}</td><td>{cc.garment_type}</td><td>{cc.avg_minutes}</td><td>${cc.fixed_cost}</td></tr>"
-    
-    html += "</table>"
-    
-    # Test the API for each garment type
-    html += "<h2>API Test Results</h2>"
-    test_types = [
-        'APRON', 'VEST', 'PANTS', 'SHORTS/SKIRTS',
-        'SS TOP/SS DRESS', 'LS TOP/LS DRESS',
-        'SS JACKET/LINED SS DRESS', 'LS JACKET/LINED LS DRESS'
-    ]
-    
-    html += "<table border='1' cellpadding='10'>"
-    html += "<tr><th>Garment Type</th><th>API Result</th></tr>"
-    
-    for gt in test_types:
-        cc = CleaningCost.query.filter_by(garment_type=gt).first()
-        if cc:
-            html += f"<tr><td>{gt}</td><td style='color:green'>Found: ${cc.fixed_cost}</td></tr>"
-        else:
-            html += f"<tr><td>{gt}</td><td style='color:red'>NOT FOUND</td></tr>"
-    
-    html += "</table>"
-    html += "<br><a href='/fix-cleaning-costs'>Fix Missing Records</a>"
-    return html
-
-@app.route('/test-complete-lookup')
-def test_complete_lookup():
-    style = Style.query.filter_by(vendor_style='21324-3202').first()
-    if style:
-        # Calculate pricing for regular and extended sizes
-        regular_price = style.get_retail_price(1.0)  # Regular sizes
-        extended_price = style.get_retail_price(1.15)  # Extended sizes (2XL-4XL)
-        
-        html = f"""
-        <div style="max-width: 800px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
-            <h1>Complete Uniform Pricing Lookup Test</h1>
-            
-            <div style="border: 2px solid #007bff; border-radius: 8px; padding: 20px; margin: 20px 0;">
-                <h2>Style Information</h2>
-                <p><strong>Vendor Style:</strong> {style.vendor_style}</p>
-                <p><strong>Name:</strong> {style.style_name}</p>
-                <p><strong>Gender:</strong> {style.gender}</p>
-                <p><strong>Garment Type:</strong> {style.garment_type}</p>
-                <p><strong>Size Range:</strong> {style.size_range}</p>
-            </div>
-            
-            <div style="border: 2px solid #28a745; border-radius: 8px; padding: 20px; margin: 20px 0;">
-                <h2>Cost Breakdown</h2>
-                <p><strong>Fabric Cost:</strong> ${style.get_total_fabric_cost():.2f}</p>
-                <p><strong>Notion Cost:</strong> ${style.get_total_notion_cost():.2f}</p>
-                <p><strong>Labor Cost:</strong> ${style.get_total_labor_cost():.2f}</p>
-                <p><strong>Label Cost:</strong> ${style.avg_label_cost:.2f}</p>
-                <hr>
-                <p><strong>Total Cost:</strong> ${style.get_total_cost():.2f}</p>
-            </div>
-            
-            <div style="border: 2px solid #dc3545; border-radius: 8px; padding: 20px; margin: 20px 0;">
-                <h2>Retail Pricing</h2>
-                <p><strong>Regular Sizes (XS-XL):</strong> ${regular_price:.2f}</p>
-                <p><strong>Extended Sizes (2XL-4XL +15%):</strong> ${extended_price:.2f}</p>
-                <p><strong>Margin:</strong> {style.base_margin_percent:.0f}%</p>
-            </div>
-            
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="/" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Go to Main Search</a>
-                <a href="/admin-panel" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-left: 10px;">Admin Panel</a>
-            </div>
-        </div>
-        """
-        return html
-    else:
-        return "<h1>No style found!</h1><a href='/create-complete-data'>Create Sample Data First</a>"
-
 # ===== ADMIN ROUTES (Future expansion) =====
 @app.route('/api/recent-styles')
 def api_recent_styles():
@@ -576,7 +466,7 @@ def api_recent_styles():
 def api_dashboard_stats():
     total_styles = Style.query.count()
     styles = Style.query.all()
-    avg_cost = sum(s.total_cost for s in styles) / len(styles) if styles else 0
+    avg_cost = sum(s.get_total_cost() for s in styles) / len(styles) if styles else 0
     
     return jsonify({
         'total_styles': total_styles,
@@ -584,6 +474,7 @@ def api_dashboard_stats():
     })
 
 @app.route('/api/style/<int:style_id>/upload-image', methods=['POST'])
+@admin_required 
 def upload_style_image(style_id):
     """Upload an image for a style"""
     
@@ -689,6 +580,7 @@ def get_style_images(style_id):
 
 
 @app.route('/api/style-image/<int:image_id>', methods=['DELETE'])
+@admin_required 
 def delete_style_image(image_id):
     """Delete a style image"""
     # Find the image record
@@ -710,155 +602,16 @@ def delete_style_image(image_id):
     
     return jsonify({'success': True}), 200
 
-@app.route('/migrate-db')
-def migrate_db():
-    """One-time migration to add new columns to styles table"""
-    try:
-        from sqlalchemy import text, inspect
-        
-        inspector = inspect(db.engine)
-        existing_columns = [col['name'] for col in inspector.get_columns('styles')]
-        
-        migrations_run = []
-        migrations_skipped = []
-        
-        # Add shipping_cost if it doesn't exist
-        if 'shipping_cost' not in existing_columns:
-            db.session.execute(text('ALTER TABLE styles ADD COLUMN shipping_cost FLOAT DEFAULT 0.00'))
-            migrations_run.append('Added shipping_cost column')
-        else:
-            migrations_skipped.append('shipping_cost already exists')
-        
-        # Add suggested_price if it doesn't exist
-        if 'suggested_price' not in existing_columns:
-            db.session.execute(text('ALTER TABLE styles ADD COLUMN suggested_price FLOAT'))
-            migrations_run.append('Added suggested_price column')
-        else:
-            migrations_skipped.append('suggested_price already exists')
-        
-        db.session.commit()
-        
-        html = f"""
-        <div style="max-width: 800px; margin: 50px auto; padding: 20px; font-family: Arial;">
-            <h1>Database Migration Complete</h1>
-            
-            <div style="background: #d4edda; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                <h3>✓ Migrations Run Successfully:</h3>
-                <ul>
-        """
-        
-        if migrations_run:
-            for migration in migrations_run:
-                html += f"<li>{migration}</li>"
-        else:
-            html += "<li>No new migrations needed</li>"
-        
-        html += "</ul></div>"
-        
-        if migrations_skipped:
-            html += """
-            <div style="background: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                <h3>⊙ Already Up to Date:</h3>
-                <ul>
-            """
-            for skipped in migrations_skipped:
-                html += f"<li>{skipped}</li>"
-            html += "</ul></div>"
-        
-        html += """
-            <div style="margin-top: 30px;">
-                <a href="/admin-panel" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Go to Admin Panel</a>
-                <a href="/style/new" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-left: 10px;">Test Style Form</a>
-            </div>
-            
-            <div style="margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 5px;">
-                <p><strong>Note:</strong> This migration only needs to be run once. You can delete the /migrate-db route after running it.</p>
-            </div>
-        </div>
-        """
-        
-        return html
-        
-    except Exception as e:
-        db.session.rollback()
-        return f"""
-        <div style="max-width: 800px; margin: 50px auto; padding: 20px; font-family: Arial;">
-            <h1>Migration Error</h1>
-            <div style="background: #f8d7da; padding: 15px; border-radius: 5px; color: #721c24;">
-                <p><strong>Error:</strong> {str(e)}</p>
-            </div>
-            <p>This might mean:</p>
-            <ul>
-                <li>The columns already exist (which is fine!)</li>
-                <li>There's a database connection issue</li>
-                <li>The database user doesn't have ALTER TABLE permissions</li>
-            </ul>
-            <a href="/admin-panel" style="background: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Back to Admin</a>
-        </div>
-        """
-@app.route('/verify-db')
-def verify_db():
-    """Check database schema"""
-    from sqlalchemy import inspect
-    
-    inspector = inspect(db.engine)
-    columns = inspector.get_columns('styles')
-    
-    html = """
-    <div style="max-width: 800px; margin: 50px auto; padding: 20px; font-family: Arial;">
-        <h1>Database Schema Verification</h1>
-        <h2>Styles Table Columns:</h2>
-        <table border="1" cellpadding="10" style="border-collapse: collapse; width: 100%;">
-            <tr>
-                <th>Column Name</th>
-                <th>Type</th>
-                <th>Nullable</th>
-                <th>Default</th>
-            </tr>
-    """
-    
-    for col in columns:
-        html += f"""
-            <tr>
-                <td><strong>{col['name']}</strong></td>
-                <td>{col['type']}</td>
-                <td>{'Yes' if col['nullable'] else 'No'}</td>
-                <td>{col['default'] or 'None'}</td>
-            </tr>
-        """
-    
-    html += """
-        </table>
-        <div style="margin-top: 20px;">
-            <a href="/admin-panel" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Back to Admin</a>
-        </div>
-    </div>
-    """
-    
-    return html
 
-@app.route('/migrate-sublimation')
-def migrate_sublimation():
-    """Add sublimation column to style_fabrics"""
-    try:
-        from sqlalchemy import text, inspect
-        
-        inspector = inspect(db.engine)
-        columns = [col['name'] for col in inspector.get_columns('style_fabrics')]
-        
-        if 'is_sublimation' not in columns:
-            db.session.execute(text('ALTER TABLE style_fabrics ADD COLUMN is_sublimation BOOLEAN DEFAULT 0'))
-            db.session.commit()
-            return "<h1>✓ Added is_sublimation column</h1><a href='/style/new'>Test Style Form</a>"
-        else:
-            return "<h1>Column already exists</h1><a href='/style/new'>Go to Style Form</a>"
-    except Exception as e:
-        db.session.rollback()
-        return f"<h1>Error:</h1><p>{str(e)}</p>"
     
 # SIZE RANGE ENDPOINTS
 @app.route('/api/size-ranges', methods=['GET', 'POST'])
 def handle_size_ranges():
+    # Check admin for write operations
+    auth_error = require_admin_for_write()
+    if auth_error:
+        return auth_error
+    
     if request.method == 'GET':
         size_ranges = SizeRange.query.order_by(SizeRange.name).all()
         return jsonify([{
@@ -885,6 +638,11 @@ def handle_size_ranges():
 
 @app.route('/api/size-ranges/<int:size_range_id>', methods=['GET', 'PUT', 'DELETE'])
 def handle_size_range(size_range_id):
+    # Check admin for write operations
+    auth_error = require_admin_for_write()
+    if auth_error:
+        return auth_error
+    
     size_range = SizeRange.query.get_or_404(size_range_id)
     
     if request.method == 'GET':
@@ -926,6 +684,11 @@ def get_global_settings():
 
 @app.route('/api/global-settings/<int:setting_id>', methods=['GET', 'PUT'])
 def handle_global_setting(setting_id):
+    # Check admin for write operations
+    auth_error = require_admin_for_write()
+    if auth_error:
+        return auth_error
+    
     setting = GlobalSetting.query.get_or_404(setting_id)
     
     if request.method == 'GET':
@@ -945,6 +708,7 @@ def handle_global_setting(setting_id):
     
 
 @app.route('/import-colors')
+@admin_required
 def import_colors():
     """One-time import of colors from Excel file"""
     import pandas as pd
@@ -990,6 +754,11 @@ def import_colors():
 # COLOR ENDPOINTS
 @app.route('/api/colors', methods=['GET', 'POST'])
 def handle_colors():
+    # Check admin for write operations
+    auth_error = require_admin_for_write()
+    if auth_error:
+        return auth_error
+    
     if request.method == 'GET':
         colors = Color.query.order_by(Color.name).all()
         return jsonify([{'id': c.id, 'name': c.name} for c in colors])
@@ -1015,6 +784,11 @@ def handle_colors():
 
 @app.route('/api/colors/<int:color_id>', methods=['GET', 'PUT', 'DELETE'])
 def handle_color(color_id):
+    # Check admin for write operations
+    auth_error = require_admin_for_write()
+    if auth_error:
+        return auth_error
+    
     color = Color.query.get_or_404(color_id)
     
     if request.method == 'GET':
@@ -1548,6 +1322,7 @@ def view_all_styles():
                          avg_cost=avg_cost)
 
 @app.route('/api/style/delete/<int:style_id>', methods=['DELETE'])
+@admin_required 
 def delete_style(style_id):
     """Delete a style and all its relationships"""
     try:
@@ -1580,6 +1355,7 @@ def delete_style(style_id):
         return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route('/api/style/duplicate/<int:style_id>', methods=['POST'])
+@admin_required 
 def duplicate_style(style_id):
     """Duplicate a style with all its components"""
     try:
@@ -1679,6 +1455,7 @@ def duplicate_style(style_id):
         return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route('/api/styles/bulk-delete', methods=['POST'])
+@admin_required 
 def bulk_delete_styles():
     """Delete multiple styles"""
     try:
@@ -1833,54 +1610,11 @@ def check_vendor_style():
     
     return jsonify({"exists": exists})
 
-# ADD THESE ROUTES TO YOUR app.py
-# These replace your existing /master-costs route and add the API endpoints
 
 # ===== EDITABLE MASTER COSTS WITH VENDOR MANAGEMENT =====
-@app.route('/migrate-phase1')
-def migrate_phase1():
-    """Add Phase 1 columns to styles table"""
-    try:
-        from sqlalchemy import text, inspect
-        
-        inspector = inspect(db.engine)
-        existing_columns = [col['name'] for col in inspector.get_columns('styles')]
-        
-        migrations = []
-        
-        if 'last_modified_by' not in existing_columns:
-            db.session.execute(text("ALTER TABLE styles ADD COLUMN last_modified_by VARCHAR(100) DEFAULT 'Admin'"))
-            migrations.append('✅ Added last_modified_by')
-        
-        if 'is_active' not in existing_columns:
-            db.session.execute(text('ALTER TABLE styles ADD COLUMN is_active BOOLEAN DEFAULT 1'))
-            migrations.append('✅ Added is_active')
-        
-        if 'is_favorite' not in existing_columns:
-            db.session.execute(text('ALTER TABLE styles ADD COLUMN is_favorite BOOLEAN DEFAULT 0'))
-            migrations.append('✅ Added is_favorite')
-        
-        db.session.commit()
-        
-        html = '<h1>🎉 Phase 1 Migration Complete!</h1>'
-        if migrations:
-            html += '<ul style="font-size: 1.2rem;">'
-            for m in migrations:
-                html += f'<li>{m}</li>'
-            html += '</ul>'
-        else:
-            html += '<p>All columns already exist!</p>'
-        
-        html += '<br><a href="/view-all-styles" style="padding: 10px 20px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px;">Go to Styles</a>'
-        
-        return html
-        
-    except Exception as e:
-        db.session.rollback()
-        import traceback
-        return f"<h1>❌ Migration Error:</h1><pre>{traceback.format_exc()}</pre>"
 
 @app.route('/api/style/<int:style_id>/favorite', methods=['POST'])
+@admin_required
 def toggle_favorite(style_id):
     """Toggle favorite status"""
     try:
@@ -1924,6 +1658,11 @@ def master_costs():
 # FABRIC VENDOR ENDPOINTS
 @app.route('/api/fabric-vendors/<int:vendor_id>', methods=['GET', 'PUT', 'DELETE'])
 def handle_fabric_vendor(vendor_id):
+    # Check admin for write operations
+    auth_error = require_admin_for_write()
+    if auth_error:
+        return auth_error
+    
     vendor = FabricVendor.query.get_or_404(vendor_id)
     
     if request.method == 'GET':
@@ -1946,6 +1685,7 @@ def handle_fabric_vendor(vendor_id):
         return jsonify({'success': True})
 
 @app.route('/api/fabric-vendors', methods=['POST'])
+@admin_required
 def create_fabric_vendor():
     data = request.json
     vendor = FabricVendor(
@@ -1960,6 +1700,11 @@ def create_fabric_vendor():
 # NOTION VENDOR ENDPOINTS
 @app.route('/api/notion-vendors/<int:vendor_id>', methods=['GET', 'PUT', 'DELETE'])
 def handle_notion_vendor(vendor_id):
+    # Check admin for write operations
+    auth_error = require_admin_for_write()
+    if auth_error:
+        return auth_error
+    
     vendor = NotionVendor.query.get_or_404(vendor_id)
     
     if request.method == 'GET':
@@ -1982,6 +1727,7 @@ def handle_notion_vendor(vendor_id):
         return jsonify({'success': True})
 
 @app.route('/api/notion-vendors', methods=['POST'])
+@admin_required
 def create_notion_vendor():
     data = request.json
     vendor = NotionVendor(
@@ -1996,6 +1742,11 @@ def create_notion_vendor():
 # FABRIC ENDPOINTS
 @app.route('/api/fabrics/<int:fabric_id>', methods=['GET', 'PUT', 'DELETE'])
 def handle_fabric(fabric_id):
+    # Check admin for write operations
+    auth_error = require_admin_for_write()
+    if auth_error:
+        return auth_error
+    
     fabric = Fabric.query.get_or_404(fabric_id)
     
     if request.method == 'GET':
@@ -2022,6 +1773,7 @@ def handle_fabric(fabric_id):
         return jsonify({'success': True})
 
 @app.route('/api/fabrics', methods=['POST'])
+@admin_required
 def create_fabric():
     data = request.json
     fabric = Fabric(
@@ -2038,6 +1790,11 @@ def create_fabric():
 # NOTION ENDPOINTS
 @app.route('/api/notions/<int:notion_id>', methods=['GET', 'PUT', 'DELETE'])
 def handle_notion(notion_id):
+    # Check admin for write operations
+    auth_error = require_admin_for_write()
+    if auth_error:
+        return auth_error
+    
     notion = Notion.query.get_or_404(notion_id)
     
     if request.method == 'GET':
@@ -2064,6 +1821,7 @@ def handle_notion(notion_id):
         return jsonify({'success': True})
 
 @app.route('/api/notions', methods=['POST'])
+@admin_required
 def create_notion():
     data = request.json
     notion = Notion(
@@ -2080,6 +1838,11 @@ def create_notion():
 # LABOR OPERATION ENDPOINTS
 @app.route('/api/labors/<int:labor_id>', methods=['GET', 'PUT', 'DELETE'])
 def handle_labor(labor_id):
+    # Check admin for write operations
+    auth_error = require_admin_for_write()
+    if auth_error:
+        return auth_error
+    
     labor = LaborOperation.query.get_or_404(labor_id)
     
     if request.method == 'GET':
@@ -2108,6 +1871,7 @@ def handle_labor(labor_id):
         return jsonify({'success': True})
 
 @app.route('/api/labors', methods=['POST'])
+@admin_required
 def create_labor():
     data = request.json
     labor = LaborOperation(
@@ -2125,6 +1889,11 @@ def create_labor():
 # CLEANING COST ENDPOINTS
 @app.route('/api/cleanings/<int:cleaning_id>', methods=['GET', 'PUT', 'DELETE'])
 def handle_cleaning(cleaning_id):
+    # Check admin for write operations
+    auth_error = require_admin_for_write()
+    if auth_error:
+        return auth_error
+    
     cleaning = CleaningCost.query.get_or_404(cleaning_id)
     
     if request.method == 'GET':
@@ -2165,6 +1934,7 @@ def get_cleaning_cost():
     return jsonify({"error": "Not found"}), 404
 
 @app.route('/api/cleanings', methods=['POST'])
+@admin_required
 def create_cleaning():
     data = request.json
     cleaning = CleaningCost(
@@ -2327,6 +2097,11 @@ def api_style_by_name():
 # VARIABLE ENDPOINTS
 @app.route('/api/variables', methods=['GET', 'POST'])
 def handle_variables():
+    # Check admin for write operations
+    auth_error = require_admin_for_write()
+    if auth_error:
+        return auth_error
+    
     if request.method == 'GET':
         variables = Variable.query.order_by(Variable.name).all()
         return jsonify([{'id': v.id, 'name': v.name} for v in variables])
@@ -2352,6 +2127,11 @@ def handle_variables():
 
 @app.route('/api/variables/<int:variable_id>', methods=['GET', 'PUT', 'DELETE'])
 def handle_variable(variable_id):
+    # Check admin for write operations
+    auth_error = require_admin_for_write()
+    if auth_error:
+        return auth_error
+    
     variable = Variable.query.get_or_404(variable_id)
     
     if request.method == 'GET':
@@ -2539,6 +2319,7 @@ def api_style_by_vendor_style():
 # with this validated version
 
 @app.post("/api/style/save")
+@admin_required 
 def api_style_save():
     """
     Save or update a Style with comprehensive validation.
@@ -2843,6 +2624,7 @@ def api_style_search():
 
 
 @app.route('/import-excel', methods=['GET', 'POST'])
+@admin_required
 def import_excel():
     if request.method == 'GET':
         return """

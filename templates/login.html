@@ -124,7 +124,8 @@
     document.documentElement.style.setProperty('--pulse-color', theme.pulse);
     document.documentElement.style.setProperty('--shadow-color', theme.shadow);
     document.documentElement.style.setProperty('--filled-bg', theme.filled);
-</script>
+    </script>
+
     <div class="auth-container" style="background: var(--dynamic-gradient, linear-gradient(135deg, #2c3e50 0%, #3498db 50%, #2980b9 100%)); background-size: 200% 200%; animation: gradientShift 15s ease infinite;">
         <!-- Animated Background Blobs -->
         <div class="auth-blob auth-blob-1"></div>
@@ -152,25 +153,8 @@
                     <p class="auth-subtitle">Sign in to your account</p>
                 </div>
 
-                <!-- Flash Messages -->
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                    {% if messages %}
-                        {% for category, message in messages %}
-                            <div class="auth-alert auth-alert-{{ category }}">
-                                {% if category == 'success' %}
-                                    <i data-feather="check-circle"></i>
-                                {% elif category == 'danger' %}
-                                    <i data-feather="alert-circle"></i>
-                                {% elif category == 'warning' %}
-                                    <i data-feather="alert-triangle"></i>
-                                {% else %}
-                                    <i data-feather="info"></i>
-                                {% endif %}
-                                <span>{{ message }}</span>
-                            </div>
-                        {% endfor %}
-                    {% endif %}
-                {% endwith %}
+                <!-- Toast Notifications Container -->
+                <div class="toast-container" id="toastContainer"></div>
 
                 <!-- Login Form -->
                 <form method="POST" action="{{ url_for('login') }}" class="auth-form">
@@ -239,7 +223,127 @@
         </div>
     </div>
 
-    <!-- Initialize Feather Icons -->
+    <style>
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        max-width: 400px;
+        pointer-events: none;
+    }
+
+    .toast {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+        padding: 16px 20px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08);
+        animation: slideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        pointer-events: auto;
+        min-width: 300px;
+        border-left: 4px solid;
+    }
+
+    .toast-success {
+        border-left-color: #28a745;
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    }
+
+    .toast-info {
+        border-left-color: #17a2b8;
+        background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+    }
+
+    .toast-warning {
+        border-left-color: #ffc107;
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    }
+
+    .toast-danger {
+        border-left-color: #dc3545;
+        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+    }
+
+    .toast i {
+        flex-shrink: 0;
+        width: 24px;
+        height: 24px;
+    }
+
+    .toast-success i { color: #28a745; }
+    .toast-info i { color: #17a2b8; }
+    .toast-warning i { color: #856404; }
+    .toast-danger i { color: #dc3545; }
+
+    .toast span {
+        flex: 1;
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 1.4;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+    }
+
+    .toast-exit {
+        animation: slideOut 0.3s ease-in forwards;
+    }
+
+    @media (max-width: 768px) {
+        .toast-container {
+            left: 10px;
+            right: 10px;
+            top: 10px;
+            max-width: none;
+        }
+        
+        .toast {
+            min-width: auto;
+        }
+    }
+    </style>
+
+    <!-- Toast Messages Data (Jinja2 renders JSON - no mixing) -->
+    <script id="flashMessages" type="application/json">
+    [
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    {
+                        "category": "{{ category }}",
+                        "message": {{ message|tojson }},
+                        "icon": "{% if category == 'success' %}check-circle{% elif category == 'danger' %}alert-circle{% elif category == 'warning' %}alert-triangle{% else %}info{% endif %}"
+                    }{% if not loop.last %},{% endif %}
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    ]
+    </script>
+
+    <!-- Pure JavaScript (No Jinja2 mixing) -->
     <script>
         feather.replace();
         
@@ -258,26 +362,35 @@
             feather.replace();
         }
 
-        // Auto-hide flash messages after 5 seconds
-        setTimeout(() => {
-            const alerts = document.querySelectorAll('.auth-alert');
-            alerts.forEach(alert => {
-                alert.style.animation = 'slideUp 0.3s ease-out';
-                setTimeout(() => alert.remove(), 300);
+        // Toast Notifications System - Pure JavaScript
+        document.addEventListener('DOMContentLoaded', function() {
+            // Parse messages from JSON script tag
+            const messagesScript = document.getElementById('flashMessages');
+            const messages = JSON.parse(messagesScript.textContent || '[]');
+            
+            const container = document.getElementById('toastContainer');
+            
+            messages.forEach((msg, index) => {
+                setTimeout(() => {
+                    const toast = document.createElement('div');
+                    toast.className = 'toast toast-' + msg.category;
+                    toast.innerHTML = '<i data-feather="' + msg.icon + '"></i><span>' + msg.message + '</span>';
+                    container.appendChild(toast);
+                    
+                    if (typeof feather !== 'undefined') {
+                        feather.replace();
+                    }
+                    
+                    // Auto-dismiss after 4 seconds
+                    setTimeout(function() {
+                        toast.classList.add('toast-exit');
+                        setTimeout(function() {
+                            toast.remove();
+                        }, 300);
+                    }, 4000);
+                }, index * 150);
             });
-        }, 5000);
-
-        // Add slideUp animation
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideUp {
-                to {
-                    opacity: 0;
-                    transform: translateY(-10px);
-                }
-            }
-        `;
-        document.head.appendChild(style);
+        });
     </script>
 </body>
 </html>
