@@ -469,11 +469,11 @@ body {
                     <td>{{ user.created_at.strftime('%b %d, %Y') if user.created_at else 'N/A' }}</td>
                     <td>
                         <div class="actions">
-                            <button class="btn-icon btn-edit" data-user-id="{{ user.id }}" title="Edit">
+                            <button type="button" class="btn-icon btn-edit" data-user-id="{{ user.id }}" title="Edit">
                                 <i data-feather="edit-2"></i>
                             </button>
                             {% if user.id != current_user.id %}
-                            <button class="btn-icon delete btn-delete" data-user-id="{{ user.id }}" title="Delete">
+                            <button type="button" class="btn-icon delete btn-delete" data-user-id="{{ user.id }}" title="Delete">
                                 <i data-feather="trash-2"></i>
                             </button>
                             {% endif %}
@@ -532,8 +532,8 @@ body {
             </form>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
-            <button class="btn btn-primary" id="saveBtn">Save Changes</button>
+            <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
+            <button type="button" class="btn btn-primary" id="userSaveBtn">Save Changes</button>
         </div>
     </div>
 </div>
@@ -556,15 +556,17 @@ body {
             <p class="delete-warning">This action cannot be undone. All user data will be permanently removed.</p>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-secondary" id="cancelDeleteBtn">Cancel</button>
-            <button class="btn btn-danger" id="confirmDeleteBtn">Delete User</button>
+            <button type="button" class="btn btn-secondary" id="cancelDeleteBtn">Cancel</button>
+            <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete User</button>
         </div>
     </div>
 </div>
 
 <script>
 // Initialize icons
-feather.replace();
+if (window.feather && typeof window.feather.replace === 'function') {
+    feather.replace();
+}
 
 // Store user ID for deletion
 let deleteUserId = null;
@@ -573,6 +575,7 @@ let deleteUserName = null;
 // Edit User - Using event delegation
 document.addEventListener('click', function(e) {
     if (e.target.closest('.btn-edit')) {
+        e.preventDefault();
         const userId = e.target.closest('.btn-edit').getAttribute('data-user-id');
         editUser(userId);
     }
@@ -581,6 +584,7 @@ document.addEventListener('click', function(e) {
 // Delete User - Using event delegation (show modal instead of confirm)
 document.addEventListener('click', function(e) {
     if (e.target.closest('.btn-delete')) {
+        e.preventDefault();
         const userId = e.target.closest('.btn-delete').getAttribute('data-user-id');
         const row = e.target.closest('tr');
         const userName = row.querySelector('td:first-child strong').textContent;
@@ -589,15 +593,21 @@ document.addEventListener('click', function(e) {
 });
 
 // Close modal buttons
-document.getElementById('closeModalBtn').addEventListener('click', closeEditModal);
-document.getElementById('cancelBtn').addEventListener('click', closeEditModal);
-document.getElementById('cancelDeleteBtn').addEventListener('click', closeDeleteModal);
+const closeModalBtn = document.getElementById('closeModalBtn');
+const cancelBtn = document.getElementById('cancelBtn');
+const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+const saveBtn = document.getElementById('userSaveBtn');
+const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+closeModalBtn?.addEventListener('click', closeEditModal);
+cancelBtn?.addEventListener('click', closeEditModal);
+cancelDeleteBtn?.addEventListener('click', closeDeleteModal);
 
 // Save button
-document.getElementById('saveBtn').addEventListener('click', saveUser);
+saveBtn?.addEventListener('click', saveUser);
 
 // Confirm delete button
-document.getElementById('confirmDeleteBtn').addEventListener('click', confirmDelete);
+confirmDeleteBtn?.addEventListener('click', confirmDeleteUser);
 
 // Show Delete Modal
 function showDeleteModal(userId, userName) {
@@ -610,19 +620,23 @@ function showDeleteModal(userId, userName) {
 // Close Delete Modal
 function closeDeleteModal() {
     document.getElementById('deleteModal').classList.remove('active');
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.textContent = 'Delete User';
+        confirmDeleteBtn.disabled = false;
+    }
     deleteUserId = null;
     deleteUserName = null;
 }
 
 // Confirm Delete
-async function confirmDelete() {
+async function confirmDeleteUser() {
     if (!deleteUserId) return;
     
     // Show loading state
-    const confirmBtn = document.getElementById('confirmDeleteBtn');
-    const originalText = confirmBtn.textContent;
-    confirmBtn.textContent = 'Deleting...';
-    confirmBtn.disabled = true;
+    if (!confirmDeleteBtn) return;
+    const originalText = confirmDeleteBtn.textContent;
+    confirmDeleteBtn.textContent = 'Deleting...';
+    confirmDeleteBtn.disabled = true;
     
     try {
         const response = await fetch(`/api/users/${deleteUserId}`, {
@@ -649,13 +663,13 @@ async function confirmDelete() {
             }
         } else {
             alert('Error: ' + result.error);
-            confirmBtn.textContent = originalText;
-            confirmBtn.disabled = false;
+            confirmDeleteBtn.textContent = originalText;
+            confirmDeleteBtn.disabled = false;
         }
     } catch (error) {
         alert('Error deleting user: ' + error.message);
-        confirmBtn.textContent = originalText;
-        confirmBtn.disabled = false;
+        confirmDeleteBtn.textContent = originalText;
+        confirmDeleteBtn.disabled = false;
     }
 }
 
@@ -678,7 +692,11 @@ async function editUser(userId) {
 }
 
 // Save User
-async function saveUser() {
+async function saveUser(event) {
+    if (event) {
+        event.preventDefault();
+    }
+
     const userId = document.getElementById('userId').value;
     const data = {
         first_name: document.getElementById('firstName').value,
@@ -687,6 +705,12 @@ async function saveUser() {
         is_active: document.getElementById('userStatus').value === 'true'
     };
     
+    const originalText = saveBtn ? saveBtn.textContent : '';
+    if (saveBtn) {
+        saveBtn.textContent = 'Saving...';
+        saveBtn.disabled = true;
+    }
+
     try {
         const response = await fetch(`/api/users/${userId}`, {
             method: 'PUT',
@@ -697,6 +721,7 @@ async function saveUser() {
         const result = await response.json();
         
         if (result.success) {
+            closeEditModal();
             showNotification('User updated successfully!', 'success');
             setTimeout(() => location.reload(), 1000);
         } else {
@@ -704,6 +729,11 @@ async function saveUser() {
         }
     } catch (error) {
         alert('Error saving user: ' + error.message);
+    } finally {
+        if (saveBtn) {
+            saveBtn.textContent = originalText || 'Save Changes';
+            saveBtn.disabled = false;
+        }
     }
 }
 
