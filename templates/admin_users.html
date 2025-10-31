@@ -3,15 +3,14 @@
 
 {% block extra_css %}
 <style>
-/* Minimize the gap between navbar and content - SAME AS MASTER COSTS */
 body {
     background: #f8f9fa;
-    padding-top: 80px !important; /* Space for fixed navbar */
+    padding-top: 80px !important;
 }
 
 .users-container {
     max-width: 1400px;
-    margin-top: -70px !important; /* Pull content closer to navbar - SAME AS MASTER COSTS */
+    margin-top: -70px !important;
     margin-bottom: 40px;
     padding: 8px 24px !important;
 }
@@ -161,7 +160,6 @@ body {
     color: #dc2626;
 }
 
-/* Modal */
 .modal {
     display: none;
     position: fixed;
@@ -290,6 +288,11 @@ body {
     background: #5568d3;
 }
 
+.btn-primary:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
 .btn-danger {
     background: #dc2626;
     color: white;
@@ -297,6 +300,11 @@ body {
 
 .btn-danger:hover {
     background: #b91c1c;
+}
+
+.btn-danger:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
 }
 
 .empty-state {
@@ -312,7 +320,6 @@ body {
     opacity: 0.5;
 }
 
-/* Delete Modal Specific Styles */
 .delete-modal-content {
     text-align: center;
     max-width: 450px;
@@ -359,7 +366,6 @@ body {
     margin-top: 15px !important;
 }
 
-/* Notification Toast */
 .notification {
     position: fixed;
     top: 20px;
@@ -407,6 +413,75 @@ body {
         opacity: 0;
     }
 }
+
+/* Custom Alert Modal */
+.alert-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+}
+
+.alert-modal.active {
+    display: flex;
+}
+
+.alert-modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 450px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    text-align: center;
+}
+
+.alert-modal-icon {
+    margin: 30px auto 10px;
+}
+
+.alert-modal-icon.error svg {
+    color: #dc2626;
+}
+
+.alert-modal-icon.success svg {
+    color: #10b981;
+}
+
+.alert-modal-icon.warning svg {
+    color: #f59e0b;
+}
+
+.alert-modal-header h2 {
+    font-size: 22px;
+    margin: 10px 20px;
+    color: #111827;
+}
+
+.alert-modal-body {
+    padding: 0 30px 30px;
+}
+
+.alert-modal-body p {
+    margin: 10px 0;
+    color: #374151;
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+.alert-modal-footer {
+    padding: 20px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.alert-modal-footer .btn {
+    min-width: 100px;
+}
 </style>
 
 <script src="https://unpkg.com/feather-icons"></script>
@@ -415,13 +490,11 @@ body {
 {% block content %}
 <div class="users-container">
     
-    <!-- Page Header -->
     <div class="page-header">
         <h1>👥 User Management</h1>
         <p>Manage user accounts, roles, and permissions</p>
     </div>
     
-    <!-- Stats -->
     <div class="stats-row">
         <div class="stat-card">
             <div class="stat-value">{{ users|length }}</div>
@@ -437,7 +510,6 @@ body {
         </div>
     </div>
     
-    <!-- Users Table -->
     <div class="users-card">
         {% if users %}
         <table class="users-table">
@@ -469,11 +541,11 @@ body {
                     <td>{{ user.created_at.strftime('%b %d, %Y') if user.created_at else 'N/A' }}</td>
                     <td>
                         <div class="actions">
-                            <button class="btn-icon btn-edit" data-user-id="{{ user.id }}" title="Edit">
+                            <button class="btn-icon btn-edit" data-user-id="{{ user.id }}" title="Edit" type="button">
                                 <i data-feather="edit-2"></i>
                             </button>
                             {% if user.id != current_user.id %}
-                            <button class="btn-icon delete btn-delete" data-user-id="{{ user.id }}" title="Delete">
+                            <button class="btn-icon delete btn-delete" data-user-id="{{ user.id }}" data-user-name="{{ user.get_full_name() }}" title="Delete" type="button">
                                 <i data-feather="trash-2"></i>
                             </button>
                             {% endif %}
@@ -493,16 +565,21 @@ body {
     
 </div>
 
-<!-- Edit User Modal -->
+<!-- Edit Modal -->
 <div id="editModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
             <h2>Edit User</h2>
-            <button class="modal-close" id="closeModalBtn">&times;</button>
+            <button class="modal-close" id="closeModalBtn" type="button">&times;</button>
         </div>
         <div class="modal-body">
             <form id="editForm">
                 <input type="hidden" id="userId">
+                
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="userEmail" required>
+                </div>
                 
                 <div class="form-group">
                     <label>First Name</label>
@@ -532,13 +609,13 @@ body {
             </form>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
-            <button class="btn btn-primary" id="saveBtn">Save Changes</button>
+            <button class="btn btn-secondary" id="cancelBtn" type="button">Cancel</button>
+            <button class="btn btn-primary" id="userSaveBtn" type="button">Save Changes</button>
         </div>
     </div>
 </div>
 
-<!-- Delete Confirmation Modal -->
+<!-- Delete Modal -->
 <div id="deleteModal" class="modal">
     <div class="modal-content delete-modal-content">
         <div class="delete-modal-icon">
@@ -556,194 +633,324 @@ body {
             <p class="delete-warning">This action cannot be undone. All user data will be permanently removed.</p>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-secondary" id="cancelDeleteBtn">Cancel</button>
-            <button class="btn btn-danger" id="confirmDeleteBtn">Delete User</button>
+            <button class="btn btn-secondary" id="cancelDeleteBtn" type="button">Cancel</button>
+            <button class="btn btn-danger" id="confirmDeleteBtn" type="button">Delete User</button>
+        </div>
+    </div>
+</div>
+
+<!-- Alert Modal -->
+<div id="alertModal" class="alert-modal">
+    <div class="alert-modal-content">
+        <div class="alert-modal-icon" id="alertIcon">
+            <!-- Icon will be inserted here -->
+        </div>
+        <div class="alert-modal-header">
+            <h2 id="alertTitle">Alert</h2>
+        </div>
+        <div class="alert-modal-body">
+            <p id="alertMessage"></p>
+        </div>
+        <div class="alert-modal-footer">
+            <button class="btn btn-primary" id="alertOkBtn" type="button">OK</button>
         </div>
     </div>
 </div>
 
 <script>
-// Initialize icons
-feather.replace();
+console.log('✅ User Management Script Loaded!');
 
-// Store user ID for deletion
-let deleteUserId = null;
-let deleteUserName = null;
+document.addEventListener('DOMContentLoaded', function() {
+    feather.replace();
 
-// Edit User - Using event delegation
-document.addEventListener('click', function(e) {
-    if (e.target.closest('.btn-edit')) {
-        const userId = e.target.closest('.btn-edit').getAttribute('data-user-id');
-        editUser(userId);
-    }
-});
+    let deleteUserId = null;
+    let deleteUserName = null;
 
-// Delete User - Using event delegation (show modal instead of confirm)
-document.addEventListener('click', function(e) {
-    if (e.target.closest('.btn-delete')) {
-        const userId = e.target.closest('.btn-delete').getAttribute('data-user-id');
-        const row = e.target.closest('tr');
-        const userName = row.querySelector('td:first-child strong').textContent;
-        showDeleteModal(userId, userName);
-    }
-});
+    // Edit button clicks using event delegation
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.btn-edit')) {
+            const userId = e.target.closest('.btn-edit').getAttribute('data-user-id');
+            console.log('✏️ Edit button clicked for user:', userId);
+            editUser(userId);
+        }
+    });
 
-// Close modal buttons
-document.getElementById('closeModalBtn').addEventListener('click', closeEditModal);
-document.getElementById('cancelBtn').addEventListener('click', closeEditModal);
-document.getElementById('cancelDeleteBtn').addEventListener('click', closeDeleteModal);
+    // Delete button clicks using event delegation
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.btn-delete')) {
+            const button = e.target.closest('.btn-delete');
+            const userId = button.getAttribute('data-user-id');
+            const userName = button.getAttribute('data-user-name');
+            console.log('🗑️ Delete button clicked for user:', userId, userName);
+            showDeleteModal(userId, userName);
+        }
+    });
 
-// Save button
-document.getElementById('saveBtn').addEventListener('click', saveUser);
+    // Modal close buttons
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+    const userSaveBtn = document.getElementById('userSaveBtn');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    const alertOkBtn = document.getElementById('alertOkBtn');
 
-// Confirm delete button
-document.getElementById('confirmDeleteBtn').addEventListener('click', confirmDelete);
-
-// Show Delete Modal
-function showDeleteModal(userId, userName) {
-    deleteUserId = userId;
-    deleteUserName = userName;
-    document.getElementById('deleteUserName').textContent = userName;
-    document.getElementById('deleteModal').classList.add('active');
-}
-
-// Close Delete Modal
-function closeDeleteModal() {
-    document.getElementById('deleteModal').classList.remove('active');
-    deleteUserId = null;
-    deleteUserName = null;
-}
-
-// Confirm Delete
-async function confirmDelete() {
-    if (!deleteUserId) return;
-    
-    // Show loading state
-    const confirmBtn = document.getElementById('confirmDeleteBtn');
-    const originalText = confirmBtn.textContent;
-    confirmBtn.textContent = 'Deleting...';
-    confirmBtn.disabled = true;
-    
-    try {
-        const response = await fetch(`/api/users/${deleteUserId}`, {
-            method: 'DELETE'
+    if (closeModalBtn) closeModalBtn.addEventListener('click', closeEditModal);
+    if (cancelBtn) cancelBtn.addEventListener('click', closeEditModal);
+    if (cancelDeleteBtn) cancelDeleteBtn.addEventListener('click', closeDeleteModal);
+    if (userSaveBtn) {
+        userSaveBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('💾 Save button clicked!');
+            saveUser();
         });
+    }
+    if (confirmDeleteBtn) confirmDeleteBtn.addEventListener('click', confirmUserDelete);
+    if (alertOkBtn) alertOkBtn.addEventListener('click', closeAlertModal);
+
+    // Custom Alert Function
+    function showAlert(message, type = 'error', title = null) {
+        const alertModal = document.getElementById('alertModal');
+        const alertIcon = document.getElementById('alertIcon');
+        const alertTitle = document.getElementById('alertTitle');
+        const alertMessage = document.getElementById('alertMessage');
         
-        const result = await response.json();
+        // Set icon based on type
+        if (type === 'error') {
+            alertIcon.className = 'alert-modal-icon error';
+            alertIcon.innerHTML = `
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+            `;
+            alertTitle.textContent = title || '❌ Error';
+        } else if (type === 'success') {
+            alertIcon.className = 'alert-modal-icon success';
+            alertIcon.innerHTML = `
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+            `;
+            alertTitle.textContent = title || '✅ Success';
+        } else if (type === 'warning') {
+            alertIcon.className = 'alert-modal-icon warning';
+            alertIcon.innerHTML = `
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+            `;
+            alertTitle.textContent = title || '⚠️ Warning';
+        }
         
-        if (result.success) {
-            closeDeleteModal();
+        alertMessage.textContent = message;
+        alertModal.classList.add('active');
+    }
+
+    function closeAlertModal() {
+        document.getElementById('alertModal').classList.remove('active');
+    }
+
+    function showDeleteModal(userId, userName) {
+        console.log('📂 Opening delete modal for:', userName);
+        deleteUserId = userId;
+        deleteUserName = userName;
+        document.getElementById('deleteUserName').textContent = userName;
+        document.getElementById('deleteModal').classList.add('active');
+    }
+
+    function closeDeleteModal() {
+        console.log('📂 Closing delete modal');
+        document.getElementById('deleteModal').classList.remove('active');
+        deleteUserId = null;
+        deleteUserName = null;
+    }
+
+    async function confirmUserDelete() {
+        if (!deleteUserId) return;
+        
+        console.log('⚠️ Confirming delete for user:', deleteUserId);
+        
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        const originalText = confirmBtn.textContent;
+        confirmBtn.textContent = 'Deleting...';
+        confirmBtn.disabled = true;
+        
+        try {
+            const response = await fetch(`/api/users/${deleteUserId}`, {
+                method: 'DELETE'
+            });
             
-            // Show success message
-            showNotification('User deleted successfully!', 'success');
+            const result = await response.json();
             
-            // Remove row from table with animation
-            const row = document.querySelector(`tr[data-user-id="${deleteUserId}"]`);
-            if (row) {
-                row.style.transition = 'all 0.3s';
-                row.style.opacity = '0';
-                row.style.transform = 'translateX(-20px)';
-                setTimeout(() => {
-                    location.reload();
-                }, 300);
+            if (result.success) {
+                closeDeleteModal();
+                showNotification('User deleted successfully!', 'success');
+                
+                const row = document.querySelector(`tr[data-user-id="${deleteUserId}"]`);
+                if (row) {
+                    row.style.transition = 'all 0.3s';
+                    row.style.opacity = '0';
+                    row.style.transform = 'translateX(-20px)';
+                    setTimeout(() => location.reload(), 300);
+                }
+            } else {
+                closeDeleteModal();
+                showAlert(result.error, 'error', 'Cannot Delete User');
+                confirmBtn.textContent = originalText;
+                confirmBtn.disabled = false;
             }
-        } else {
-            alert('Error: ' + result.error);
+        } catch (error) {
+            console.error('Delete error:', error);
+            closeDeleteModal();
+            showAlert('Error deleting user: ' + error.message, 'error');
             confirmBtn.textContent = originalText;
             confirmBtn.disabled = false;
         }
-    } catch (error) {
-        alert('Error deleting user: ' + error.message);
-        confirmBtn.textContent = originalText;
-        confirmBtn.disabled = false;
     }
-}
 
-// Edit User
-async function editUser(userId) {
-    try {
-        const response = await fetch(`/api/users/${userId}`);
-        const user = await response.json();
-        
-        document.getElementById('userId').value = user.id;
-        document.getElementById('firstName').value = user.first_name || '';
-        document.getElementById('lastName').value = user.last_name || '';
-        document.getElementById('userRole').value = user.role;
-        document.getElementById('userStatus').value = user.is_active.toString();
-        
-        document.getElementById('editModal').classList.add('active');
-    } catch (error) {
-        alert('Error loading user: ' + error.message);
-    }
-}
-
-// Save User
-async function saveUser() {
-    const userId = document.getElementById('userId').value;
-    const data = {
-        first_name: document.getElementById('firstName').value,
-        last_name: document.getElementById('lastName').value,
-        role: document.getElementById('userRole').value,
-        is_active: document.getElementById('userStatus').value === 'true'
-    };
-    
-    try {
-        const response = await fetch(`/api/users/${userId}`, {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            showNotification('User updated successfully!', 'success');
-            setTimeout(() => location.reload(), 1000);
-        } else {
-            alert('Error: ' + result.error);
+    async function editUser(userId) {
+        console.log('📝 Loading user data for:', userId);
+        try {
+            const response = await fetch(`/api/users/${userId}`);
+            const user = await response.json();
+            
+            console.log('👤 User data:', user);
+            
+            document.getElementById('userId').value = user.id;
+            document.getElementById('userEmail').value = user.email || '';
+            document.getElementById('firstName').value = user.first_name || '';
+            document.getElementById('lastName').value = user.last_name || '';
+            document.getElementById('userRole').value = user.role;
+            document.getElementById('userStatus').value = user.is_active.toString();
+            
+            document.getElementById('editModal').classList.add('active');
+            console.log('📂 Modal opened');
+        } catch (error) {
+            console.error('Load error:', error);
+            showAlert('Error loading user: ' + error.message, 'error');
         }
-    } catch (error) {
-        alert('Error saving user: ' + error.message);
     }
-}
 
-// Close Edit Modal
-function closeEditModal() {
-    document.getElementById('editModal').classList.remove('active');
-}
+    async function saveUser() {
+        console.log('💾 SAVE USER FUNCTION CALLED!');
+        
+        const userId = document.getElementById('userId').value;
+        const email = document.getElementById('userEmail').value.trim();
+        const firstName = document.getElementById('firstName').value.trim();
+        const lastName = document.getElementById('lastName').value.trim();
+        
+        if (!email || !firstName) {
+            showAlert('Email and First Name are required!', 'error', 'Missing Required Fields');
+            return;
+        }
+        
+        const data = {
+            email: email,
+            first_name: firstName,
+            last_name: lastName,
+            role: document.getElementById('userRole').value,
+            is_active: document.getElementById('userStatus').value === 'true'
+        };
+        
+        console.log('📦 Saving user ID:', userId);
+        console.log('📦 Data:', data);
+        
+        const saveBtn = document.getElementById('userSaveBtn');
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+        
+        try {
+            console.log('🚀 Sending PUT request to:', `/api/users/${userId}`);
+            
+            const response = await fetch(`/api/users/${userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+            
+            console.log('📥 Response status:', response.status);
+            
+            const result = await response.json();
+            console.log('📋 Result:', result);
+            
+            if (result.success) {
+                console.log('✅ SUCCESS!');
+                closeEditModal();
+                showAlert('User updated successfully!', 'success');
+                setTimeout(() => {
+                    console.log('🔄 Reloading...');
+                    location.reload();
+                }, 1500);
+            } else {
+                console.error('❌ Error:', result.error);
+                showAlert(result.error, 'error', 'Cannot Save Changes');
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Changes';
+            }
+        } catch (error) {
+            console.error('❌ Save error:', error);
+            showAlert('Error saving user: ' + error.message, 'error');
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Save Changes';
+        }
+    }
 
-// Show Notification
-function showNotification(message, type = 'success') {
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.innerHTML = `
-        <div class="notification-content">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                <polyline points="22 4 12 14.01 9 11.01"/>
-            </svg>
-            <span>${message}</span>
-        </div>
-    `;
-    document.body.appendChild(notification);
+    function closeEditModal() {
+        console.log('📂 Closing edit modal');
+        document.getElementById('editModal').classList.remove('active');
+    }
+
+    function showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+                <span>${message}</span>
+            </div>
+        `;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-in';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+
+    // Close modals on outside click
+    const editModal = document.getElementById('editModal');
+    const deleteModal = document.getElementById('deleteModal');
+    const alertModal = document.getElementById('alertModal');
     
-    setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease-in';
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
-}
-
-// Close modal on outside click
-document.getElementById('editModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeEditModal();
+    if (editModal) {
+        editModal.addEventListener('click', function(e) {
+            if (e.target === this) closeEditModal();
+        });
     }
-});
-
-document.getElementById('deleteModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeDeleteModal();
+    
+    if (deleteModal) {
+        deleteModal.addEventListener('click', function(e) {
+            if (e.target === this) closeDeleteModal();
+        });
     }
+    
+    if (alertModal) {
+        alertModal.addEventListener('click', function(e) {
+            if (e.target === this) closeAlertModal();
+        });
+    }
+    
+    console.log('✅ All event listeners attached!');
 });
 </script>
 {% endblock %}

@@ -2194,17 +2194,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 300);
   });
 
-  document.addEventListener('click', function(e) {
-    if (e.target !== styleSearch && e.target !== searchResults) {
-      searchResults.style.display = 'none';
-    }
-  });
+  // Only add event listeners if search elements exist
+  if (styleSearch && searchResults) {
+    document.addEventListener('click', function(e) {
+      if (e.target !== styleSearch && e.target !== searchResults) {
+        searchResults.style.display = 'none';
+      }
+    });
 
-  styleSearch?.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-      this.value = '';
-      searchResults.style.display = 'none';
-    }
-  });
+    styleSearch.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        this.value = '';
+        searchResults.style.display = 'none';
+      }
+    });
+  }
 
 });

@@ -409,12 +409,35 @@ def get_user(user_id):
     })
 
 @app.route('/api/users/<int:user_id>', methods=['PUT'])
+@login_required
 @admin_required
 def update_user(user_id):
     """Update user details"""
+    print(f"💾 PUT user {user_id}")
     try:
         user = User.query.get_or_404(user_id)
         data = request.json
+        print(f"📦 Data: {data}")
+        
+        # CRITICAL: Prevent removing the last admin
+        if 'role' in data and data['role'] == 'user' and user.role == 'admin':
+            # Count total admins
+            admin_count = User.query.filter_by(role='admin').count()
+            print(f"🔍 Current admin count: {admin_count}")
+            
+            if admin_count <= 1:
+                print(f"❌ Cannot remove last admin!")
+                return jsonify({
+                    'success': False, 
+                    'error': 'Cannot change the last admin to user. The system must have at least one admin.'
+                }), 400
+        
+        # Update email if provided and check for duplicates
+        if 'email' in data and data['email'] != user.email:
+            existing = User.query.filter_by(email=data['email']).first()
+            if existing and existing.id != user_id:
+                return jsonify({'success': False, 'error': 'Email already exists'}), 400
+            user.email = data['email']
         
         if 'first_name' in data:
             user.first_name = data['first_name']
@@ -427,32 +450,52 @@ def update_user(user_id):
         
         if user.first_name and user.last_name:
             user.full_name = f"{user.first_name} {user.last_name}"
+        elif user.first_name:
+            user.full_name = user.first_name
         
         db.session.commit()
+        print(f"✅ User {user_id} updated!")
         
         return jsonify({'success': True, 'message': 'User updated successfully'})
     except Exception as e:
         db.session.rollback()
+        print(f"❌ Error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
+@login_required
 @admin_required
 def delete_user(user_id):
-    """Delete a user"""
+    """Delete user"""
+    print(f"🗑️ DELETE user {user_id}")
     try:
         user = User.query.get_or_404(user_id)
         
+        # Prevent deleting yourself
         if user.id == current_user.id:
             return jsonify({'success': False, 'error': 'Cannot delete your own account'}), 400
         
+        # CRITICAL: Prevent deleting the last admin
+        if user.role == 'admin':
+            admin_count = User.query.filter_by(role='admin').count()
+            print(f"🔍 Current admin count: {admin_count}")
+            
+            if admin_count <= 1:
+                print(f"❌ Cannot delete last admin!")
+                return jsonify({
+                    'success': False, 
+                    'error': 'Cannot delete the last admin. The system must have at least one admin.'
+                }), 400
+        
         db.session.delete(user)
         db.session.commit()
+        print(f"✅ User {user_id} deleted!")
         
         return jsonify({'success': True, 'message': 'User deleted successfully'})
     except Exception as e:
         db.session.rollback()
+        print(f"❌ Error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
 
 
 # ===== MAIN APPLICATION ROUTES =====
