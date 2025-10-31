@@ -532,8 +532,8 @@ body {
             </form>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
-            <button class="btn btn-primary" id="saveBtn">Save Changes</button>
+            <button class="btn btn-secondary" id="cancelBtn" type="button">Cancel</button>
+            <button class="btn btn-primary" id="userSaveBtn" type="button">Save Changes</button>
         </div>
     </div>
 </div>
@@ -556,8 +556,8 @@ body {
             <p class="delete-warning">This action cannot be undone. All user data will be permanently removed.</p>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-secondary" id="cancelDeleteBtn">Cancel</button>
-            <button class="btn btn-danger" id="confirmDeleteBtn">Delete User</button>
+            <button class="btn btn-secondary" id="cancelDeleteBtn" type="button">Cancel</button>
+            <button class="btn btn-danger" id="confirmDeleteBtn" type="button">Delete User</button>
         </div>
     </div>
 </div>
@@ -594,10 +594,10 @@ document.getElementById('cancelBtn').addEventListener('click', closeEditModal);
 document.getElementById('cancelDeleteBtn').addEventListener('click', closeDeleteModal);
 
 // Save button
-document.getElementById('saveBtn').addEventListener('click', saveUser);
+document.getElementById('userSaveBtn').addEventListener('click', saveUser);
 
 // Confirm delete button
-document.getElementById('confirmDeleteBtn').addEventListener('click', confirmDelete);
+document.getElementById('confirmDeleteBtn').addEventListener('click', confirmUserDelete);
 
 // Show Delete Modal
 function showDeleteModal(userId, userName) {
@@ -615,7 +615,7 @@ function closeDeleteModal() {
 }
 
 // Confirm Delete
-async function confirmDelete() {
+async function confirmUserDelete() {
     if (!deleteUserId) return;
     
     // Show loading state
