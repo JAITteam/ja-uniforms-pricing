@@ -1381,6 +1381,7 @@ def export_sap_format():
 
 
 @app.route('/view-all-styles')
+@login_required
 def view_all_styles():
     """View all styles with filters"""
     styles = Style.query.all()
