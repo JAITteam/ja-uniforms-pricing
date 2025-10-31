@@ -580,9 +580,12 @@ document.addEventListener('click', function(e) {
 
 // Delete User - Using event delegation (show modal instead of confirm)
 document.addEventListener('click', function(e) {
-    if (e.target.closest('.btn-delete')) {
-        const userId = e.target.closest('.btn-delete').getAttribute('data-user-id');
-        const row = e.target.closest('tr');
+    const deleteBtn = e.target.closest('.btn-delete');
+    if (deleteBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const userId = deleteBtn.getAttribute('data-user-id');
+        const row = deleteBtn.closest('tr');
         const userName = row.querySelector('td:first-child strong').textContent;
         showDeleteModal(userId, userName);
     }
@@ -680,12 +683,26 @@ async function editUser(userId) {
 // Save User
 async function saveUser() {
     const userId = document.getElementById('userId').value;
+    const firstName = document.getElementById('firstName').value.trim();
+    
+    // Validate first name is not empty
+    if (!firstName) {
+        alert('First name is required');
+        return;
+    }
+    
     const data = {
-        first_name: document.getElementById('firstName').value,
-        last_name: document.getElementById('lastName').value,
+        first_name: firstName,
+        last_name: document.getElementById('lastName').value.trim(),
         role: document.getElementById('userRole').value,
         is_active: document.getElementById('userStatus').value === 'true'
     };
+    
+    // Show loading state
+    const saveBtn = document.getElementById('saveBtn');
+    const originalText = saveBtn.textContent;
+    saveBtn.textContent = 'Saving...';
+    saveBtn.disabled = true;
     
     try {
         const response = await fetch(`/api/users/${userId}`, {
@@ -697,13 +714,18 @@ async function saveUser() {
         const result = await response.json();
         
         if (result.success) {
+            closeEditModal();
             showNotification('User updated successfully!', 'success');
             setTimeout(() => location.reload(), 1000);
         } else {
             alert('Error: ' + result.error);
+            saveBtn.textContent = originalText;
+            saveBtn.disabled = false;
         }
     } catch (error) {
         alert('Error saving user: ' + error.message);
+        saveBtn.textContent = originalText;
+        saveBtn.disabled = false;
     }
 }
 
