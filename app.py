@@ -414,14 +414,28 @@ def update_user(user_id):
     """Update user details"""
     try:
         user = User.query.get_or_404(user_id)
-        data = request.json
-        
+        data = request.get_json() or {}
+
+        # Prevent demoting the last remaining admin
+        if 'role' in data:
+            new_role = data['role']
+            if new_role not in ['admin', 'user']:
+                return jsonify({'success': False, 'error': 'Invalid role specified'}), 400
+
+            if user.role == 'admin' and new_role != 'admin':
+                remaining_admins = User.query.filter(User.role == 'admin', User.id != user.id).count()
+                if remaining_admins == 0:
+                    return jsonify({
+                        'success': False,
+                        'error': 'At least one admin must remain in the system.'
+                    }), 400
+
+            user.role = new_role
+
         if 'first_name' in data:
             user.first_name = data['first_name']
         if 'last_name' in data:
             user.last_name = data['last_name']
-        if 'role' in data and data['role'] in ['admin', 'user']:
-            user.role = data['role']
         if 'is_active' in data:
             user.is_active = data['is_active']
         
@@ -444,6 +458,15 @@ def delete_user(user_id):
         
         if user.id == current_user.id:
             return jsonify({'success': False, 'error': 'Cannot delete your own account'}), 400
+
+        # Prevent deleting the last remaining admin
+        if user.role == 'admin':
+            remaining_admins = User.query.filter(User.role == 'admin', User.id != user.id).count()
+            if remaining_admins == 0:
+                return jsonify({
+                    'success': False,
+                    'error': 'Cannot delete the last remaining admin user.'
+                }), 400
         
         db.session.delete(user)
         db.session.commit()
