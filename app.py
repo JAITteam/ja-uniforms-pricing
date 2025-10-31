@@ -243,14 +243,19 @@ def verify_code():
         
         # Create user account
         user_data = stored['user_data']
-        user = User(username=email)
+        user = User(
+            username=email,
+            email=email,
+            first_name=user_data.get('first_name'),
+            last_name=user_data.get('last_name'),
+            full_name=f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip()
+        )
         user.set_password(user_data['password'])
 
         if email == 'it@jauniforms.com':
             user.role = 'admin'
         else:
             user.role = 'user'
-
 
         db.session.add(user)
         db.session.commit()
@@ -266,6 +271,7 @@ def verify_code():
         
     except Exception as e:
         print(f"Verification error: {e}")
+        db.session.rollback()
         return jsonify({'success': False, 'error': 'Verification failed'}), 200
 
 
@@ -377,6 +383,75 @@ def register():
             return jsonify({'success': False, 'error': 'Registration failed'}), 200
     
     return render_template('register.html')
+
+# ===== USER MANAGEMENT ROUTES (ADMIN ONLY) =====
+
+@app.route('/admin/users')
+@admin_required
+def manage_users():
+    """Admin-only user management page"""
+    users = User.query.order_by(User.created_at.desc()).all()
+    return render_template('admin_users.html', users=users)
+
+@app.route('/api/users/<int:user_id>', methods=['GET'])
+@admin_required
+def get_user(user_id):
+    """Get user details"""
+    user = User.query.get_or_404(user_id)
+    return jsonify({
+        'id': user.id,
+        'email': user.email,
+        'first_name': user.first_name or '',
+        'last_name': user.last_name or '',
+        'role': user.role,
+        'is_active': user.is_active,
+        'created_at': user.created_at.isoformat() if user.created_at else None
+    })
+
+@app.route('/api/users/<int:user_id>', methods=['PUT'])
+@admin_required
+def update_user(user_id):
+    """Update user details"""
+    try:
+        user = User.query.get_or_404(user_id)
+        data = request.json
+        
+        if 'first_name' in data:
+            user.first_name = data['first_name']
+        if 'last_name' in data:
+            user.last_name = data['last_name']
+        if 'role' in data and data['role'] in ['admin', 'user']:
+            user.role = data['role']
+        if 'is_active' in data:
+            user.is_active = data['is_active']
+        
+        if user.first_name and user.last_name:
+            user.full_name = f"{user.first_name} {user.last_name}"
+        
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'User updated successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/users/<int:user_id>', methods=['DELETE'])
+@admin_required
+def delete_user(user_id):
+    """Delete a user"""
+    try:
+        user = User.query.get_or_404(user_id)
+        
+        if user.id == current_user.id:
+            return jsonify({'success': False, 'error': 'Cannot delete your own account'}), 400
+        
+        db.session.delete(user)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'User deleted successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 

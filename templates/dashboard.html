@@ -12,7 +12,7 @@
     <!-- WELCOME BANNER -->
     <div class="welcome-banner">
         <div class="welcome-content">
-            <h1 id="greeting">Good morning, Admin! ☀️</h1>
+            <h1 id="greeting">Good morning, {{ current_user.get_display_name() }}! ☀️</h1>
             <p class="subtitle">
                 <span id="current-date">Friday, October 24, 2025</span> • 
                 <span id="last-updated">Last updated: just now</span>
@@ -51,6 +51,7 @@
                                 Recently updated
                             </div>
                         </div>
+                        {% if current_user.is_admin() %}
                         <div class="style-actions">
                             <button class="btn-edit-quick" onclick="window.location.href='/style/new?vendor_style={{ style.vendor_style }}'">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -60,11 +61,12 @@
                                 Edit
                             </button>
                         </div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 {% else %}
                     <div style="text-align: center; padding: 40px; color: #6B7280;">
-                        <p>No recent styles yet. Create your first style!</p>
+                        <p>No recent styles yet. {% if current_user.is_admin() %}Create your first style!{% endif %}</p>
                     </div>
                 {% endif %}
             </div>
@@ -154,6 +156,7 @@
     <!-- ACTION BUTTONS GRID -->
     <div class="action-buttons-grid">
         
+        {% if current_user.is_admin() %}
         <div class="action-card-modern" onclick="window.location.href='/style/new'">
             <div class="action-icon-modern">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -167,7 +170,9 @@
                 Open Wizard →
             </button>
         </div>
+        {% endif %}
         
+        {% if current_user.is_admin() %}
         <div class="action-card-modern green" onclick="window.location.href='/import-excel'">
             <div class="action-icon-modern">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -182,6 +187,7 @@
                 Upload File →
             </button>
         </div>
+        {% endif %}
         
         <div class="action-card-modern orange" id="export-all-btn">
             <div class="action-icon-modern">

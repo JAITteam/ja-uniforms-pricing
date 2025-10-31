@@ -13,8 +13,14 @@ class User(UserMixin, db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(120), nullable=False)
-    role = db.Column(db.String(20), default='user', nullable=False) 
+    first_name = db.Column(db.String(50), nullable=True)
+    last_name = db.Column(db.String(50), nullable=True)
+    full_name = db.Column(db.String(100), nullable=True)
+    role = db.Column(db.String(20), default='user', nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    last_login = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def set_password(self, password):
@@ -26,8 +32,32 @@ class User(UserMixin, db.Model):
     def is_admin(self):
         return self.role == 'admin'
     
+    def get_full_name(self):
+        """Return full name or email if names not set"""
+        if self.first_name and self.last_name:
+            return f"{self.first_name} {self.last_name}"
+        elif self.full_name:
+            return self.full_name
+        elif self.first_name:
+            return self.first_name
+        else:
+            return self.email.split('@')[0].title()
+    
+    def get_display_name(self):
+        """Return first name or email prefix"""
+        if self.first_name:
+            return self.first_name
+        elif self.full_name:
+            return self.full_name.split()[0]
+        elif self.email:
+            return self.email.split('@')[0].title()
+        elif self.username:
+            return self.username.split('@')[0].title()
+        else:
+            return 'User'
+    
     def __repr__(self):
-        return f'<User {self.username}>'
+        return f'<User {self.email}>'
 
 # ===== VENDOR TABLES =====
 class FabricVendor(db.Model):
@@ -114,8 +144,8 @@ class SizeRange(db.Model):
     extended_sizes = db.Column(db.String(100))
     extended_markup_percent = db.Column(db.Float, default=15.0)
     description = db.Column(db.String(200))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    #created_at = db.Column(db.DateTime, default=get_eastern_time)
+    #created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=get_eastern_time)
     
     def __repr__(self):
         return f'<SizeRange {self.name}>'
@@ -138,7 +168,8 @@ class Style(db.Model):
     suggested_price = db.Column(db.Float)  # ADD THIS
     notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    #updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=get_eastern_time, onupdate=get_eastern_time)
     last_modified_by = db.Column(db.String(100), default='Admin')
     is_active = db.Column(db.Boolean, default=True)
     is_favorite = db.Column(db.Boolean, default=False)

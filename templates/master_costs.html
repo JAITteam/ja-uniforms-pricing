@@ -15,7 +15,7 @@
     }
     
     .main-container {
-        margin-top: -70px !important; /* Pull content closer to navbar */
+        margin-top: -50px !important; /* Pull content closer to navbar */
         padding: 8px 24px !important;
     }
     
@@ -86,9 +86,13 @@
                             <i data-feather="package"></i>
                             <h3>Fabric Vendors</h3>
                         </div>
-                        <button class="btn-add" data-type="fabric_vendor">
+                        {% if current_user.is_admin() %}
+                    {% if current_user.is_admin() %}
+                    <button class="btn-add" data-type="fabric_vendor">
                             <i data-feather="plus"></i>
                         </button>
+                    {% endif %}
+                    {% endif %}
                     </div>
                     <div class="table-container">
                         <table class="modern-table">
@@ -103,7 +107,9 @@
                                 <tr data-id="{{ vendor.id }}">
                                     <td>{{ vendor.name }}</td>
                                     <td>{{ vendor.vendor_code or '' }}</td>
-                                    <td class="actions-cell">
+                                    {% if current_user.is_admin() %}
+                            {% if current_user.is_admin() %}
+                            <td class="actions-cell">
                                         <div class="row-actions">
                                             <button class="icon-btn icon-edit" data-type="fabric_vendor" data-id="{{ vendor.id }}" title="Edit">
                                                 <i data-feather="edit-2"></i>
@@ -113,6 +119,8 @@
                                             </button>
                                         </div>
                                     </td>
+                            {% endif %}
+                            {% endif %}
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -127,9 +135,13 @@
                             <i data-feather="box"></i>
                             <h3>Notion Vendors</h3>
                         </div>
-                        <button class="btn-add" data-type="notion_vendor">
+                        {% if current_user.is_admin() %}
+                    {% if current_user.is_admin() %}
+                    <button class="btn-add" data-type="notion_vendor">
                             <i data-feather="plus"></i>
                         </button>
+                    {% endif %}
+                    {% endif %}
                     </div>
                     <div class="table-container">
                         <table class="modern-table">
@@ -144,7 +156,9 @@
                                 <tr data-id="{{ vendor.id }}">
                                     <td>{{ vendor.name }}</td>
                                     <td>{{ vendor.vendor_code or '' }}</td>
-                                    <td class="actions-cell">
+                                    {% if current_user.is_admin() %}
+                            {% if current_user.is_admin() %}
+                            <td class="actions-cell">
                                         <div class="row-actions">
                                             <button class="icon-btn icon-edit" data-type="notion_vendor" data-id="{{ vendor.id }}" title="Edit">
                                                 <i data-feather="edit-2"></i>
@@ -154,6 +168,8 @@
                                             </button>
                                         </div>
                                     </td>
+                            {% endif %}
+                            {% endif %}
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -176,10 +192,14 @@
                         <i data-feather="search"></i>
                         <input type="text" id="fabricSearch" placeholder="Search fabrics..." autocomplete="off">
                     </div>
+                    {% if current_user.is_admin() %}
+                    {% if current_user.is_admin() %}
                     <button class="btn-add" data-type="fabric">
                         <i data-feather="plus"></i>
                         <span>Add Fabric</span>
                     </button>
+                    {% endif %}
+                    {% endif %}
                 </div>
             </div>
             <div class="table-container scrollable">
@@ -199,6 +219,8 @@
                             <td><code>{{ fabric.fabric_code or '-' }}</code></td>
                             <td><span class="price">${{ "%.2f"|format(fabric.cost_per_yard) }}</span></td>
                             <td>{{ fabric.fabric_vendor.name if fabric.fabric_vendor else '-' }}</td>
+                            {% if current_user.is_admin() %}
+                            {% if current_user.is_admin() %}
                             <td class="actions-cell">
                                 <div class="row-actions">
                                     <button class="icon-btn icon-edit" data-type="fabric" data-id="{{ fabric.id }}" title="Edit">
@@ -209,6 +231,8 @@
                                     </button>
                                 </div>
                             </td>
+                            {% endif %}
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -229,10 +253,14 @@
                         <i data-feather="search"></i>
                         <input type="text" id="notionSearch" placeholder="Search notions..." autocomplete="off">
                     </div>
+                    {% if current_user.is_admin() %}
+                    {% if current_user.is_admin() %}
                     <button class="btn-add" data-type="notion">
                         <i data-feather="plus"></i>
                         <span>Add Notion</span>
                     </button>
+                    {% endif %}
+                    {% endif %}
                 </div>
             </div>
             <div class="table-container scrollable">
@@ -252,6 +280,8 @@
                             <td><span class="price">${{ "%.2f"|format(notion.cost_per_unit) }}</span></td>
                             <td><span class="badge">{{ notion.unit_type or 'each' }}</span></td>
                             <td>{{ notion.notion_vendor.name if notion.notion_vendor else '-' }}</td>
+                            {% if current_user.is_admin() %}
+                            {% if current_user.is_admin() %}
                             <td class="actions-cell">
                                 <div class="row-actions">
                                     <button class="icon-btn icon-edit" data-type="notion" data-id="{{ notion.id }}" title="Edit">
@@ -262,6 +292,8 @@
                                     </button>
                                 </div>
                             </td>
+                            {% endif %}
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -282,10 +314,14 @@
                         <i data-feather="search"></i>
                         <input type="text" id="laborSearch" placeholder="Search labor..." autocomplete="off">
                     </div>
+                    {% if current_user.is_admin() %}
+                    {% if current_user.is_admin() %}
                     <button class="btn-add" data-type="labor">
                         <i data-feather="plus"></i>
                         <span>Add Labor</span>
                     </button>
+                    {% endif %}
+                    {% endif %}
                 </div>
             </div>
             <div class="table-container scrollable">
@@ -313,6 +349,8 @@
                                     <span class="text-muted">N/A</span>
                                 {% endif %}
                             </td>
+                            {% if current_user.is_admin() %}
+                            {% if current_user.is_admin() %}
                             <td class="actions-cell">
                                 <div class="row-actions">
                                     <button class="icon-btn icon-edit" data-type="labor" data-id="{{ labor.id }}" title="Edit">
@@ -323,6 +361,8 @@
                                     </button>
                                 </div>
                             </td>
+                            {% endif %}
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -343,10 +383,14 @@
                         <i data-feather="search"></i>
                         <input type="text" id="cleaningSearch" placeholder="Search cleaning..." autocomplete="off">
                     </div>
+                    {% if current_user.is_admin() %}
+                    {% if current_user.is_admin() %}
                     <button class="btn-add" data-type="cleaning">
                         <i data-feather="plus"></i>
                         <span>Add Cleaning</span>
                     </button>
+                    {% endif %}
+                    {% endif %}
                 </div>
             </div>
             <div class="table-container scrollable">
@@ -362,6 +406,8 @@
                         <tr data-id="{{ cleaning.id }}" class="cleaning-row">
                             <td><strong>{{ cleaning.garment_type }}</strong></td>
                             <td><span class="price">${{ "%.2f"|format(cleaning.fixed_cost) }}</span></td>
+                            {% if current_user.is_admin() %}
+                            {% if current_user.is_admin() %}
                             <td class="actions-cell">
                                 <div class="row-actions">
                                     <button class="icon-btn icon-edit" data-type="cleaning" data-id="{{ cleaning.id }}" title="Edit">
@@ -372,6 +418,8 @@
                                     </button>
                                 </div>
                             </td>
+                            {% endif %}
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -392,10 +440,14 @@
                         <i data-feather="search"></i>
                         <input type="text" id="colorSearch" placeholder="Search colors..." autocomplete="off">
                     </div>
+                    {% if current_user.is_admin() %}
+                    {% if current_user.is_admin() %}
                     <button class="btn-add" data-type="color">
                         <i data-feather="plus"></i>
                         <span>Add Color</span>
                     </button>
+                    {% endif %}
+                    {% endif %}
                 </div>
             </div>
             <div class="table-container scrollable">
@@ -409,6 +461,8 @@
                         {% for color in colors %}
                         <tr data-id="{{ color.id }}" class="color-row">
                             <td><strong>{{ color.name }}</strong></td>
+                            {% if current_user.is_admin() %}
+                            {% if current_user.is_admin() %}
                             <td class="actions-cell">
                                 <div class="row-actions">
                                     <button class="icon-btn icon-edit" data-type="color" data-id="{{ color.id }}" title="Edit">
@@ -419,6 +473,8 @@
                                     </button>
                                 </div>
                             </td>
+                            {% endif %}
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -439,10 +495,14 @@
                         <i data-feather="search"></i>
                         <input type="text" id="variableSearch" placeholder="Search variables..." autocomplete="off">
                     </div>
+                    {% if current_user.is_admin() %}
+                    {% if current_user.is_admin() %}
                     <button class="btn-add" data-type="variable">
                         <i data-feather="plus"></i>
                         <span>Add Variable</span>
                     </button>
+                    {% endif %}
+                    {% endif %}
                 </div>
             </div>
             <div class="table-container scrollable">
@@ -456,6 +516,8 @@
                         {% for variable in variables %}
                         <tr data-id="{{ variable.id }}" class="variable-row">
                             <td><strong>{{ variable.name }}</strong></td>
+                            {% if current_user.is_admin() %}
+                            {% if current_user.is_admin() %}
                             <td class="actions-cell">
                                 <div class="row-actions">
                                     <button class="icon-btn icon-edit" data-type="variable" data-id="{{ variable.id }}" title="Edit">
@@ -466,6 +528,8 @@
                                     </button>
                                 </div>
                             </td>
+                            {% endif %}
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -486,10 +550,14 @@
                         <i data-feather="search"></i>
                         <input type="text" id="sizeRangeSearch" placeholder="Search sizes..." autocomplete="off">
                     </div>
+                    {% if current_user.is_admin() %}
+                    {% if current_user.is_admin() %}
                     <button class="btn-add" data-type="size_range">
                         <i data-feather="plus"></i>
                         <span>Add Size Range</span>
                     </button>
+                    {% endif %}
+                    {% endif %}
                 </div>
             </div>
             <div class="table-container scrollable">
@@ -511,6 +579,8 @@
                             <td><code>{{ size_range.extended_sizes or '-' }}</code></td>
                             <td><span class="badge">{{ "%.1f"|format(size_range.extended_markup_percent or 0) }}%</span></td>
                             <td><span class="text-muted">{{ size_range.description or '-' }}</span></td>
+                            {% if current_user.is_admin() %}
+                            {% if current_user.is_admin() %}
                             <td class="actions-cell">
                                 <div class="row-actions">
                                     <button class="icon-btn icon-edit" data-type="size_range" data-id="{{ size_range.id }}" title="Edit">
@@ -521,6 +591,8 @@
                                     </button>
                                 </div>
                             </td>
+                            {% endif %}
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -550,6 +622,8 @@
                         <tr data-id="{{ setting.id }}">
                             <td><strong>{{ setting.setting_key }}</strong></td>
                             <td><span class="price">{{ setting.setting_value }}</span></td>
+                            {% if current_user.is_admin() %}
+                            {% if current_user.is_admin() %}
                             <td class="actions-cell">
                                 <div class="row-actions">
                                     <button class="icon-btn icon-edit" data-type="global_setting" data-id="{{ setting.id }}" title="Edit">
@@ -557,6 +631,8 @@
                                     </button>
                                 </div>
                             </td>
+                            {% endif %}
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>

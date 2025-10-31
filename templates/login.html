@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - J.A Uniforms Pricing Tool</title>
     
+    <!-- Preload for faster loading -->
+    <link rel="preload" href="https://unpkg.com/feather-icons" as="script">
+    
     <!-- Feather Icons -->
     <script src="https://unpkg.com/feather-icons"></script>
     
@@ -32,14 +35,9 @@
     document.documentElement.style.setProperty('--shadow-color', theme.shadow);
     document.documentElement.style.setProperty('--filled-bg', theme.filled);
     </script>
-    
 
-    <div class="auth-container" style="background: var(--dynamic-gradient, linear-gradient(135deg, #2c3e50 0%, #3498db 50%, #2980b9 100%)); background-size: 200% 200%; animation: gradientShift 15s ease infinite;">
-        <!-- Animated Background Blobs -->
-        <div class="auth-blob auth-blob-1"></div>
-        <div class="auth-blob auth-blob-2"></div>
-        <div class="auth-blob auth-blob-3"></div>
-
+    <div class="auth-container" style="background: var(--dynamic-gradient, linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%));">
+        
         <!-- Auth Card -->
         <div class="auth-card">
             <!-- Left Section: Logo -->
@@ -278,8 +276,8 @@
             
             const container = document.getElementById('toastContainer');
             
-            messages.forEach((msg, index) => {
-                setTimeout(() => {
+            messages.forEach(function(msg, index) {
+                setTimeout(function() {
                     const toast = document.createElement('div');
                     toast.className = 'toast toast-' + msg.category;
                     toast.innerHTML = '<i data-feather="' + msg.icon + '"></i><span>' + msg.message + '</span>';

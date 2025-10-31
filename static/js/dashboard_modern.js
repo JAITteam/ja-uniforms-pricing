@@ -11,7 +11,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!greetingElement) return;
         
         const hour = new Date().getHours();
-        const userName = 'Admin'; // You can make this dynamic
+        
+        // Extract current username from the greeting (set by Jinja2 template)
+        const currentText = greetingElement.textContent;
+        const userNameMatch = currentText.match(/,\s*([^!]+)!/);
+        const userName = userNameMatch ? userNameMatch[1] : 'Admin';
         
         let greeting = '';
         let emoji = '';
@@ -42,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
             greetingElement.innerHTML = `Welcome back, ${userName}! ${emoji}`;
         }
     }
-    
+        
     // ===== UPDATE DATE/TIME =====
     function updateDateTime() {
         const dateElement = document.getElementById('current-date');
