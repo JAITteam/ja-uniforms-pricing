@@ -425,8 +425,13 @@ def update_user(user_id):
         if 'is_active' in data:
             user.is_active = data['is_active']
         
+        # Update full_name field properly
         if user.first_name and user.last_name:
             user.full_name = f"{user.first_name} {user.last_name}"
+        elif user.first_name:
+            user.full_name = user.first_name
+        else:
+            user.full_name = None
         
         db.session.commit()
         
