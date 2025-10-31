@@ -12,117 +12,25 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
     
     <!-- Dynamic Color System -->
+    <!-- Fixed Professional Color Theme -->
     <script>
-        // 🎨 12 Beautiful Professional Gradient Combinations
-        const colorThemes = [
-            {
-                gradient: 'linear-gradient(135deg, #2c3e50 0%, #3498db 50%, #2980b9 100%)',
-                primary: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
-                accent: '#3498db',
-                pulse: 'rgba(52, 152, 219, 0.4)',
-                shadow: 'rgba(52, 152, 219, 0.3)',
-                filled: 'rgba(52, 152, 219, 0.05)'
-            },
-            {
-                gradient: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #7e22ce 100%)',
-                primary: 'linear-gradient(135deg, #7e22ce 0%, #6b21a8 100%)',
-                accent: '#7e22ce',
-                pulse: 'rgba(126, 34, 206, 0.4)',
-                shadow: 'rgba(126, 34, 206, 0.3)',
-                filled: 'rgba(126, 34, 206, 0.05)'
-            },
-            {
-                gradient: 'linear-gradient(135deg, #134e4a 0%, #0d9488 50%, #14b8a6 100%)',
-                primary: 'linear-gradient(135deg, #0d9488 0%, #0f766e 100%)',
-                accent: '#0d9488',
-                pulse: 'rgba(13, 148, 136, 0.4)',
-                shadow: 'rgba(13, 148, 136, 0.3)',
-                filled: 'rgba(13, 148, 136, 0.05)'
-            },
-            {
-                gradient: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%)',
-                primary: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                accent: '#3b82f6',
-                pulse: 'rgba(59, 130, 246, 0.4)',
-                shadow: 'rgba(59, 130, 246, 0.3)',
-                filled: 'rgba(59, 130, 246, 0.05)'
-            },
-            {
-                gradient: 'linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%)',
-                primary: 'linear-gradient(135deg, #475569 0%, #334155 100%)',
-                accent: '#475569',
-                pulse: 'rgba(71, 85, 105, 0.4)',
-                shadow: 'rgba(71, 85, 105, 0.3)',
-                filled: 'rgba(71, 85, 105, 0.05)'
-            },
-            {
-                gradient: 'linear-gradient(135deg, #0e7490 0%, #06b6d4 50%, #22d3ee 100%)',
-                primary: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
-                accent: '#06b6d4',
-                pulse: 'rgba(6, 182, 212, 0.4)',
-                shadow: 'rgba(6, 182, 212, 0.3)',
-                filled: 'rgba(6, 182, 212, 0.05)'
-            },
-            {
-                gradient: 'linear-gradient(135deg, #312e81 0%, #4f46e5 50%, #6366f1 100%)',
-                primary: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
-                accent: '#4f46e5',
-                pulse: 'rgba(79, 70, 229, 0.4)',
-                shadow: 'rgba(79, 70, 229, 0.3)',
-                filled: 'rgba(79, 70, 229, 0.05)'
-            },
-            {
-                gradient: 'linear-gradient(135deg, #065f46 0%, #059669 50%, #10b981 100%)',
-                primary: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                accent: '#059669',
-                pulse: 'rgba(5, 150, 105, 0.4)',
-                shadow: 'rgba(5, 150, 105, 0.3)',
-                filled: 'rgba(5, 150, 105, 0.05)'
-            },
-            {
-                gradient: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
-                primary: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-                accent: '#1e293b',
-                pulse: 'rgba(30, 41, 59, 0.4)',
-                shadow: 'rgba(30, 41, 59, 0.3)',
-                filled: 'rgba(30, 41, 59, 0.05)'
-            },
-            {
-                gradient: 'linear-gradient(135deg, #0c4a6e 0%, #0284c7 50%, #38bdf8 100%)',
-                primary: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-                accent: '#0284c7',
-                pulse: 'rgba(2, 132, 199, 0.4)',
-                shadow: 'rgba(2, 132, 199, 0.3)',
-                filled: 'rgba(2, 132, 199, 0.05)'
-            },
-            {
-                gradient: 'linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #8b5cf6 100%)',
-                primary: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
-                accent: '#7c3aed',
-                pulse: 'rgba(124, 58, 237, 0.4)',
-                shadow: 'rgba(124, 58, 237, 0.3)',
-                filled: 'rgba(124, 58, 237, 0.05)'
-            },
-            {
-                gradient: 'linear-gradient(135deg, #1e293b 0%, #475569 50%, #64748b 100%)',
-                primary: 'linear-gradient(135deg, #475569 0%, #334155 100%)',
-                accent: '#475569',
-                pulse: 'rgba(71, 85, 105, 0.4)',
-                shadow: 'rgba(71, 85, 105, 0.3)',
-                filled: 'rgba(71, 85, 105, 0.05)'
-            }
-        ];
-        
-        // Pick random theme
-        const theme = colorThemes[Math.floor(Math.random() * colorThemes.length)];
-        
-        // Apply theme
-        document.documentElement.style.setProperty('--dynamic-gradient', theme.gradient);
-        document.documentElement.style.setProperty('--primary-color', theme.primary);
-        document.documentElement.style.setProperty('--accent-color', theme.accent);
-        document.documentElement.style.setProperty('--pulse-color', theme.pulse);
-        document.documentElement.style.setProperty('--shadow-color', theme.shadow);
-        document.documentElement.style.setProperty('--filled-bg', theme.filled);
+    // Fixed slate/blue-gray theme for professional appearance
+    const theme = {
+        gradient: 'linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%)',
+        primary: 'linear-gradient(135deg, #475569 0%, #334155 100%)',
+        accent: '#475569',
+        pulse: 'rgba(71, 85, 105, 0.4)',
+        shadow: 'rgba(71, 85, 105, 0.3)',
+        filled: 'rgba(71, 85, 105, 0.05)'
+    };
+
+    // Apply theme colors
+    document.documentElement.style.setProperty('--dynamic-gradient', theme.gradient);
+    document.documentElement.style.setProperty('--primary-color', theme.primary);
+    document.documentElement.style.setProperty('--accent-color', theme.accent);
+    document.documentElement.style.setProperty('--pulse-color', theme.pulse);
+    document.documentElement.style.setProperty('--shadow-color', theme.shadow);
+    document.documentElement.style.setProperty('--filled-bg', theme.filled);
     </script>
 </head>
 <body>
