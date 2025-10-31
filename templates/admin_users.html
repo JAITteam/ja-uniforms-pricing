@@ -286,8 +286,14 @@ body {
     color: white;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
     background: #5568d3;
+}
+
+.btn-primary:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+    opacity: 0.6;
 }
 
 .btn-danger {
@@ -682,8 +688,12 @@ async function editUser(userId) {
 
 // Save User
 async function saveUser() {
+    console.log('Save button clicked');
     const userId = document.getElementById('userId').value;
     const firstName = document.getElementById('firstName').value.trim();
+    
+    console.log('User ID:', userId);
+    console.log('First Name:', firstName);
     
     // Validate first name is not empty
     if (!firstName) {
@@ -698,6 +708,8 @@ async function saveUser() {
         is_active: document.getElementById('userStatus').value === 'true'
     };
     
+    console.log('Sending data:', data);
+    
     // Show loading state
     const saveBtn = document.getElementById('saveBtn');
     const originalText = saveBtn.textContent;
@@ -705,24 +717,32 @@ async function saveUser() {
     saveBtn.disabled = true;
     
     try {
+        console.log('Making PUT request to:', `/api/users/${userId}`);
         const response = await fetch(`/api/users/${userId}`, {
             method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
+            headers: {
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify(data)
         });
         
+        console.log('Response status:', response.status);
         const result = await response.json();
+        console.log('Response data:', result);
         
-        if (result.success) {
+        if (response.ok && result.success) {
             closeEditModal();
             showNotification('User updated successfully!', 'success');
             setTimeout(() => location.reload(), 1000);
         } else {
-            alert('Error: ' + result.error);
+            const errorMsg = result.error || `HTTP Error ${response.status}`;
+            alert('Error: ' + errorMsg);
+            console.error('Save failed:', errorMsg);
             saveBtn.textContent = originalText;
             saveBtn.disabled = false;
         }
     } catch (error) {
+        console.error('Exception during save:', error);
         alert('Error saving user: ' + error.message);
         saveBtn.textContent = originalText;
         saveBtn.disabled = false;

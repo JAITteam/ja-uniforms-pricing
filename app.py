@@ -391,9 +391,10 @@ def register():
 def manage_users():
     """Admin-only user management page"""
     users = User.query.order_by(User.created_at.desc()).all()
-    return render_template('admin_users.html', users=users)
+    return render_template('admin_users.html', users=users, current_user=current_user)
 
 @app.route('/api/users/<int:user_id>', methods=['GET'])
+@csrf.exempt
 @admin_required
 def get_user(user_id):
     """Get user details"""
@@ -409,6 +410,7 @@ def get_user(user_id):
     })
 
 @app.route('/api/users/<int:user_id>', methods=['PUT'])
+@csrf.exempt
 @admin_required
 def update_user(user_id):
     """Update user details"""
@@ -441,6 +443,7 @@ def update_user(user_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
+@csrf.exempt
 @admin_required
 def delete_user(user_id):
     """Delete a user"""
