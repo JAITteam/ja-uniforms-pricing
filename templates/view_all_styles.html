@@ -3,119 +3,154 @@
 
 {% block content %}
 <style>
-/* AGGRESSIVE FULL WIDTH OVERRIDE */
-body {
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-body > nav + div {
-    max-width: 100% !important;
-    width: 100% !important;
-    padding: 0 !important;
-    margin: 0 !important;
-}
-/* ============================================
-   COMPACT PROFESSIONAL DESIGN
-   ============================================ */
-
+body { margin: 0 !important; padding: 0 !important; }
+body > nav + div { max-width: 100% !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
 * { box-sizing: border-box; }
 
 .page-container {
     max-width: 100% !important;
     width: 100% !important;
     margin: 0 !important;
-    padding: 1rem 1.5rem !important;
-    background: #f8fafc;
+    padding: 1.5rem 2rem !important;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
     min-height: 100vh;
 }
 
-/* Compact Header */
 .page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 2px solid #e2e8f0;
 }
 
 .page-header h1 {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     font-weight: 700;
-    color: #1e293b;
+    color: #1a1a2e;
     margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
 }
 
-.header-actions {
-    display: flex;
-    gap: 0.75rem;
-    align-items: center;
+.page-header h1::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 28px;
+    background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+    border-radius: 2px;
 }
 
 .btn {
-    padding: 0.5rem 1rem;
+    padding: 0.65rem 1.25rem;
     border: none;
-    border-radius: 6px;
+    border-radius: 10px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
     text-decoration: none;
     font-size: 0.875rem;
-    white-space: nowrap; /* Prevent text wrapping */
-    line-height: 1.5;
+    white-space: nowrap;
 }
 
-.btn-primary {
-    background: #3b82f6;
+.btn-export {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;
-    border: 1px solid #3b82f6;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);
+    padding: 0.75rem 1.5rem;
 }
 
-.btn-primary:hover {
-    background: #2563eb;
-    border-color: #2563eb;
-    transform: translateY(-1px);
+.btn-export:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+}
+
+.btn-export svg {
+    transition: transform 0.3s;
+}
+
+.btn-export:hover svg {
+    transform: translateY(2px);
+}
+
+.btn-clear {
+    background: white;
+    color: #64748b;
+    border: 2px solid #e2e8f0;
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+}
+
+.btn-clear:hover {
+    background: #fef2f2;
+    border-color: #fca5a5;
+    color: #dc2626;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
 }
 
 .btn-secondary {
     background: white;
     color: #475569;
-    border: 1px solid #cbd5e1;
+    border: 2px solid #e2e8f0;
 }
 
 .btn-secondary:hover {
     background: #f8fafc;
-    border-color: #94a3b8;
+    border-color: #cbd5e1;
 }
 
 .stats-cards {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
+    gap: 1.25rem;
     margin-bottom: 1.5rem;
 }
 
 .stat-card {
     background: white;
-    padding: 1.25rem;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-    border-left: 3px solid #3b82f6;
-    transition: all 0.2s;
+    padding: 1.5rem;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    border: 1px solid rgba(0,0,0,0.04);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+}
+
+.stat-card:nth-child(2)::before {
+    background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+}
+
+.stat-card:nth-child(3)::before {
+    background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
 }
 
 .stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
 }
 
 .stat-card h3 {
-    font-size: 1.75rem;
-    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+    margin: 0 0 0.25rem 0;
     font-weight: 700;
     color: #1e293b;
 }
@@ -123,144 +158,191 @@ body > nav + div {
 .stat-card p {
     margin: 0;
     color: #64748b;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 500;
-}
-/* Compact Filters */
-.filters-section {
-    background: white;
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-}
-
-.filters-grid {
-    display: grid;
-    grid-template-columns: 2fr 180px 180px;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-}
-
-.form-control {
-    width: 100%;
-    padding: 0.5rem 0.75rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    font-size: 0.875rem;
-    transition: all 0.2s;
-}
-
-.form-control:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.form-select {
-    width: 100%;
-    padding: 0.5rem 2rem 0.5rem 0.75rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    font-size: 0.875rem;
-    background: white;
-    cursor: pointer;
-    appearance: none;
-    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke=%22%23475569%22%3E%3Cpath stroke-linecap=%22round%22 stroke-linejoin=%22round%22 stroke-width=%222%22 d=%22M19 9l-7 7-7-7%22%3E%3C/path%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.5rem center;
-    background-size: 1rem;
-}
-
-/* Compact Quick Filters */
-.quick-filters-label {
-    font-size: 0.7rem;
-    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: #64748b;
-    margin-bottom: 0.5rem;
 }
 
-.quick-filters {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.filter-chip {
-    padding: 0.375rem 0.875rem;
-    border: 1px solid #cbd5e1;
+/* REVAMPED FILTER BOX */
+.filters-section {
     background: white;
     border-radius: 16px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    font-weight: 500;
-    transition: all 0.2s;
-    user-select: none;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    border: 1px solid rgba(0,0,0,0.04);
+    overflow: hidden;
 }
 
-.filter-chip:hover {
-    background: #f1f5f9;
-}
-
-.filter-chip.active {
-    background: #3b82f6;
-    color: white;
-    border-color: #3b82f6;
-}
-
-/* Bulk Actions */
-.bulk-actions {
-    display: none;
-    background: #dbeafe;
-    border: 2px solid #3b82f6;
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
+.filters-top-row {
+    display: flex;
     align-items: center;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.search-box {
+    flex: 1;
+    position: relative;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 2.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    transition: all 0.3s;
+    background: white;
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.search-box svg {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    width: 18px;
+    height: 18px;
+}
+
+.dropdown-group {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.custom-select {
+    position: relative;
+    min-width: 160px;
+}
+
+.custom-select select {
+    width: 100%;
+    padding: 0.75rem 2.5rem 0.75rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s;
+    appearance: none;
+    color: #334155;
+}
+
+.custom-select select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.custom-select::after {
+    content: '';
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid #64748b;
+    pointer-events: none;
+}
+
+.filters-bottom-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
     gap: 1rem;
 }
 
-.bulk-actions.active {
+.filter-chips {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.filter-chip {
+    padding: 0.5rem 1.1rem;
+    border: 2px solid #e2e8f0;
+    background: white;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.3s;
+    color: #64748b;
+}
+
+.filter-chip:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+    background: #eff6ff;
+}
+
+.filter-chip.active {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.filter-chip.active-secondary {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.filter-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.active-filters-bar {
+    display: none;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-top: 1px solid #fcd34d;
+    font-size: 0.8rem;
+    color: #92400e;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.active-filters-bar.show {
     display: flex;
 }
 
-.bulk-actions-label {
-    font-weight: 600;
-    color: #1e40af;
-    font-size: 0.875rem;
+.active-filters-bar svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
 }
 
-.btn-danger {
-    background: #ef4444;
-    color: white;
+.active-filters-bar strong {
+    color: #78350f;
 }
 
-.btn-danger:hover {
-    background: #dc2626;
-}
-
-/* Export Success Button */
-.btn-success {
-    background: #10b981;
-    color: white;
-    border: none;
-    font-weight: 600;
-}
-
-.btn-success:hover {
-    background: #059669;
-}
-
-
-/* Compact Table */
+/* TABLE STYLES */
 .table-container {
     background: white;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    border: 1px solid rgba(0,0,0,0.04);
     overflow: hidden;
-    width: 100%;
 }
 
 .modern-table {
@@ -269,48 +351,48 @@ body > nav + div {
 }
 
 .modern-table thead {
-    background: #f8fafc;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
     border-bottom: 2px solid #e2e8f0;
 }
 
 .modern-table th {
-    padding: 0.75rem 0.5rem;
+    padding: 1rem 0.75rem;
     text-align: left;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 0.7rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
     color: #475569;
     cursor: pointer;
-    user-select: none;
     white-space: nowrap;
-    transition: background 0.2s;
+    transition: all 0.2s;
 }
 
 .modern-table th:hover {
-    background: #f1f5f9;
+    background: rgba(59, 130, 246, 0.05);
+    color: #3b82f6;
 }
 
 .modern-table th.sortable::after {
-    content: ' ↕';
+    content: ' \2195';
     opacity: 0.3;
     font-size: 0.65rem;
 }
 
 .modern-table th.sort-asc::after {
-    content: ' ↑';
+    content: ' \2191';
     opacity: 1;
     color: #3b82f6;
 }
 
 .modern-table th.sort-desc::after {
-    content: ' ↓';
+    content: ' \2193';
     opacity: 1;
     color: #3b82f6;
 }
 
 .modern-table td {
-    padding: 0.75rem 0.5rem;
+    padding: 1rem 0.75rem;
     border-bottom: 1px solid #f1f5f9;
     font-size: 0.875rem;
     color: #475569;
@@ -321,61 +403,38 @@ body > nav + div {
 }
 
 .modern-table tbody tr:hover {
-    background: #f8fafc;
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.03) 0%, transparent 100%);
 }
 
-/* Modern Clean Margin Colors - BLUE for Standard 60% */
 .modern-table tbody tr.margin-high {
-    background: #f0fdf4 !important; /* Soft green */
-    border-left: 3px solid #10b981;
+    border-left: 4px solid #10b981;
 }
 
 .modern-table tbody tr.margin-medium {
-    background: #eff6ff !important; /* Soft blue - NO YELLOW! */
-    border-left: 3px solid #3b82f6;
+    border-left: 4px solid #3b82f6;
 }
 
 .modern-table tbody tr.margin-low {
-    background: #fef2f2 !important; /* Soft red */
-    border-left: 3px solid #ef4444;
+    border-left: 4px solid #ef4444;
 }
 
-.modern-table tbody tr.margin-high:hover {
-    background: #dcfce7 !important;
-}
-
-.modern-table tbody tr.margin-medium:hover {
-    background: #dbeafe !important; /* Blue hover */
-}
-
-.modern-table tbody tr.margin-low:hover {
-    background: #fee2e2 !important;
-}
-/* Status Badge */
-.status-badge {
-    display: inline-block;
-    padding: 0.2rem 0.6rem;
-    border-radius: 10px;
-    font-size: 0.7rem;
+.vendor-style-link {
+    color: #3b82f6;
+    text-decoration: none;
     font-weight: 600;
+    transition: all 0.2s;
 }
 
-.status-active {
-    background: #d1fae5;
-    color: #065f46;
+.vendor-style-link:hover {
+    color: #1d4ed8;
+    text-decoration: underline;
 }
 
-.status-inactive {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-/* Favorite Star */
 .favorite-star {
     cursor: pointer;
     color: #cbd5e1;
     fill: none;
-    transition: all 0.2s;
+    transition: all 0.3s;
 }
 
 .favorite-star.active {
@@ -384,101 +443,123 @@ body > nav + div {
 }
 
 .favorite-star:hover {
-    transform: scale(1.1);
+    transform: scale(1.2);
     color: #f59e0b;
 }
 
-/* Action Buttons */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-active {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    color: #065f46;
+}
+
+.status-active::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: #10b981;
+    border-radius: 50%;
+}
+
+.status-inactive {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    color: #991b1b;
+}
+
 .action-buttons {
     display: flex;
-    gap: 0.25rem;
+    gap: 0.35rem;
 }
 
 .action-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 34px;
+    height: 34px;
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
     cursor: pointer;
-    transition: all 0.2s;
-    background: transparent;
+    transition: all 0.3s;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
 }
 
 .action-btn svg {
-    width: 14px;
-    height: 14px;
+    width: 15px;
+    height: 15px;
 }
 
-.action-btn.edit:hover {
-    background: #ddd6fe;
-}
+.action-btn.edit { color: #7c3aed; }
+.action-btn.edit:hover { background: #ede9fe; border-color: #a78bfa; }
 
-.action-btn.edit svg {
-    stroke: #7c3aed;
-}
+.action-btn.copy { color: #0891b2; }
+.action-btn.copy:hover { background: #cffafe; border-color: #22d3ee; }
 
-.action-btn.copy:hover {
-    background: #d1fae5;
-}
+.action-btn.export { color: #059669; }
+.action-btn.export:hover { background: #d1fae5; border-color: #34d399; }
 
-.action-btn.copy svg {
-    stroke: #059669;
-}
+.action-btn.delete { color: #dc2626; }
+.action-btn.delete:hover { background: #fee2e2; border-color: #f87171; }
 
-.action-btn.delete:hover {
-    background: #fee2e2;
-}
-
-.action-btn.delete svg {
-    stroke: #dc2626;
-}
-
-/* Compact Pagination */
+/* PAGINATION */
 .pagination {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem;
-    background: white;
+    padding: 1rem 1.25rem;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
     border-top: 1px solid #e2e8f0;
 }
 
 .pagination-info {
     color: #64748b;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
 }
 
 .pagination-controls {
     display: flex;
-    gap: 0.25rem;
+    gap: 0.35rem;
 }
 
 .page-btn {
-    padding: 0.375rem 0.625rem;
-    border: 1px solid #cbd5e1;
+    padding: 0.5rem 0.85rem;
+    border: 2px solid #e2e8f0;
     background: white;
-    border-radius: 5px;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
+    font-weight: 600;
     transition: all 0.2s;
-    min-width: 32px;
+    min-width: 38px;
+    color: #64748b;
 }
 
 .page-btn:hover:not(:disabled) {
-    background: #f1f5f9;
+    border-color: #3b82f6;
+    color: #3b82f6;
+    background: #eff6ff;
 }
 
 .page-btn.active {
-    background: #3b82f6;
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
     color: white;
-    border-color: #3b82f6;
+    border-color: transparent;
 }
 
 .page-btn:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
 }
 
@@ -486,17 +567,20 @@ body > nav + div {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     color: #64748b;
 }
 
 .items-per-page select {
-    padding: 0.375rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 5px;
-    font-size: 0.8rem;
+    padding: 0.5rem 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
 }
-/* Export Modal */
+
+/* EXPORT MODAL */
 .export-modal {
     display: none;
     position: fixed;
@@ -505,63 +589,95 @@ body > nav + div {
     top: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(8px);
 }
 
 .export-modal.active {
     display: flex;
     align-items: center;
     justify-content: center;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .export-modal-content {
     background: white;
-    border-radius: 12px;
+    border-radius: 20px;
     width: 90%;
-    max-width: 700px;
-    max-height: 85vh;
+    max-width: 650px;
+    max-height: 80vh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
 }
 
 .export-modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.5rem;
-    border-bottom: 2px solid #e2e8f0;
+    padding: 1.5rem 1.75rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: linear-gradient(180deg, #f8fafc 0%, white 100%);
+    border-radius: 20px 20px 0 0;
 }
 
 .export-modal-header h3 {
     margin: 0;
     font-size: 1.25rem;
     color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.export-modal-header h3::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 20px;
+    background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+    border-radius: 2px;
+}
+
+.export-filter-info {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-top: 0.25rem;
 }
 
 .close-modal {
-    background: none;
+    background: #f1f5f9;
     border: none;
-    font-size: 2rem;
+    font-size: 1.5rem;
     color: #64748b;
     cursor: pointer;
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
+    border-radius: 10px;
     transition: all 0.2s;
 }
 
 .close-modal:hover {
-    background: #f1f5f9;
-    color: #1e293b;
+    background: #fee2e2;
+    color: #dc2626;
 }
 
 .export-modal-body {
-    padding: 1.5rem;
+    padding: 1.5rem 1.75rem;
     overflow-y: auto;
     flex: 1;
 }
@@ -570,33 +686,54 @@ body > nav + div {
     margin-bottom: 1rem;
 }
 
+.export-search input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.9rem;
+}
+
+.export-search input:focus {
+    outline: none;
+    border-color: #3b82f6;
+}
+
 .export-select-all {
-    padding: 1rem;
-    background: #f8fafc;
-    border-radius: 8px;
+    padding: 1rem 1.25rem;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border-radius: 12px;
     margin-bottom: 1rem;
+    border: 2px solid #a7f3d0;
 }
 
 .export-select-all label {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
     cursor: pointer;
     margin: 0;
+    font-weight: 600;
+    color: #065f46;
+}
+
+.export-select-all input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: #10b981;
 }
 
 .export-styles-list {
-    max-height: 400px;
+    max-height: 350px;
     overflow-y: auto;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 0.5rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
 }
 
 .export-style-item {
-    padding: 0.75rem;
+    padding: 1rem 1.25rem;
     border-bottom: 1px solid #f1f5f9;
-    transition: background 0.2s;
+    transition: all 0.2s;
 }
 
 .export-style-item:last-child {
@@ -609,22 +746,23 @@ body > nav + div {
 
 .export-style-item label {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 0.75rem;
     cursor: pointer;
     margin: 0;
 }
 
 .export-style-item input[type="checkbox"] {
-    margin-top: 0.25rem;
-    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    accent-color: #10b981;
 }
 
 .export-style-info {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.15rem;
 }
 
 .export-style-info strong {
@@ -634,7 +772,7 @@ body > nav + div {
 
 .export-style-info span {
     color: #475569;
-    font-size: 0.875rem;
+    font-size: 0.85rem;
 }
 
 .export-style-info small {
@@ -646,33 +784,28 @@ body > nav + div {
     display: flex;
     justify-content: flex-end;
     gap: 0.75rem;
-    padding: 1.5rem;
-    border-top: 2px solid #e2e8f0;
+    padding: 1.25rem 1.75rem;
+    border-top: 1px solid #e2e8f0;
+    background: linear-gradient(180deg, white 0%, #f8fafc 100%);
+    border-radius: 0 0 20px 20px;
+}
+
+.export-modal-footer .btn {
+    padding: 0.75rem 1.5rem;
+}
+
+.no-results {
+    text-align: center;
+    padding: 2rem;
+    color: #64748b;
 }
 </style>
 
 <div class="page-container">
-    <!-- Header -->
     <div class="page-header">
-        <h1>📊 All Styles</h1>
-        <div class="header-actions">
-            <a href="/style/new" class="btn btn-primary">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                New Style
-            </a>
-            <button class="btn btn-secondary" onclick="openExportModal()">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                </svg>
-                Export to SAP
-            </button>
-            <a href="/admin-panel" class="btn btn-secondary">← Back</a>
-        </div>
+        <h1>All Styles</h1>
     </div>
 
-    <!-- Stats Cards -->
     <div class="stats-cards">
         <div class="stat-card">
             <h3>{{ total_styles }}</h3>
@@ -684,76 +817,84 @@ body > nav + div {
         </div>
         <div class="stat-card">
             <h3>${{ "%.2f"|format(total_value) }}</h3>
-            <p>Total Inventory Value</p>
+            <p>Total Value</p>
         </div>
     </div>
 
-    <!-- Filters Section -->
+    <!-- REVAMPED FILTER BOX -->
     <div class="filters-section">
-        <div class="filters-grid">
-            <div>
-                <input type="text" id="searchInput" class="form-control" placeholder="🔍 Search vendor style, name, fabric, or vendor..." onkeyup="filterTable()">
+        <div class="filters-top-row">
+            <div class="search-box">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                <input type="text" id="searchInput" placeholder="Search vendor style, name, or fabric...">
             </div>
-            <div>
-                <select id="genderFilter" class="form-select" onchange="filterTable()">
-                    <option value="">All Genders</option>
-                    <option value="MENS">MENS</option>
-                    <option value="LADIES">LADIES</option>
-                    <option value="UNISEX">UNISEX</option>
-                </select>
-            </div>
-            <div>
-                <select id="costFilter" class="form-select" onchange="filterTable()">
-                    <option value="">All Costs</option>
-                    <option value="0-50">$0 - $50</option>
-                    <option value="50-100">$50 - $100</option>
-                    <option value="100+">$100+</option>
-                </select>
-            </div>
-        </div>
-
-        <div>
-            <div class="quick-filters-label">Quick Filters</div>
-            <div class="quick-filters">
-                <button class="filter-chip active" onclick="quickFilter('all', event)">All</button>
-                <button class="filter-chip" onclick="quickFilter('high-margin', event)">High Margin (65%+)</button>
-                <button class="filter-chip" onclick="quickFilter('low-margin', event)">Low Margin (<50%)</button>
-                <button class="filter-chip" onclick="quickFilter('favorites', event)">⭐ Favorites</button>
-                <button class="filter-chip" onclick="quickFilter('recent', event)">🆕 Modified Today</button>
-                <button class="filter-chip" onclick="quickFilter('week', event)">This Week</button>
-                <button class="btn-secondary" onclick="clearFilters()" style="margin-left: auto;">Clear All</button>
+            <div class="dropdown-group">
+                <div class="custom-select">
+                    <select id="genderFilter">
+                        <option value="">All Genders</option>
+                        <option value="MENS">MENS</option>
+                        <option value="LADIES">LADIES</option>
+                        <option value="UNISEX">UNISEX</option>
+                    </select>
+                </div>
+                <div class="custom-select">
+                    <select id="costFilter">
+                        <option value="">All Costs</option>
+                        <option value="0-50">$0 - $50</option>
+                        <option value="50-100">$50 - $100</option>
+                        <option value="100+">$100+</option>
+                    </select>
+                </div>
             </div>
         </div>
-    </div>
-
-    <!-- Bulk Actions -->
-    <div class="bulk-actions" id="bulkActions">
-        <span class="bulk-actions-label" id="selectedCount">0 selected</span>
-        <button class="btn btn-success" onclick="exportSelected()">
-            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 4px;">
-                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+        
+        <div class="filters-bottom-row">
+            <div class="filter-chips">
+                <button class="filter-chip active" data-filter="all">All</button>
+                <button class="filter-chip" data-filter="high-margin">High Margin (65%+)</button>
+                <button class="filter-chip" data-filter="low-margin">Low Margin</button>
+                {% if permissions.can_edit %}
+                <button class="filter-chip" data-filter="favorites">Favorites</button>
+                {% endif %}
+                <button class="filter-chip" data-filter="recent">Today</button>
+                <button class="filter-chip" data-filter="week">This Week</button>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-clear" id="clearFiltersBtn">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                    Clear All
+                </button>
+                <button class="btn btn-export" id="openExportBtn">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    Export to SAP
+                </button>
+            </div>
+        </div>
+        
+        <div class="active-filters-bar" id="activeFiltersBar">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
             </svg>
-            Export Selected to SAP
-        </button>
-        <button class="btn btn-danger" onclick="bulkDelete()">Delete Selected</button>
-        <button class="btn btn-secondary" onclick="clearSelection()">Clear Selection</button>
+            <span>Active filters: <strong id="activeFiltersList"></strong> — <span id="filteredCount">0</span> styles found</span>
+        </div>
     </div>
 
-    <!-- Table Container -->
     <div class="table-container">
         <table class="modern-table" id="stylesTable">
             <thead>
                 <tr>
-                    <th style="width: 40px;">
-                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
-                    </th>
-                    <th class="sortable" onclick="sortTable('vendor_style')">Vendor Style</th>
-                    <th class="sortable" onclick="sortTable('style_name')">Style Name</th>
-                    <th class="sortable" onclick="sortTable('gender')">Gender</th>
-                    <th class="sortable" onclick="sortTable('cost')">Total Cost</th>
-                    <th class="sortable" onclick="sortTable('margin')">Margin %</th>
-                    <th class="sortable" onclick="sortTable('updated_at')">Last Modified</th>
+                    <th class="sortable" data-sort="vendor_style">Vendor Style</th>
+                    <th class="sortable" data-sort="style_name">Style Name</th>
+                    <th class="sortable" data-sort="gender">Gender</th>
+                    <th class="sortable" data-sort="cost">Cost</th>
+                    <th class="sortable" data-sort="margin">Margin</th>
+                    <th class="sortable" data-sort="updated_at">Modified</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
@@ -761,52 +902,43 @@ body > nav + div {
             <tbody id="tableBody">
                 {% for style in styles %}
                 <tr class="{% if style.base_margin_percent >= 65 %}margin-high{% elif style.base_margin_percent >= 50 %}margin-medium{% else %}margin-low{% endif %}"
-                    data-vendor-style="{{ style.vendor_style|lower }}"
-                    data-style-name="{{ style.style_name|lower }}"
+                    data-id="{{ style.id }}"
+                    data-vendor-style="{{ style.vendor_style }}"
+                    data-vendor-style-lower="{{ style.vendor_style|lower }}"
+                    data-style-name="{{ style.style_name }}"
+                    data-style-name-lower="{{ style.style_name|lower }}"
                     data-gender="{{ style.gender }}"
                     data-cost="{{ style.get_total_cost() }}"
                     data-margin="{{ style.base_margin_percent }}"
                     data-updated="{{ style.updated_at.isoformat() if style.updated_at else '' }}"
-                    data-favorite="{{ 'true' if style.is_favorite else 'false' }}">
+                    data-favorite="{{ 'true' if style.is_favorite else 'false' }}"
+                    data-visible="true">
                     
-                    <td>
-                        <input type="checkbox" class="style-checkbox" value="{{ style.id }}" onchange="updateBulkActions()">
-                    </td>
-                    
-
                     <td style="display: flex; align-items: center; gap: 0.5rem;">
+                        {% if permissions.can_edit %}
                         <svg class="favorite-star {% if style.is_favorite %}active{% endif %}" 
                             data-style-id="{{ style.id }}"
-                            onclick="toggleFavorite(this.dataset.styleId, this)"
-                            width="18" 
-                            height="18" 
-                            viewBox="0 0 24 24" 
-                            style="cursor: pointer; flex-shrink: 0;">
+                            width="18" height="18" viewBox="0 0 24 24">
                             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" 
-                                stroke="currentColor" 
-                                stroke-width="2" 
-                                stroke-linecap="round" 
-                                stroke-linejoin="round"></path>
+                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
-                        <strong>{{ style.vendor_style }}</strong>
+                        {% endif %}
+                        <a href="/style/view?vendor_style={{ style.vendor_style }}" class="vendor-style-link">{{ style.vendor_style }}</a>
                     </td>
-                                        <td>{{ style.style_name }}</td>
+                    <td>{{ style.style_name }}</td>
                     <td>{{ style.gender }}</td>
                     <td><strong>${{ "%.2f"|format(style.get_total_cost()) }}</strong></td>
                     <td>
                         {% if style.base_margin_percent >= 65 %}
-                            <span style="font-weight: 600; color: #10b981;">{{ style.base_margin_percent|int }}%</span>
+                        <span style="font-weight: 700; color: #059669;">{{ style.base_margin_percent|int }}%</span>
                         {% elif style.base_margin_percent >= 50 %}
-                            <span style="font-weight: 600; color: #3b82f6;">{{ style.base_margin_percent|int }}%</span>
+                        <span style="font-weight: 700; color: #3b82f6;">{{ style.base_margin_percent|int }}%</span>
                         {% else %}
-                            <span style="font-weight: 600; color: #ef4444;">{{ style.base_margin_percent|int }}%</span>
+                        <span style="font-weight: 700; color: #dc2626;">{{ style.base_margin_percent|int }}%</span>
                         {% endif %}
                     </td>
-                   
                     <td>
-                        <small>{{ style.updated_at.strftime('%Y-%m-%d %H:%M') if style.updated_at else 'N/A' }}</small>
-                        <br>
-                        <small style="color: #94a3b8;">by {{ style.last_modified_by or 'Admin' }}</small>
+                        <small style="color: #64748b;">{{ style.updated_at.strftime('%b %d, %Y') if style.updated_at else 'N/A' }}</small>
                     </td>
                     <td>
                         <span class="status-badge {% if style.is_active %}status-active{% else %}status-inactive{% endif %}">
@@ -816,45 +948,44 @@ body > nav + div {
                     
                     <td>
                         <div class="action-buttons">
-                                <button class="action-btn edit" 
-                                        title="Edit" 
-                                        data-vendor-style="{{ style.vendor_style }}"
-                                        onclick="editStyle(this.dataset.vendorStyle)">
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                    </svg>
-                                </button>
-                                <button class="action-btn copy" 
-                                        title="Duplicate" 
-                                        data-style-id="{{ style.id }}"
-                                        onclick="duplicateStyle(this.dataset.styleId)">
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                                    </svg>
-                                </button>
-                                <button class="action-btn delete" 
-                                        title="Delete" 
-                                        data-style-id="{{ style.id }}"
-                                        data-vendor-style="{{ style.vendor_style }}"
-                                        onclick="deleteStyle(this.dataset.styleId, this.dataset.vendorStyle)">
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                    </svg>
-                                </button>
-                            </div>
+                            {% if permissions.can_edit %}
+                            <button class="action-btn edit" title="Edit Style" data-vendor-style="{{ style.vendor_style }}">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                            </button>
+                            <button class="action-btn copy" title="Duplicate Style" data-style-id="{{ style.id }}">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                                </svg>
+                            </button>
+                            {% endif %}
+                            <button class="action-btn export" title="Export Style" data-style-id="{{ style.id }}">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                                </svg>
+                            </button>
+                            {% if permissions.can_delete %}
+                            <button class="action-btn delete" title="Delete Style" data-style-id="{{ style.id }}" data-vendor-style="{{ style.vendor_style }}">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
 
-        <!-- Pagination -->
         <div class="pagination">
             <div class="pagination-info">
-                Showing <strong id="showingFrom">1</strong> to <strong id="showingTo">50</strong> of <strong id="totalRows">{{ total_styles }}</strong> styles
+                Showing <strong id="showingFrom">1</strong>-<strong id="showingTo">50</strong> of <strong id="totalRows">{{ total_styles }}</strong> styles
             </div>
             <div class="items-per-page">
-                <span>Items per page:</span>
-                <select id="itemsPerPage" onchange="changeItemsPerPage()">
+                <span>Show:</span>
+                <select id="itemsPerPage">
                     <option value="25">25</option>
                     <option value="50" selected>50</option>
                     <option value="100">100</option>
@@ -864,60 +995,34 @@ body > nav + div {
         </div>
     </div>
 </div>
+
 <!-- Export Modal -->
 <div id="exportModal" class="export-modal">
     <div class="export-modal-content">
         <div class="export-modal-header">
-            <h3>📊 Export Styles to SAP B1</h3>
-            <button class="close-modal" onclick="closeExportModal()">&times;</button>
-        </div>
-        
-        <div class="export-modal-body">
-            <!-- Search Bar -->
-            <div class="export-search">
-                <input type="text" 
-                       id="exportSearch" 
-                       class="form-control" 
-                       placeholder="🔍 Search by vendor style or name..." 
-                       onkeyup="filterExportList()">
+            <div>
+                <h3>Export to SAP</h3>
+                <div class="export-filter-info" id="exportFilterInfo">Showing all styles</div>
             </div>
-            
-            <!-- Select All -->
+            <button class="close-modal" id="closeExportBtn">&times;</button>
+        </div>
+        <div class="export-modal-body">
+            <div class="export-search">
+                <input type="text" id="exportSearch" placeholder="Search within current view...">
+            </div>
             <div class="export-select-all">
                 <label>
-                    <input type="checkbox" id="exportSelectAll" onchange="toggleExportSelectAll()">
-                    <strong>Select All (<span id="exportSelectedCount">0</span> selected)</strong>
+                    <input type="checkbox" id="exportSelectAll">
+                    <span>Select All (<span id="exportSelectedCount">0</span> of <span id="exportTotalCount">0</span>)</span>
                 </label>
             </div>
-            
-            <!-- Styles List -->
-            <div class="export-styles-list" id="exportStylesList">
-                {% for style in styles %}
-                <div class="export-style-item" data-search="{{ style.vendor_style|lower }} {{ style.style_name|lower }}">
-                    <label>
-                        <input type="checkbox" 
-                               class="export-style-checkbox" 
-                               value="{{ style.id }}"
-                               data-vendor-style="{{ style.vendor_style }}"
-                               data-style-name="{{ style.style_name }}"
-                               onchange="updateExportCount()">
-                        <div class="export-style-info">
-                            <strong>{{ style.vendor_style }}</strong>
-                            <span>{{ style.style_name }}</span>
-                            <small class="text-muted">{{ style.gender }} • ${{ "%.2f"|format(style.get_total_cost()) }}</small>
-                        </div>
-                    </label>
-                </div>
-                {% endfor %}
-            </div>
+            <div class="export-styles-list" id="exportStylesList"></div>
         </div>
-        
         <div class="export-modal-footer">
-            <button class="btn btn-secondary" onclick="closeExportModal()">Cancel</button>
-            <button class="btn btn-success" onclick="exportSelectedFromModal()">
-                <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style="margin-right: 4px;">
-                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+            <button class="btn btn-secondary" id="cancelExportBtn">Cancel</button>
+            <button class="btn btn-export" id="doExportBtn">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                 </svg>
                 Export Selected
             </button>
@@ -926,421 +1031,550 @@ body > nav + div {
 </div>
 
 <script>
-let currentSort = { column: 'updated_at', direction: 'desc' };
-let currentPage = 1;
-let itemsPerPage = 50;
-let currentFilter = 'all';
-
-document.addEventListener('DOMContentLoaded', function() {
-    sortTable('updated_at');
-    updatePagination();
-});
-
-function sortTable(column) {
-    const table = document.getElementById('stylesTable');
-    const tbody = table.querySelector('tbody');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
+(function() {
+    "use strict";
     
-    if (currentSort.column === column) {
-        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
-    } else {
-        currentSort.column = column;
-        currentSort.direction = 'asc';
+    var currentSort = { column: "updated_at", direction: "desc" };
+    var currentPage = 1;
+    var itemsPerPage = 50;
+    var filteredRows = [];
+    
+    var activeFilters = {
+        "high-margin": false,
+        "low-margin": false,
+        "favorites": false,
+        "recent": false,
+        "week": false
+    };
+
+    function init() {
+        bindEvents();
+        sortTable("updated_at");
     }
-    
-    // Remove all sort indicators
-    table.querySelectorAll('th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
-    
-    // Find the clicked header and add sort indicator
-    const clickedHeader = Array.from(table.querySelectorAll('th')).find(th => {
-        const onClick = th.getAttribute('onclick');
-        return onClick && onClick.includes(`'${column}'`);
-    });
-    
-    if (clickedHeader) {
-        clickedHeader.classList.add(currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
-    }
-    
-    // Sort rows
-    rows.sort((a, b) => {
-        let aVal, bVal;
+
+    function bindEvents() {
+        document.getElementById("searchInput").addEventListener("keyup", applyFilters);
+        document.getElementById("genderFilter").addEventListener("change", applyFilters);
+        document.getElementById("costFilter").addEventListener("change", applyFilters);
+        document.getElementById("clearFiltersBtn").addEventListener("click", clearFilters);
+        document.getElementById("itemsPerPage").addEventListener("change", changeItemsPerPage);
+        document.getElementById("openExportBtn").addEventListener("click", openExportModal);
+        document.getElementById("closeExportBtn").addEventListener("click", closeExportModal);
+        document.getElementById("cancelExportBtn").addEventListener("click", closeExportModal);
+        document.getElementById("exportSearch").addEventListener("keyup", filterExportList);
+        document.getElementById("exportSelectAll").addEventListener("change", toggleExportSelectAll);
+        document.getElementById("doExportBtn").addEventListener("click", exportSelectedFromModal);
         
-        switch(column) {
-            case 'vendor_style':
-                aVal = a.dataset.vendorStyle;
-                bVal = b.dataset.vendorStyle;
-                break;
-            case 'style_name':
-                aVal = a.dataset.styleName;
-                bVal = b.dataset.styleName;
-                break;
-            case 'gender':
-                aVal = a.dataset.gender || '';
-                bVal = b.dataset.gender || '';
-                break;
-            case 'cost':
-                aVal = parseFloat(a.dataset.cost) || 0;
-                bVal = parseFloat(b.dataset.cost) || 0;
-                break;
-            case 'margin':
-                aVal = parseFloat(a.dataset.margin) || 0;
-                bVal = parseFloat(b.dataset.margin) || 0;
-                break;
-            case 'updated_at':
-                aVal = new Date(a.dataset.updated || '1970-01-01');
-                bVal = new Date(b.dataset.updated || '1970-01-01');
-                break;
-            default:
-                return 0;
-        }
-        
-        if (aVal < bVal) return currentSort.direction === 'asc' ? -1 : 1;
-        if (aVal > bVal) return currentSort.direction === 'asc' ? 1 : -1;
-        return 0;
-    });
-    
-    rows.forEach(row => tbody.appendChild(row));
-    updatePagination();
-}
-
-
-function filterTable() {
-    const searchValue = document.getElementById('searchInput').value.toLowerCase();
-    const genderValue = document.getElementById('genderFilter').value;
-    const costValue = document.getElementById('costFilter').value;
-    const rows = document.querySelectorAll('#tableBody tr');
-    
-    rows.forEach(row => {
-        const text = row.textContent.toLowerCase();
-        const gender = row.dataset.gender;
-        const cost = parseFloat(row.dataset.cost);
-        const favorite = row.dataset.favorite === 'true';
-        const updatedDate = new Date(row.dataset.updated);
-        const today = new Date();
-        const daysDiff = Math.floor((today - updatedDate) / (1000 * 60 * 60 * 24));
-        
-        let showRow = true;
-        
-        if (searchValue && !text.includes(searchValue)) showRow = false;
-        if (genderValue && gender !== genderValue) showRow = false;
-        if (costValue) {
-            if (costValue === '0-50' && (cost < 0 || cost > 50)) showRow = false;
-            if (costValue === '50-100' && (cost < 50 || cost > 100)) showRow = false;
-            if (costValue === '100+' && cost < 100) showRow = false;
-        }
-        
-        if (currentFilter === 'high-margin' && parseFloat(row.dataset.margin) < 65) showRow = false;
-        if (currentFilter === 'low-margin' && parseFloat(row.dataset.margin) >= 50) showRow = false;
-        if (currentFilter === 'favorites' && !favorite) showRow = false;
-        if (currentFilter === 'recent' && daysDiff > 0) showRow = false;
-        if (currentFilter === 'week' && daysDiff > 7) showRow = false;
-        
-        row.style.display = showRow ? '' : 'none';
-    });
-    
-    currentPage = 1;
-    updatePagination();
-}
-
-function quickFilter(filter, event) {
-    currentFilter = filter;
-    document.querySelectorAll('.filter-chip').forEach(chip => chip.classList.remove('active'));
-    event.target.classList.add('active');
-    filterTable();
-}
-
-function clearFilters() {
-    document.getElementById('searchInput').value = '';
-    document.getElementById('genderFilter').value = '';
-    document.getElementById('costFilter').value = '';
-    currentFilter = 'all';
-    document.querySelectorAll('.filter-chip').forEach(chip => chip.classList.remove('active'));
-    document.querySelector('.filter-chip').classList.add('active');
-    filterTable();
-}
-
-function exportSelected() {
-    const checked = Array.from(document.querySelectorAll('.style-checkbox:checked')).map(cb => parseInt(cb.value));
-    
-    if (checked.length === 0) {
-        alert('Please select at least one style to export');
-        return;
-    }
-    
-    // Get CSRF token
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-    
-    // Send to export endpoint
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '/export-sap-format';
-    
-    // Add CSRF token
-    const csrfInput = document.createElement('input');
-    csrfInput.type = 'hidden';
-    csrfInput.name = 'csrf_token';
-    csrfInput.value = csrfToken;
-    form.appendChild(csrfInput);
-    
-    // Add style IDs
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'style_ids';
-    input.value = JSON.stringify(checked);
-    form.appendChild(input);
-    
-    document.body.appendChild(form);
-    form.submit();
-}
-
-function updatePagination() {
-    const rows = Array.from(document.querySelectorAll('#tableBody tr')).filter(row => row.style.display !== 'none');
-    const totalRows = rows.length;
-    const totalPages = Math.ceil(totalRows / itemsPerPage);
-    
-    rows.forEach((row, index) => {
-        const start = (currentPage - 1) * itemsPerPage;
-        const end = start + itemsPerPage;
-        row.style.display = (index >= start && index < end) ? '' : 'none';
-    });
-    
-    document.getElementById('showingFrom').textContent = totalRows > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
-    document.getElementById('showingTo').textContent = Math.min(currentPage * itemsPerPage, totalRows);
-    document.getElementById('totalRows').textContent = totalRows;
-    
-    const controls = document.getElementById('paginationControls');
-    controls.innerHTML = '';
-    
-    const prevBtn = document.createElement('button');
-    prevBtn.className = 'page-btn';
-    prevBtn.textContent = '←';
-    prevBtn.disabled = currentPage === 1;
-    prevBtn.onclick = () => { currentPage--; updatePagination(); };
-    controls.appendChild(prevBtn);
-    
-    for (let i = 1; i <= Math.min(totalPages, 10); i++) {
-        const btn = document.createElement('button');
-        btn.className = 'page-btn' + (i === currentPage ? ' active' : '');
-        btn.textContent = i;
-        btn.onclick = () => { currentPage = i; updatePagination(); };
-        controls.appendChild(btn);
-    }
-    
-    const nextBtn = document.createElement('button');
-    nextBtn.className = 'page-btn';
-    nextBtn.textContent = '→';
-    nextBtn.disabled = currentPage === totalPages || totalPages === 0;
-    nextBtn.onclick = () => { currentPage++; updatePagination(); };
-    controls.appendChild(nextBtn);
-}
-
-function changeItemsPerPage() {
-    itemsPerPage = parseInt(document.getElementById('itemsPerPage').value);
-    currentPage = 1;
-    updatePagination();
-}
-
-function toggleSelectAll() {
-    const selectAll = document.getElementById('selectAll');
-    document.querySelectorAll('.style-checkbox').forEach(cb => {
-        if (cb.closest('tr').style.display !== 'none') cb.checked = selectAll.checked;
-    });
-    updateBulkActions();
-}
-
-function updateBulkActions() {
-    const checked = document.querySelectorAll('.style-checkbox:checked').length;
-    const bulkActions = document.getElementById('bulkActions');
-    const selectedCount = document.getElementById('selectedCount');
-    
-    if (checked > 0) {
-        bulkActions.classList.add('active');
-        selectedCount.textContent = `${checked} selected`;
-    } else {
-        bulkActions.classList.remove('active');
-    }
-}
-
-function clearSelection() {
-    document.querySelectorAll('.style-checkbox').forEach(cb => cb.checked = false);
-    document.getElementById('selectAll').checked = false;
-    updateBulkActions();
-}
-
-function editStyle(vendorStyle) {
-    window.location.href = `/style/new?vendor_style=${vendorStyle}`;
-}
-
-function duplicateStyle(styleId) {
-    if (!confirm('Duplicate this style?\n\nYou will need to enter a new Vendor Style and Style Name before saving.')) return;
-    window.location.href = `/style/new?duplicate_from_id=${styleId}`;
-}
-
-async function deleteStyle(styleId, vendorStyle) {
-    if (!confirm(`Delete style "${vendorStyle}"?\n\nThis action cannot be undone.`)) return;
-    
-    try {
-        const response = await fetch(`/api/style/delete/${styleId}`, {
-            method: 'DELETE'
+        document.querySelectorAll(".filter-chip").forEach(function(chip) {
+            chip.addEventListener("click", function() {
+                handleFilterClick(this.getAttribute("data-filter"), this);
+            });
         });
-        const data = await response.json();
         
-        if (data.ok) {
-            alert('Style deleted successfully!');
-            window.location.reload();
-        } else {
-            alert('Error: ' + data.error);
-        }
-    } catch (error) {
-        alert('Error deleting style: ' + error);
-    }
-}
-
-async function bulkDelete() {
-    const checked = Array.from(document.querySelectorAll('.style-checkbox:checked')).map(cb => parseInt(cb.value));
-    
-    if (checked.length === 0) {
-        alert('No styles selected');
-        return;
-    }
-    
-    if (!confirm(`Delete ${checked.length} style(s)?\n\nThis action cannot be undone.`)) return;
-    
-    try {
-        const response = await fetch('/api/styles/bulk-delete', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({style_ids: checked})
+        document.querySelectorAll("th.sortable").forEach(function(th) {
+            th.addEventListener("click", function() {
+                sortTable(this.getAttribute("data-sort"));
+            });
         });
-        const data = await response.json();
         
-        if (data.ok) {
-            alert(data.message);
-            window.location.reload();
-        } else {
-            alert('Error: ' + data.error);
-        }
-    } catch (error) {
-        alert('Error deleting styles: ' + error);
+        document.querySelectorAll(".favorite-star").forEach(function(star) {
+            star.addEventListener("click", function() {
+                toggleFavorite(this.getAttribute("data-style-id"), this);
+            });
+        });
+        
+        document.querySelectorAll(".action-btn.edit").forEach(function(btn) {
+            btn.addEventListener("click", function() {
+                editStyle(this.getAttribute("data-vendor-style"));
+            });
+        });
+        
+        document.querySelectorAll(".action-btn.copy").forEach(function(btn) {
+            btn.addEventListener("click", function() {
+                duplicateStyle(this.getAttribute("data-style-id"));
+            });
+        });
+        
+        document.querySelectorAll(".action-btn.export").forEach(function(btn) {
+            btn.addEventListener("click", function() {
+                quickExport(this.getAttribute("data-style-id"));
+            });
+        });
+        
+        document.querySelectorAll(".action-btn.delete").forEach(function(btn) {
+            btn.addEventListener("click", function() {
+                deleteStyle(this.getAttribute("data-style-id"), this.getAttribute("data-vendor-style"));
+            });
+        });
+        
+        document.getElementById("exportModal").addEventListener("click", function(e) {
+            if (e.target === this) closeExportModal();
+        });
     }
-}
 
+    function handleFilterClick(filter, element) {
+        if (filter === "all") {
+            for (var key in activeFilters) {
+                activeFilters[key] = false;
+            }
+            document.querySelectorAll(".filter-chip").forEach(function(chip) {
+                chip.classList.remove("active", "active-secondary");
+            });
+            element.classList.add("active");
+        } else {
+            activeFilters[filter] = !activeFilters[filter];
+            
+            var allChip = document.querySelector(".filter-chip[data-filter='all']");
+            
+            if (activeFilters[filter]) {
+                element.classList.add("active-secondary");
+                allChip.classList.remove("active");
+            } else {
+                element.classList.remove("active-secondary");
+            }
+            
+            var anyActive = false;
+            for (var key in activeFilters) {
+                if (activeFilters[key]) {
+                    anyActive = true;
+                    break;
+                }
+            }
+            
+            if (!anyActive) {
+                allChip.classList.add("active");
+            }
+        }
+        
+        applyFilters();
+    }
 
-async function toggleFavorite(styleId, element) {
-    const isFavorite = element.classList.contains('active');
-    
-    try {
-        const response = await fetch(`/api/style/${styleId}/favorite`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
+    function applyFilters() {
+        var searchValue = document.getElementById("searchInput").value.toLowerCase();
+        var genderValue = document.getElementById("genderFilter").value;
+        var costValue = document.getElementById("costFilter").value;
+        var allRows = Array.from(document.querySelectorAll("#tableBody tr"));
+        
+        filteredRows = [];
+        
+        allRows.forEach(function(row) {
+            var text = row.textContent.toLowerCase();
+            var gender = row.getAttribute("data-gender");
+            var cost = parseFloat(row.getAttribute("data-cost"));
+            var margin = parseFloat(row.getAttribute("data-margin"));
+            var favorite = row.getAttribute("data-favorite") === "true";
+            var updatedStr = row.getAttribute("data-updated");
+            
+            var today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            var rowDate = updatedStr ? new Date(updatedStr) : new Date("1970-01-01");
+            rowDate.setHours(0, 0, 0, 0);
+            
+            var daysDiff = Math.floor((today - rowDate) / (1000 * 60 * 60 * 24));
+            
+            var showRow = true;
+            
+            if (searchValue && text.indexOf(searchValue) === -1) showRow = false;
+            if (genderValue && gender !== genderValue) showRow = false;
+            
+            if (costValue) {
+                if (costValue === "0-50" && cost > 50) showRow = false;
+                if (costValue === "50-100" && (cost < 50 || cost > 100)) showRow = false;
+                if (costValue === "100+" && cost < 100) showRow = false;
+            }
+            
+            if (activeFilters["high-margin"] && margin < 65) showRow = false;
+            if (activeFilters["low-margin"] && margin >= 50) showRow = false;
+            if (activeFilters["favorites"] && !favorite) showRow = false;
+            if (activeFilters["recent"] && daysDiff !== 0) showRow = false;
+            if (activeFilters["week"] && daysDiff > 7) showRow = false;
+            
+            row.setAttribute("data-visible", showRow ? "true" : "false");
+            
+            if (showRow) {
+                filteredRows.push(row);
+            }
+        });
+        
+        updateActiveFiltersInfo();
+        currentPage = 1;
+        updatePagination();
+    }
+
+    function updateActiveFiltersInfo() {
+        var activeList = [];
+        var filterLabels = {
+            "high-margin": "High Margin",
+            "low-margin": "Low Margin",
+            "favorites": "Favorites",
+            "recent": "Today",
+            "week": "This Week"
+        };
+        
+        for (var key in activeFilters) {
+            if (activeFilters[key]) {
+                activeList.push(filterLabels[key]);
+            }
+        }
+        
+        var genderVal = document.getElementById("genderFilter").value;
+        var costVal = document.getElementById("costFilter").value;
+        var searchVal = document.getElementById("searchInput").value;
+        
+        if (genderVal) activeList.push(genderVal);
+        if (costVal) activeList.push(costVal);
+        if (searchVal) activeList.push("\"" + searchVal + "\"");
+        
+        var bar = document.getElementById("activeFiltersBar");
+        var listEl = document.getElementById("activeFiltersList");
+        var countEl = document.getElementById("filteredCount");
+        
+        if (activeList.length > 0) {
+            listEl.textContent = activeList.join(" + ");
+            countEl.textContent = filteredRows.length;
+            bar.classList.add("show");
+        } else {
+            bar.classList.remove("show");
+        }
+    }
+
+    function sortTable(column) {
+        var table = document.getElementById("stylesTable");
+        var tbody = table.querySelector("tbody");
+        var rows = Array.from(tbody.querySelectorAll("tr"));
+        
+        if (currentSort.column === column) {
+            currentSort.direction = currentSort.direction === "asc" ? "desc" : "asc";
+        } else {
+            currentSort.column = column;
+            currentSort.direction = "asc";
+        }
+        
+        table.querySelectorAll("th").forEach(function(th) {
+            th.classList.remove("sort-asc", "sort-desc");
+        });
+        
+        var targetTh = table.querySelector("th[data-sort='" + column + "']");
+        if (targetTh) {
+            targetTh.classList.add(currentSort.direction === "asc" ? "sort-asc" : "sort-desc");
+        }
+        
+        rows.sort(function(a, b) {
+            var aVal, bVal;
+            switch(column) {
+                case "vendor_style": 
+                    aVal = a.getAttribute("data-vendor-style-lower") || ""; 
+                    bVal = b.getAttribute("data-vendor-style-lower") || ""; 
+                    break;
+                case "style_name": 
+                    aVal = a.getAttribute("data-style-name-lower") || ""; 
+                    bVal = b.getAttribute("data-style-name-lower") || ""; 
+                    break;
+                case "gender": 
+                    aVal = a.getAttribute("data-gender") || ""; 
+                    bVal = b.getAttribute("data-gender") || ""; 
+                    break;
+                case "cost": 
+                    aVal = parseFloat(a.getAttribute("data-cost")) || 0; 
+                    bVal = parseFloat(b.getAttribute("data-cost")) || 0; 
+                    break;
+                case "margin": 
+                    aVal = parseFloat(a.getAttribute("data-margin")) || 0; 
+                    bVal = parseFloat(b.getAttribute("data-margin")) || 0; 
+                    break;
+                case "updated_at": 
+                    aVal = new Date(a.getAttribute("data-updated") || "1970-01-01"); 
+                    bVal = new Date(b.getAttribute("data-updated") || "1970-01-01"); 
+                    break;
+                default: 
+                    return 0;
+            }
+            if (aVal < bVal) return currentSort.direction === "asc" ? -1 : 1;
+            if (aVal > bVal) return currentSort.direction === "asc" ? 1 : -1;
+            return 0;
+        });
+        
+        rows.forEach(function(row) { tbody.appendChild(row); });
+        applyFilters();
+    }
+
+    function clearFilters() {
+        document.getElementById("searchInput").value = "";
+        document.getElementById("genderFilter").value = "";
+        document.getElementById("costFilter").value = "";
+        
+        for (var key in activeFilters) {
+            activeFilters[key] = false;
+        }
+        
+        document.querySelectorAll(".filter-chip").forEach(function(chip) {
+            chip.classList.remove("active", "active-secondary");
+        });
+        document.querySelector(".filter-chip[data-filter='all']").classList.add("active");
+        
+        applyFilters();
+    }
+
+    function updatePagination() {
+        var allRows = Array.from(document.querySelectorAll("#tableBody tr"));
+        var totalFiltered = filteredRows.length;
+        var totalPages = Math.ceil(totalFiltered / itemsPerPage);
+        
+        if (currentPage > totalPages && totalPages > 0) {
+            currentPage = totalPages;
+        }
+        if (currentPage < 1) {
+            currentPage = 1;
+        }
+        
+        var startIndex = (currentPage - 1) * itemsPerPage;
+        var endIndex = startIndex + itemsPerPage;
+        
+        allRows.forEach(function(row) {
+            row.style.display = "none";
+        });
+        
+        filteredRows.forEach(function(row, index) {
+            if (index >= startIndex && index < endIndex) {
+                row.style.display = "";
+            }
+        });
+        
+        var showFrom = totalFiltered > 0 ? startIndex + 1 : 0;
+        var showTo = Math.min(endIndex, totalFiltered);
+        
+        document.getElementById("showingFrom").textContent = showFrom;
+        document.getElementById("showingTo").textContent = showTo;
+        document.getElementById("totalRows").textContent = totalFiltered;
+        
+        renderPaginationControls(totalPages);
+    }
+
+    function renderPaginationControls(totalPages) {
+        var controls = document.getElementById("paginationControls");
+        controls.innerHTML = "";
+        
+        var prevBtn = document.createElement("button");
+        prevBtn.className = "page-btn";
+        prevBtn.innerHTML = "&laquo;";
+        prevBtn.disabled = currentPage === 1;
+        prevBtn.addEventListener("click", function() {
+            if (currentPage > 1) {
+                currentPage--;
+                updatePagination();
+            }
+        });
+        controls.appendChild(prevBtn);
+        
+        var startPage = Math.max(1, currentPage - 2);
+        var endPage = Math.min(totalPages, startPage + 4);
+        
+        if (endPage - startPage < 4) {
+            startPage = Math.max(1, endPage - 4);
+        }
+        
+        for (var i = startPage; i <= endPage; i++) {
+            var btn = document.createElement("button");
+            btn.className = "page-btn" + (i === currentPage ? " active" : "");
+            btn.textContent = i;
+            (function(page) {
+                btn.addEventListener("click", function() {
+                    currentPage = page;
+                    updatePagination();
+                });
+            })(i);
+            controls.appendChild(btn);
+        }
+        
+        var nextBtn = document.createElement("button");
+        nextBtn.className = "page-btn";
+        nextBtn.innerHTML = "&raquo;";
+        nextBtn.disabled = currentPage === totalPages || totalPages === 0;
+        nextBtn.addEventListener("click", function() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                updatePagination();
+            }
+        });
+        controls.appendChild(nextBtn);
+    }
+
+    function changeItemsPerPage() {
+        itemsPerPage = parseInt(document.getElementById("itemsPerPage").value);
+        currentPage = 1;
+        updatePagination();
+    }
+
+    function editStyle(vendorStyle) {
+        window.location.href = "/style/new?vendor_style=" + encodeURIComponent(vendorStyle);
+    }
+
+    function duplicateStyle(styleId) {
+        if (!confirm("Duplicate this style?")) return;
+        window.location.href = "/style/new?duplicate_from_id=" + styleId;
+    }
+
+    function deleteStyle(styleId, vendorStyle) {
+        if (!confirm("Delete \"" + vendorStyle + "\"? This cannot be undone.")) return;
+        
+        fetch("/api/style/delete/" + styleId, { method: "DELETE" })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data.ok) {
+                    window.location.reload();
+                } else {
+                    alert("Error: " + data.error);
+                }
+            })
+            .catch(function(error) {
+                alert("Error: " + error);
+            });
+    }
+
+    function toggleFavorite(styleId, element) {
+        var isFavorite = element.classList.contains("active");
+        
+        fetch("/api/style/" + styleId + "/favorite", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify({is_favorite: !isFavorite})
+        })
+        .then(function(response) {
+            if (response.ok) {
+                element.classList.toggle("active");
+                element.closest("tr").setAttribute("data-favorite", (!isFavorite).toString());
+            }
+        })
+        .catch(function(error) {
+            console.error("Error:", error);
         });
+    }
+
+    function quickExport(styleId) {
+        submitExportForm([parseInt(styleId)]);
+    }
+
+    function openExportModal() {
+        var exportList = document.getElementById("exportStylesList");
+        exportList.innerHTML = "";
         
-        if (response.ok) {
-            element.classList.toggle('active');
-            element.closest('tr').dataset.favorite = !isFavorite;
-        }
-    } catch (error) {
-        console.error('Error toggling favorite:', error);
-    }
-}
-    
-
-function exportAllToExcel() {
-    window.location.href = '/export-all-styles';
-}
-
-// Export Modal Functions
-function openExportModal() {
-    document.getElementById('exportModal').classList.add('active');
-    updateExportCount();
-}
-
-function closeExportModal() {
-    document.getElementById('exportModal').classList.remove('active');
-}
-
-function filterExportList() {
-    const searchValue = document.getElementById('exportSearch').value.toLowerCase();
-    const items = document.querySelectorAll('.export-style-item');
-    
-    items.forEach(item => {
-        const searchText = item.dataset.search;
-        if (searchText.includes(searchValue)) {
-            item.style.display = '';
+        if (filteredRows.length === 0) {
+            exportList.innerHTML = '<div class="no-results">No styles match current filters</div>';
         } else {
-            item.style.display = 'none';
+            filteredRows.forEach(function(row) {
+                var id = row.getAttribute("data-id");
+                var vendorStyle = row.getAttribute("data-vendor-style");
+                var styleName = row.getAttribute("data-style-name");
+                var gender = row.getAttribute("data-gender");
+                var cost = parseFloat(row.getAttribute("data-cost")).toFixed(2);
+                
+                var item = document.createElement("div");
+                item.className = "export-style-item";
+                item.setAttribute("data-search", (vendorStyle + " " + styleName).toLowerCase());
+                item.innerHTML = 
+                    '<label>' +
+                        '<input type="checkbox" class="export-style-checkbox" value="' + id + '">' +
+                        '<div class="export-style-info">' +
+                            '<strong>' + vendorStyle + '</strong>' +
+                            '<span>' + styleName + '</span>' +
+                            '<small>' + gender + ' &bull; $' + cost + '</small>' +
+                        '</div>' +
+                    '</label>';
+                exportList.appendChild(item);
+            });
+            
+            document.querySelectorAll(".export-style-checkbox").forEach(function(cb) {
+                cb.addEventListener("change", updateExportCount);
+            });
         }
-    });
-}
-
-function toggleExportSelectAll() {
-    const selectAll = document.getElementById('exportSelectAll');
-    const checkboxes = document.querySelectorAll('.export-style-checkbox');
-    const visibleCheckboxes = Array.from(checkboxes).filter(cb => 
-        cb.closest('.export-style-item').style.display !== 'none'
-    );
-    
-    visibleCheckboxes.forEach(cb => {
-        cb.checked = selectAll.checked;
-    });
-    
-    updateExportCount();
-}
-
-function updateExportCount() {
-    const checked = document.querySelectorAll('.export-style-checkbox:checked').length;
-    document.getElementById('exportSelectedCount').textContent = checked;
-}
-
-function exportSelectedFromModal() {
-    const checked = Array.from(document.querySelectorAll('.export-style-checkbox:checked'))
-        .map(cb => parseInt(cb.value));
-    
-    if (checked.length === 0) {
-        alert('Please select at least one style to export');
-        return;
+        
+        var filterInfo = document.getElementById("exportFilterInfo");
+        var activeListEl = document.getElementById("activeFiltersList");
+        if (activeListEl && activeListEl.textContent) {
+            filterInfo.textContent = "Filtered by: " + activeListEl.textContent + " (" + filteredRows.length + " styles)";
+        } else {
+            filterInfo.textContent = "Showing all " + filteredRows.length + " styles";
+        }
+        
+        document.getElementById("exportTotalCount").textContent = filteredRows.length;
+        document.getElementById("exportSelectAll").checked = false;
+        updateExportCount();
+        
+        document.getElementById("exportModal").classList.add("active");
     }
-    
-    // Close modal
-    closeExportModal();
-    
-    // Get CSRF token
-    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-    
-    // Send to export endpoint
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '/export-sap-format';
-    
-    // Add CSRF token
-    const csrfInput = document.createElement('input');
-    csrfInput.type = 'hidden';
-    csrfInput.name = 'csrf_token';
-    csrfInput.value = csrfToken;
-    form.appendChild(csrfInput);
-    
-    // Add style IDs
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'style_ids';
-    input.value = JSON.stringify(checked);
-    form.appendChild(input);
-    
-    document.body.appendChild(form);
-    form.submit();
-}
 
-// Close modal on outside click
-window.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('exportModal')?.addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeExportModal();
+    function closeExportModal() {
+        document.getElementById("exportModal").classList.remove("active");
+    }
+
+    function filterExportList() {
+        var searchValue = document.getElementById("exportSearch").value.toLowerCase();
+        document.querySelectorAll(".export-style-item").forEach(function(item) {
+            var searchData = item.getAttribute("data-search") || "";
+            item.style.display = searchData.indexOf(searchValue) !== -1 ? "" : "none";
+        });
+    }
+
+    function toggleExportSelectAll() {
+        var selectAll = document.getElementById("exportSelectAll");
+        document.querySelectorAll(".export-style-checkbox").forEach(function(cb) {
+            if (cb.closest(".export-style-item").style.display !== "none") {
+                cb.checked = selectAll.checked;
+            }
+        });
+        updateExportCount();
+    }
+
+    function updateExportCount() {
+        var checked = document.querySelectorAll(".export-style-checkbox:checked").length;
+        document.getElementById("exportSelectedCount").textContent = checked;
+    }
+
+    function exportSelectedFromModal() {
+        var checkboxes = document.querySelectorAll(".export-style-checkbox:checked");
+        var checked = [];
+        checkboxes.forEach(function(cb) { checked.push(parseInt(cb.value)); });
+        
+        if (checked.length === 0) {
+            alert("Please select at least one style to export");
+            return;
         }
-    });
-});
+        
+        closeExportModal();
+        submitExportForm(checked);
+    }
 
+    function submitExportForm(styleIds) {
+        var csrfMeta = document.querySelector("meta[name='csrf-token']");
+        var csrfToken = csrfMeta ? csrfMeta.getAttribute("content") : "";
+        
+        var form = document.createElement("form");
+        form.method = "POST";
+        form.action = "/export-sap-format";
+        
+        var csrfInput = document.createElement("input");
+        csrfInput.type = "hidden";
+        csrfInput.name = "csrf_token";
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+        
+        var input = document.createElement("input");
+        input.type = "hidden";
+        input.name = "style_ids";
+        input.value = JSON.stringify(styleIds);
+        form.appendChild(input);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
 
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+})();
 </script>
 
 {% endblock %}

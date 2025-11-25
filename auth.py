@@ -37,14 +37,12 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
-            # Check if it's an API call
             if request.path.startswith('/api/'):
                 return jsonify({'error': 'Authentication required'}), 401
             flash('Please log in to access this page.', 'warning')
             return redirect(url_for('login'))
         
         if not current_user.is_admin():
-            # Check if it's an API call
             if request.path.startswith('/api/'):
                 return jsonify({'error': 'Admin access required'}), 403
             flash('Admin access required. You do not have permission to access this page.', 'danger')
@@ -52,3 +50,64 @@ def admin_required(f):
         
         return f(*args, **kwargs)
     return decorated_function
+
+# ============================================
+# ADD THESE TWO FUNCTIONS BELOW
+# ============================================
+
+def role_required(*roles):
+    """Decorator to require specific roles"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not current_user.is_authenticated:
+                if request.path.startswith('/api/'):
+                    return jsonify({'error': 'Authentication required'}), 401
+                flash('Please log in to access this page.', 'warning')
+                return redirect(url_for('login'))
+            
+            if current_user.role not in roles:
+                if request.path.startswith('/api/'):
+                    return jsonify({'error': 'Access denied'}), 403
+                flash('You do not have permission to access this page.', 'danger')
+                return redirect(url_for('index'))
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+
+def get_user_permissions():
+    """Return permissions based on user role"""
+    if not current_user.is_authenticated:
+        return {
+            'can_view': False,
+            'can_create': False,
+            'can_edit': False,
+            'can_delete': False,
+            'can_duplicate': False,
+            'can_favorite': False,
+            'can_export': False
+        }
+    
+    if current_user.role == 'admin':
+        return {
+            'can_view': True,
+            'can_create': True,
+            'can_edit': True,
+            'can_delete': True,
+            'can_duplicate': True,
+            'can_favorite': True,
+            'can_export': True
+        }
+    
+    # Regular user - VIEW and EXPORT only
+    return {
+        'can_view': True,
+        'can_create': False,
+        'can_edit': False,
+        'can_delete': False,
+        'can_duplicate': False,
+        'can_favorite': False,
+        'can_export': True
+    }

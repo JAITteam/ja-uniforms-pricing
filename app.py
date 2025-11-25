@@ -22,7 +22,7 @@ from io import StringIO
 from werkzeug.utils import secure_filename
 from flask_wtf.csrf import CSRFProtect
 from flask_login import login_user, logout_user, current_user, login_required
-from auth import init_auth, admin_required, login_required_custom
+from auth import init_auth, admin_required, login_required_custom, role_required, get_user_permissions
 from models import (
     Style, Fabric, User, FabricVendor, Notion, NotionVendor, 
     LaborOperation, CleaningCost, StyleFabric, StyleNotion, 
@@ -56,6 +56,32 @@ mail.init_app(app)
 csrf = CSRFProtect(app)
 
 init_auth(app)
+
+@app.context_processor
+def inject_permissions():
+    """Make user permissions available to all templates"""
+    if current_user.is_authenticated:
+        is_admin = current_user.role == 'admin'
+        return {
+            'permissions': get_user_permissions(),
+            'user_role': current_user.role,
+            'can_edit_styles': is_admin,
+            'can_delete_styles': is_admin,
+            'can_create_styles': is_admin,
+            'can_duplicate_styles': is_admin,
+            'can_favorite_styles': is_admin,
+            'is_admin': is_admin
+        }
+    return {
+        'permissions': get_user_permissions(),
+        'user_role': None,
+        'can_edit_styles': False,
+        'can_delete_styles': False,
+        'can_create_styles': False,
+        'can_duplicate_styles': False,
+        'can_favorite_styles': False,
+        'is_admin': False
+    }
 
 
 UPLOAD_FOLDER = 'static/img'
@@ -1424,9 +1450,9 @@ def export_sap_format():
 
 
 @app.route('/view-all-styles')
-@login_required
+@role_required('admin', 'user')  # Only admin and user roles allowed
 def view_all_styles():
-    """View all styles with filters"""
+    """View all styles with filters - RBAC enabled (Admin and User only)"""
     styles = Style.query.all()
     
     # Calculate stats
@@ -1434,11 +1460,16 @@ def view_all_styles():
     total_value = sum([s.get_total_cost() for s in styles])
     avg_cost = total_value / total_styles if total_styles > 0 else 0
     
+    # Get user permissions for frontend
+    permissions = get_user_permissions()
+    
     return render_template('view_all_styles.html', 
                          styles=styles,
                          total_styles=total_styles,
                          total_value=total_value,
-                         avg_cost=avg_cost)
+                         avg_cost=avg_cost,
+                         permissions=permissions,
+                         current_user=current_user)
 
 @app.route('/api/style/delete/<int:style_id>', methods=['DELETE'])
 @admin_required 
@@ -2066,6 +2097,8 @@ def create_cleaning():
     return jsonify({'success': True, 'id': cleaning.id})
 # ===== PLACEHOLDER ROUTES FOR FUTURE FEATURES =====
 @app.route("/style/new")
+@login_required
+@admin_required  
 def style_wizard():
     # Get all master data for dropdowns
     fabric_vendors = FabricVendor.query.order_by(FabricVendor.name).all()
@@ -2100,6 +2133,51 @@ def style_wizard():
                           default_label_cost=default_label_cost,
                           default_shipping_cost=default_shipping_cost)
 
+@app.route("/style/view")
+@role_required('admin', 'user')  # Both can view
+def style_view():
+    """View style details (read-only for users)"""
+    vendor_style = request.args.get('vendor_style', '')
+    
+    # Get all master data for display
+    fabric_vendors = FabricVendor.query.order_by(FabricVendor.name).all()
+    notion_vendors = NotionVendor.query.order_by(NotionVendor.name).all()
+    fabrics = Fabric.query.order_by(Fabric.name).all()
+    notions = Notion.query.order_by(Notion.name).all()
+    
+    labor_ops = []
+    fusion = LaborOperation.query.filter_by(name='FUSION').first()
+    if fusion: labor_ops.append(fusion)
+    marker = LaborOperation.query.filter_by(name='Marker+Cut').first()
+    if marker: labor_ops.append(marker)
+    sewing = LaborOperation.query.filter_by(name='Sewing').first()
+    if sewing: labor_ops.append(sewing)
+    button = LaborOperation.query.filter_by(name='Button/Snap/Grommet').first()
+    if button: labor_ops.append(button)
+    
+    garment_types = [cc.garment_type for cc in CleaningCost.query.order_by(CleaningCost.garment_type).all()]
+    size_ranges = SizeRange.query.order_by(SizeRange.name).all()
+    
+    label_cost_setting = GlobalSetting.query.filter_by(setting_key='avg_label_cost').first()
+    shipping_cost_setting = GlobalSetting.query.filter_by(setting_key='shipping_cost').first()
+    default_label_cost = label_cost_setting.setting_value if label_cost_setting else 0.20
+    default_shipping_cost = shipping_cost_setting.setting_value if shipping_cost_setting else 0.00
+    
+    # Get permissions
+    permissions = get_user_permissions()
+    
+    return render_template("style_wizard.html", 
+                          fabric_vendors=fabric_vendors,
+                          notion_vendors=notion_vendors,
+                          fabrics=fabrics,
+                          notions=notions,
+                          labor_ops=labor_ops,
+                          garment_types=garment_types,
+                          size_ranges=size_ranges,
+                          default_label_cost=default_label_cost,
+                          default_shipping_cost=default_shipping_cost,
+                          permissions=permissions,
+                          view_mode=not permissions['can_edit'])
 
 @app.get("/api/style/by-name")
 def api_style_by_name():
