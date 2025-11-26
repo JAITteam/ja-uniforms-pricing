@@ -2,9 +2,13 @@
 # Copy lines 1-46 and replace the messy imports at the top of your app.py
 
 import pandas as pd
+import logging
+from logging.handlers import RotatingFileHandler
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, Response, flash, session
 from sqlalchemy import func
 from flask_mail import Mail, Message
+from flask_migrate import Migrate
+import pytz
 
 # ===== LOAD ENVIRONMENT VARIABLES =====
 from dotenv import load_dotenv
@@ -13,11 +17,14 @@ load_dotenv()
 
 from config import Config
 from database import db
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import random
 import string
 from datetime import datetime, timedelta
 import os
 import csv
+from dotenv import load_dotenv
 from io import StringIO
 from werkzeug.utils import secure_filename
 from flask_wtf.csrf import CSRFProtect
@@ -30,24 +37,67 @@ from models import (
     SizeRange, GlobalSetting, StyleImage
 )
 import pytz
-
+load_dotenv()
 
 # Initialize Mail
 mail = Mail()
 # Store verification codes
 verification_codes = {}
 
+def setup_logging(app):
+    """Configure application logging"""
+    # Create logs folder if it doesn't exist
+    if not os.path.exists('logs'):
+        os.makedirs('logs')
+    
+    # Main log file - captures everything
+    file_handler = RotatingFileHandler(
+        'logs/ja_uniforms.log',
+        maxBytes=10 * 1024 * 1024,  # 10MB max size
+        backupCount=10               # Keep 10 backup files
+    )
+    file_handler.setFormatter(logging.Formatter(
+        '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
+    ))
+    file_handler.setLevel(logging.INFO)
+    
+    # Error-only log file - easier to find critical issues
+    error_handler = RotatingFileHandler(
+        'logs/ja_uniforms_errors.log',
+        maxBytes=10 * 1024 * 1024,
+        backupCount=10
+    )
+    error_handler.setFormatter(logging.Formatter(
+        '[%(asctime)s] %(levelname)s in %(pathname)s:%(lineno)d\n%(message)s\n'
+    ))
+    error_handler.setLevel(logging.ERROR)
+    
+    # Add handlers to app
+    app.logger.addHandler(file_handler)
+    app.logger.addHandler(error_handler)
+    app.logger.setLevel(logging.INFO)
+    
+    app.logger.info('=== J.A. Uniforms Application Started ===')
+
 
 # Initialize Flask app
 app = Flask(__name__)
+setup_logging(app)
+# Rate Limiter - prevents abuse
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
 app.config.from_object(Config)
-# ===== ADD EMAIL CONFIGURATION HERE =====
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
+
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = 'it@jauniforms.com'
-app.config['MAIL_PASSWORD'] = 'xbwpikuegurlwnlc'  # ← Paste the password from Google
-app.config['MAIL_DEFAULT_SENDER'] = 'it@jauniforms.com'
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')  # ✅ SECURE
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
 # =========================================
 mail.init_app(app)
 
@@ -97,8 +147,10 @@ def allowed_file(filename, allowed_extensions):
 
 # Initialize database with app
 db.init_app(app)
+migrate = Migrate(app, db)
 
 # ===== HELPER FUNCTIONS (already provided in your document) =====
+
 def generate_verification_code():
     """Generate a 6-digit verification code"""
     return ''.join(random.choices(string.digits, k=6))
@@ -168,7 +220,7 @@ J.A. Uniforms Team
         mail.send(msg)
         return True
     except Exception as e:
-        print(f"Error sending email: {e}")
+        app.logger.info(f"Error sending email: {e}")
         return False
 
 # ===== VALIDATION HELPER FUNCTIONS =====
@@ -207,12 +259,25 @@ def validate_string_length(value, field_name, max_length):
     return True, str(value)
 
 # ===== END OF VALIDATION HELPERS =====
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    """Handle rate limit exceeded"""
+    if request.path.startswith('/api/'):
+        return jsonify({
+            "ok": False,
+            "error": "Too many requests. Please slow down."
+        }), 429
+    
+    flash("Too many requests. Please wait a moment and try again.", "warning")
+    return redirect(request.referrer or url_for('index'))
 
 # ===== YOUR ROUTES START HERE =====
 # ===== DELETING USERS ======
 
 
 @app.route('/api/send-verification-code', methods=['POST'])
+@limiter.limit("3 per minute")   # ← ADD THIS
+@limiter.limit("10 per hour") 
 def send_verification_code():
     """API endpoint to send verification code"""
     data = request.get_json()
@@ -245,6 +310,7 @@ def send_verification_code():
 # Add these routes AFTER your register route
 
 @app.route('/api/verify-code', methods=['POST'])
+@limiter.limit("5 per minute")
 @csrf.exempt
 def verify_code():
     """Verify the email verification code"""
@@ -296,12 +362,14 @@ def verify_code():
         }), 200
         
     except Exception as e:
-        print(f"Verification error: {e}")
+        app.logger.info(f"Verification error: {e}")
         db.session.rollback()
         return jsonify({'success': False, 'error': 'Verification failed'}), 200
 
 
 @app.route('/api/resend-verification-code', methods=['POST'])
+@limiter.limit("2 per minute")   # ← ADD THIS
+@limiter.limit("5 per hour") 
 @csrf.exempt
 def resend_verification_code():
     """Resend verification code"""
@@ -324,12 +392,13 @@ def resend_verification_code():
             return jsonify({'success': False, 'error': 'Error sending email'}), 200
             
     except Exception as e:
-        print(f"Resend error: {e}")
+        app.logger.info(f"Resend error: {e}")
         return jsonify({'success': False, 'error': 'Failed to resend code'}), 200
     
 
 # ===== AUTHENTICATION ROUTES =====
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute") 
 def login():
     # Don't redirect if already logged in - let them see the login page
     # if current_user.is_authenticated:
@@ -367,6 +436,7 @@ def logout():
     return redirect(url_for('login'))
 
 @app.route('/register', methods=['GET', 'POST'])
+@limiter.limit("5 per minute") 
 def register():
     """Main registration page - single page with modal verification"""
     if current_user.is_authenticated:
@@ -405,7 +475,7 @@ def register():
                 return jsonify({'success': False, 'error': 'Error sending email'}), 200
                 
         except Exception as e:
-            print(f"Registration error: {e}")
+            app.logger.info(f"Registration error: {e}")
             return jsonify({'success': False, 'error': 'Registration failed'}), 200
     
     return render_template('register.html')
@@ -439,20 +509,20 @@ def get_user(user_id):
 @admin_required
 def update_user(user_id):
     """Update user details"""
-    print(f"💾 PUT user {user_id}")
+    app.logger.info(f"💾 PUT user {user_id}")
     try:
         user = User.query.get_or_404(user_id)
         data = request.json
-        print(f"📦 Data: {data}")
+        app.logger.info(f"📦 Data: {data}")
         
         # CRITICAL: Prevent removing the last admin
         if 'role' in data and data['role'] == 'user' and user.role == 'admin':
             # Count total admins
             admin_count = User.query.filter_by(role='admin').count()
-            print(f"🔍 Current admin count: {admin_count}")
+            app.logger.info(f"🔍 Current admin count: {admin_count}")
             
             if admin_count <= 1:
-                print(f"❌ Cannot remove last admin!")
+                app.logger.error(f"❌ Cannot remove last admin!")
                 return jsonify({
                     'success': False, 
                     'error': 'Cannot change the last admin to user. The system must have at least one admin.'
@@ -480,12 +550,12 @@ def update_user(user_id):
             user.full_name = user.first_name
         
         db.session.commit()
-        print(f"✅ User {user_id} updated!")
+        app.logger.info(f"✅ User {user_id} updated!")
         
         return jsonify({'success': True, 'message': 'User updated successfully'})
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Error: {e}")
+        app.logger.error(f"❌ Error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
@@ -493,7 +563,7 @@ def update_user(user_id):
 @admin_required
 def delete_user(user_id):
     """Delete user"""
-    print(f"🗑️ DELETE user {user_id}")
+    app.logger.info(f"🗑️ DELETE user {user_id}")
     try:
         user = User.query.get_or_404(user_id)
         
@@ -504,10 +574,10 @@ def delete_user(user_id):
         # CRITICAL: Prevent deleting the last admin
         if user.role == 'admin':
             admin_count = User.query.filter_by(role='admin').count()
-            print(f"🔍 Current admin count: {admin_count}")
+            app.logger.info(f"🔍 Current admin count: {admin_count}")
             
             if admin_count <= 1:
-                print(f"❌ Cannot delete last admin!")
+                app.logger.error(f"❌ Cannot delete last admin!")
                 return jsonify({
                     'success': False, 
                     'error': 'Cannot delete the last admin. The system must have at least one admin.'
@@ -515,13 +585,43 @@ def delete_user(user_id):
         
         db.session.delete(user)
         db.session.commit()
-        print(f"✅ User {user_id} deleted!")
+        app.logger.info(f"✅ User {user_id} deleted!")
         
         return jsonify({'success': True, 'message': 'User deleted successfully'})
     except Exception as e:
         db.session.rollback()
-        print(f"❌ Error: {e}")
+        app.logger.error(f"❌ Error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+    
+
+@app.template_filter('time_ago')
+def time_ago_filter(dt):
+    """Calculate time ago using system time"""
+    if dt is None:
+        return 'N/A'
+    
+    from datetime import datetime
+    
+    now = datetime.now()
+    diff = now - dt
+    
+    seconds = diff.total_seconds()
+    
+    if seconds < 0:
+        return 'Just now'
+    elif seconds < 60:
+        return 'Just now'
+    elif seconds < 3600:
+        minutes = int(seconds / 60)
+        return f'{minutes} min ago'
+    elif seconds < 86400:
+        hours = int(seconds / 3600)
+        return f'{hours} hour{"s" if hours != 1 else ""} ago'
+    elif seconds < 604800:
+        days = int(seconds / 86400)
+        return f'{days} day{"s" if days != 1 else ""} ago'
+    else:
+        return dt.strftime('%b %d, %Y')
 
 
 # ===== MAIN APPLICATION ROUTES =====
@@ -623,18 +723,18 @@ def upload_style_image(style_id):
     """Upload an image for a style"""
     
     # ===== DEBUG: Print what we received =====
-    print("="*60)
-    print(f"📥 UPLOAD REQUEST for style {style_id}")
-    print(f"📋 request.files keys: {list(request.files.keys())}")
-    print(f"📋 request.form keys: {list(request.form.keys())}")
-    print(f"📋 request.content_type: {request.content_type}")
+    app.logger.info("="*60)
+    app.logger.info(f"📥 UPLOAD REQUEST for style {style_id}")
+    app.logger.info(f"📋 request.files keys: {list(request.files.keys())}")
+    app.logger.info(f"📋 request.form keys: {list(request.form.keys())}")
+    app.logger.info(f"📋 request.content_type: {request.content_type}")
     
     # Print details of all files in request
     for key in request.files:
         f = request.files[key]
-        print(f"  File '{key}': filename={f.filename}, content_type={f.content_type}")
+        app.logger.info(f"  File '{key}': filename={f.filename}, content_type={f.content_type}")
     
-    print("="*60)
+    app.logger.info("="*60)
     # ===== END DEBUG =====
     
     # Check if style exists
@@ -642,17 +742,17 @@ def upload_style_image(style_id):
     
     # Check if file is in request
     if 'image' not in request.files:
-        print("❌ ERROR: 'image' key not found in request.files")
+        app.logger.info("❌ ERROR: 'image' key not found in request.files")
         return jsonify({'error': 'No file provided'}), 400
     
     file = request.files['image']
     
     # Check if filename is empty
     if file.filename == '':
-        print("❌ ERROR: file.filename is empty")
+        app.logger.info("❌ ERROR: file.filename is empty")
         return jsonify({'error': 'No file selected'}), 400
     
-    print(f"✅ File received: {file.filename}")
+    app.logger.info(f"✅ File received: {file.filename}")
     
     # Validate and save file
     if file and allowed_file(file.filename, ALLOWED_IMAGE_EXTENSIONS):
@@ -661,7 +761,7 @@ def upload_style_image(style_id):
         original_filename = secure_filename(file.filename)
         filename = f"style_{style_id}_{timestamp}_{original_filename}"
         
-        print(f"💾 Saving as: {filename}")
+        app.logger.info(f"💾 Saving as: {filename}")
         
         # Ensure upload directory exists
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -670,7 +770,7 @@ def upload_style_image(style_id):
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         
-        print(f"✅ File saved to: {filepath}")
+        app.logger.info(f"✅ File saved to: {filepath}")
         
         # Check if this should be the primary image (first image for this style)
         is_primary = StyleImage.query.filter_by(style_id=style_id).count() == 0
@@ -686,7 +786,7 @@ def upload_style_image(style_id):
         db.session.add(new_image)
         db.session.commit()
         
-        print(f"✅ Image record created in database, ID: {new_image.id}")
+        app.logger.info(f"✅ Image record created in database, ID: {new_image.id}")
         
         return jsonify({
             'success': True,
@@ -696,7 +796,7 @@ def upload_style_image(style_id):
             'is_primary': is_primary
         }), 200
     
-    print(f"❌ ERROR: File validation failed for {file.filename}")
+    app.logger.error(f"❌ ERROR: File validation failed for {file.filename}")
     return jsonify({'error': 'Invalid file type. Allowed: png, jpg, jpeg, gif'}), 400
 
 @app.route('/api/style/<int:style_id>/images', methods=['GET'])
@@ -737,7 +837,7 @@ def delete_style_image(image_id):
         try:
             os.remove(filepath)
         except Exception as e:
-            print(f"Error deleting file: {e}")
+            app.logger.info(f"Error deleting file: {e}")
             # Continue anyway to remove from database
     
     # Delete database record
@@ -1234,7 +1334,7 @@ def export_sap_single_style():
 
     except Exception as e:
         import traceback
-        print(traceback.format_exc())
+        app.logger.error(traceback.format_exc())
         return f"Error exporting: {str(e)}", 500
 
 
@@ -1445,7 +1545,7 @@ def export_sap_format():
 
     except Exception as e:
         import traceback
-        print(traceback.format_exc())
+        app.logger.error(traceback.format_exc())
         return f"Error exporting: {str(e)}", 500
 
 
@@ -1501,7 +1601,7 @@ def delete_style(style_id):
         db.session.rollback()
         import traceback
         error_details = traceback.format_exc()
-        print(f"Delete error: {error_details}")
+        app.logger.info(f"Delete error: {error_details}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route('/api/style/duplicate/<int:style_id>', methods=['POST'])
@@ -1601,7 +1701,7 @@ def duplicate_style(style_id):
         db.session.rollback()
         import traceback
         error_details = traceback.format_exc()
-        print(f"Duplicate error: {error_details}")
+        app.logger.info(f"Duplicate error: {error_details}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route('/api/styles/bulk-delete', methods=['POST'])
@@ -1645,7 +1745,7 @@ def bulk_delete_styles():
         db.session.rollback()
         import traceback
         error_details = traceback.format_exc()
-        print(f"Bulk delete error: {error_details}")
+        app.logger.info(f"Bulk delete error: {error_details}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route('/api/style/load-for-duplicate/<int:style_id>')
@@ -2138,6 +2238,18 @@ def style_wizard():
 def style_view():
     """View style details (read-only for users)"""
     vendor_style = request.args.get('vendor_style', '')
+    style_id = request.args.get('id')
+    
+    # ✅ FETCH THE STYLE!
+    style = None
+    if vendor_style:
+        style = Style.query.filter_by(vendor_style=vendor_style).first()
+    elif style_id:
+        style = Style.query.get(style_id)
+    
+    if not style:
+        flash('Style not found.', 'danger')
+        return redirect(url_for('view_all_styles'))
     
     # Get all master data for display
     fabric_vendors = FabricVendor.query.order_by(FabricVendor.name).all()
@@ -2166,7 +2278,8 @@ def style_view():
     # Get permissions
     permissions = get_user_permissions()
     
-    return render_template("style_wizard.html", 
+    return render_template("style_wizard.html",
+                          style=style,  # ✅ PASS THE STYLE!
                           fabric_vendors=fabric_vendors,
                           notion_vendors=notion_vendors,
                           fabrics=fabrics,
@@ -2986,10 +3099,10 @@ if __name__ == '__main__':
     
     # Show warning if debug is enabled
     if debug_mode:
-        print("\n" + "="*70)
-        print("⚠️  WARNING: Running in DEBUG mode!")
-        print("⚠️  This is for development only - NEVER use in production!")
-        print("⚠️  Set FLASK_DEBUG=False in .env for production")
-        print("="*70 + "\n")
+        app.logger.info("\n" + "="*70)
+        app.logger.info("⚠️  WARNING: Running in DEBUG mode!")
+        app.logger.info("⚠️  This is for development only - NEVER use in production!")
+        app.logger.info("⚠️  Set FLASK_DEBUG=False in .env for production")
+        app.logger.info("="*70 + "\n")
     
     app.run(debug=debug_mode, host='0.0.0.0', port=5000)

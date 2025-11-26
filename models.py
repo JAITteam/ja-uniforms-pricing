@@ -4,24 +4,25 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 import pytz
 
-def get_eastern_time():
-    """Get current system time"""
+
+def get_utc_now():
+    """Get current UTC time - use this for all database timestamps"""
     return datetime.now()
 # ===== AUTHENTICATION =====
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
     
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    username = db.Column(db.String(80), unique=True, nullable=False, index=True)  
+    email = db.Column(db.String(120), unique=True, nullable=False, index=True)  
     password_hash = db.Column(db.String(120), nullable=False)
     first_name = db.Column(db.String(50), nullable=True)
     last_name = db.Column(db.String(50), nullable=True)
     full_name = db.Column(db.String(100), nullable=True)
-    role = db.Column(db.String(20), default='user', nullable=False)
-    is_active = db.Column(db.Boolean, default=True)
+    role = db.Column(db.String(20), default='user', nullable=False, index=True)  
+    is_active = db.Column(db.Boolean, default=True, index=True)  
     last_login = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -66,7 +67,7 @@ class FabricVendor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     vendor_code = db.Column(db.String(20), unique=True)
-    created_at = db.Column(db.DateTime, default=get_eastern_time)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
 class NotionVendor(db.Model):
     __tablename__ = 'notion_vendors'
@@ -74,7 +75,7 @@ class NotionVendor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     vendor_code = db.Column(db.String(20), unique=True)
-    updated_at = db.Column(db.DateTime, default=get_eastern_time, onupdate=get_eastern_time)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
 
 # ===== PRODUCT TABLES =====
@@ -82,12 +83,12 @@ class Fabric(db.Model):
     __tablename__ = 'fabrics'
     
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
+    name = db.Column(db.String(100), nullable=False, index=True)  # ← ADDED
     fabric_code = db.Column(db.String(20))
     cost_per_yard = db.Column(db.Float, nullable=False)
     color = db.Column(db.String(50))
-    fabric_vendor_id = db.Column(db.Integer, db.ForeignKey('fabric_vendors.id'))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    fabric_vendor_id = db.Column(db.Integer, db.ForeignKey('fabric_vendors.id'), index=True)  # ← ADDED
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     
     fabric_vendor = db.relationship('FabricVendor', backref='fabrics')
 
@@ -95,11 +96,11 @@ class Notion(db.Model):
     __tablename__ = 'notions'
     
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
+    name = db.Column(db.String(100), nullable=False, index=True)
     cost_per_unit = db.Column(db.Float, nullable=False)
     unit_type = db.Column(db.String(20), default='each')
-    notion_vendor_id = db.Column(db.Integer, db.ForeignKey('notion_vendors.id'))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    notion_vendor_id = db.Column(db.Integer, db.ForeignKey('notion_vendors.id'), index=True)  
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     
     notion_vendor = db.relationship('NotionVendor', backref='notions')
 
@@ -114,7 +115,7 @@ class LaborOperation(db.Model):
     cost_per_hour = db.Column(db.Float)  # For Sewing
     cost_per_piece = db.Column(db.Float)  # For Button/Snap/Grommet
     is_active = db.Column(db.Boolean, default=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
 # ===== CLEANING COSTS BY GARMENT TYPE =====
 class CleaningCost(db.Model):
@@ -124,7 +125,7 @@ class CleaningCost(db.Model):
     garment_type = db.Column(db.String(50), nullable=False, unique=True)
     fixed_cost = db.Column(db.Float, nullable=False)
     avg_minutes = db.Column(db.Integer, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
 # ===== SIZE VARIANTS =====
 class SizeVariant(db.Model):
@@ -144,8 +145,8 @@ class SizeRange(db.Model):
     extended_sizes = db.Column(db.String(100))
     extended_markup_percent = db.Column(db.Float, default=15.0)
     description = db.Column(db.String(200))
-    #created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    created_at = db.Column(db.DateTime, default=get_eastern_time)
+    #created_at = db.Column(db.DateTime, default=datetime.now)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     
     def __repr__(self):
         return f'<SizeRange {self.name}>'
@@ -155,24 +156,23 @@ class Style(db.Model):
     __tablename__ = 'styles'
     
     id = db.Column(db.Integer, primary_key=True)
-    vendor_style = db.Column(db.String(50), unique=True, nullable=False)  # "21324-3202"
-    base_item_number = db.Column(db.String(20))  # "21324"
-    variant_code = db.Column(db.String(20))      # "3202"
-    style_name = db.Column(db.String(200),unique=True, nullable=False)
-    gender = db.Column(db.String(20))            # "MENS", "LADIES", "UNISEX"
-    garment_type = db.Column(db.String(50))      # "SS TOP/SS DRESS", "APRON", etc.
-    size_range = db.Column(db.String(50))        # "XS-4XL"
-    base_margin_percent = db.Column(db.Float, default=60.0)
+    vendor_style = db.Column(db.String(50), unique=True, nullable=False, index=True)  # ← ADDED
+    base_item_number = db.Column(db.String(20))
+    variant_code = db.Column(db.String(20))
+    style_name = db.Column(db.String(200), unique=True, nullable=False, index=True)  # ← ADDED
+    gender = db.Column(db.String(20), index=True)  # ← ADDED
+    garment_type = db.Column(db.String(50), index=True)  # ← ADDED
+    size_range = db.Column(db.String(50))
+    base_margin_percent = db.Column(db.Float, default=60.0, index=True)  # ← ADDED
     avg_label_cost = db.Column(db.Float, default=0.20)
-    shipping_cost = db.Column(db.Float, default=0.00)  # ADD THIS
-    suggested_price = db.Column(db.Float)  # ADD THIS
+    shipping_cost = db.Column(db.Float, default=0.00)
+    suggested_price = db.Column(db.Float)
     notes = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    #updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=get_eastern_time, onupdate=get_eastern_time)
+    created_at = db.Column(db.DateTime, default=datetime.now, index=True)  # ← ADDED
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now, index=True)
     last_modified_by = db.Column(db.String(100), default='Admin')
-    is_active = db.Column(db.Boolean, default=True)
-    is_favorite = db.Column(db.Boolean, default=False)
+    is_active = db.Column(db.Boolean, default=True, index=True)  # ← ADDED
+    is_favorite = db.Column(db.Boolean, default=False, index=True)  # ← ADDED
     colors = db.relationship('StyleColor', back_populates='style', cascade='all, delete-orphan')
     
     def get_total_fabric_cost(self):
@@ -260,7 +260,7 @@ class Color(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
     color_code = db.Column(db.String(50))  # Optional: for hex codes or reference codes
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     
     def __repr__(self):
         return f'<Color {self.name}>'
@@ -270,7 +270,7 @@ class Variable(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, unique=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     
     def __repr__(self):
         return f'<Variable {self.name}>'
@@ -303,7 +303,7 @@ class StyleImage(db.Model):
     style_id = db.Column(db.Integer, db.ForeignKey('styles.id'), nullable=False)
     filename = db.Column(db.String(255), nullable=False)
     is_primary = db.Column(db.Boolean, default=False)
-    upload_date = db.Column(db.DateTime, default=datetime.utcnow)
+    upload_date = db.Column(db.DateTime, default=datetime.now)
     
     style = db.relationship('Style', backref='images')
 
@@ -329,7 +329,7 @@ class GlobalSetting(db.Model):
     setting_key = db.Column(db.String(50), unique=True, nullable=False)
     setting_value = db.Column(db.Float, nullable=False)
     description = db.Column(db.String(200))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     
     def __repr__(self):
         return f'<GlobalSetting {self.setting_key}={self.setting_value}>'

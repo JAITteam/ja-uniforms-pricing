@@ -9,3 +9,4 @@ python-dotenv==1.0.0
 Flask-Limiter==3.5.0
 Werkzeug==3.0.0
 pytz==2023.3
+Flask-Limiter==3.5.0

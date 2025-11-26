@@ -47,9 +47,7 @@
                     <div class="recent-style-item" data-style-id="{{ style.id }}">
                         <div class="style-info">
                             <div class="style-name">📋 {{ style.vendor_style }} - {{ style.style_name }}</div>
-                            <div class="style-time" data-timestamp="{{ style.updated_at.timestamp() * 1000 if style.updated_at else 0 }}">
-                                Recently updated
-                            </div>
+                            <div class="style-time">{{ style.updated_at|time_ago }}</div>
                         </div>
                         {% if current_user.is_admin() %}
                         <div class="style-actions">
