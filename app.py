@@ -632,6 +632,7 @@ def update_user(user_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
+@limiter.limit("5 per minute")
 @login_required
 @admin_required
 def delete_user(user_id):
@@ -1705,6 +1706,7 @@ def view_all_styles():
                          current_user=current_user)
 
 @app.route('/api/style/delete/<int:style_id>', methods=['DELETE'])
+@limiter.limit("10 per minute")
 @admin_required 
 def delete_style(style_id):
     """Delete a style and all its relationships"""
@@ -1835,6 +1837,7 @@ def duplicate_style(style_id):
         return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route('/api/styles/bulk-delete', methods=['POST'])
+@limiter.limit("3 per minute")
 @admin_required 
 def bulk_delete_styles():
     """Delete multiple styles"""
@@ -3013,6 +3016,7 @@ def api_style_by_vendor_style():
 # with this validated version
 
 @app.post("/api/style/save")
+@limiter.limit("20 per minute")
 @admin_required 
 def api_style_save():
     """
