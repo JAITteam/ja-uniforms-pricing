@@ -240,17 +240,70 @@ J.A. Uniforms Team
         return False
 
 # ===== VALIDATION HELPER FUNCTIONS =====
-def validate_positive_number(value, field_name, allow_zero=False):
-    """Validate that a number is positive"""
+
+def validate_positive_number(value, field_name, required=True, allow_zero=True):
+    """Validate that a value is a positive number"""
+    if value is None or value == '':
+        if required:
+            return None, f"{field_name} is required"
+        return 0 if allow_zero else None, None
+    
     try:
         num = float(value)
-        if allow_zero and num < 0:
-            return False, f"{field_name} cannot be negative"
-        elif not allow_zero and num <= 0:
-            return False, f"{field_name} must be greater than 0"
-        return True, num
+        if num < 0:
+            return None, f"{field_name} cannot be negative"
+        if not allow_zero and num == 0:
+            return None, f"{field_name} must be greater than zero"
+        return num, None
     except (ValueError, TypeError):
-        return False, f"{field_name} must be a valid number"
+        return None, f"{field_name} must be a valid number"
+
+def validate_positive_integer(value, field_name, required=True):
+    """Validate that a value is a positive integer"""
+    if value is None or value == '':
+        if required:
+            return None, f"{field_name} is required"
+        return 0, None
+    
+    try:
+        num = int(float(value))
+        if num < 0:
+            return None, f"{field_name} cannot be negative"
+        return num, None
+    except (ValueError, TypeError):
+        return None, f"{field_name} must be a valid whole number"
+        
+def validate_required_string(value, field_name, max_length=200):
+    """Validate that a value is a non-empty string"""
+    if value is None or str(value).strip() == '':
+        return None, f"{field_name} is required"
+    
+    value = str(value).strip()
+    if len(value) > max_length:
+        return None, f"{field_name} cannot exceed {max_length} characters"
+    
+    return value, None
+
+def validate_choice(value, field_name, choices):
+    """Validate that a value is one of the allowed choices"""
+    if value not in choices:
+        return None, f"{field_name} must be one of: {', '.join(choices)}"
+    return value, None
+
+
+def validate_email(email):
+    """Validate email format"""
+    import re
+    if not email:
+        return None, "Email is required"
+    
+    email = email.strip().lower()
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(pattern, email):
+        return None, "Invalid email format"
+    
+    return email, None
+
 
 def validate_required_field(value, field_name):
     """Validate that a required field is not empty"""
@@ -870,43 +923,51 @@ def delete_style_image(image_id):
     
 # SIZE RANGE ENDPOINTS
 @app.route('/api/size-ranges', methods=['GET', 'POST'])
-def handle_size_ranges():
-    # Check admin for write operations
-    auth_error = require_admin_for_write()
-    if auth_error:
-        return auth_error
-    
+def api_size_ranges():
     if request.method == 'GET':
-        size_ranges = SizeRange.query.order_by(SizeRange.name).all()
+        ranges = SizeRange.query.all()
         return jsonify([{
-            'id': sr.id,
-            'name': sr.name,
-            'regular_sizes': sr.regular_sizes,
-            'extended_sizes': sr.extended_sizes,
-            'extended_markup_percent': float(sr.extended_markup_percent),
-            'description': sr.description
-        } for sr in size_ranges])
+            'id': r.id,
+            'name': r.name,
+            'regular_sizes': r.regular_sizes,
+            'extended_sizes': r.extended_sizes,
+            'extended_markup_percent': r.extended_markup_percent
+        } for r in ranges])
     
     elif request.method == 'POST':
-        data = request.json
-        size_range = SizeRange(
-            name=data.get('name', '').strip().upper(),
-            regular_sizes=data.get('regular_sizes', '').strip(),
-            extended_sizes=data.get('extended_sizes', '').strip(),
-            extended_markup_percent=float(data.get('extended_markup_percent', 15.0)),
-            description=data.get('description', '').strip()
-        )
-        db.session.add(size_range)
-        db.session.commit()
-        return jsonify({'success': True, 'id': size_range.id})
+        try:
+            data = request.get_json()
+            
+            # Validation
+            name, error = validate_required_string(data.get('name'), 'Size range name', max_length=50)
+            if error:
+                return jsonify({'success': False, 'error': error}), 400
+            
+            regular_sizes, error = validate_required_string(data.get('regular_sizes'), 'Regular sizes', max_length=100)
+            if error:
+                return jsonify({'success': False, 'error': error}), 400
+            
+            markup, error = validate_positive_number(data.get('extended_markup_percent', 15), 'Extended markup percent', required=False)
+            if error:
+                return jsonify({'success': False, 'error': error}), 400
+            
+            size_range = SizeRange(
+                name=name,
+                regular_sizes=regular_sizes,
+                extended_sizes=data.get('extended_sizes', '').strip() if data.get('extended_sizes') else None,
+                extended_markup_percent=markup or 15.0,
+                description=data.get('description', '').strip() if data.get('description') else None
+            )
+            db.session.add(size_range)
+            db.session.commit()
+            
+            return jsonify({'success': True, 'id': size_range.id})
+        except Exception as e:
+            app.logger.error(f"Error adding size range: {e}")
+            return jsonify({'success': False, 'error': 'Failed to add size range'}), 500
 
 @app.route('/api/size-ranges/<int:size_range_id>', methods=['GET', 'PUT', 'DELETE'])
-def handle_size_range(size_range_id):
-    # Check admin for write operations
-    auth_error = require_admin_for_write()
-    if auth_error:
-        return auth_error
-    
+def api_size_range_detail(size_range_id):
     size_range = SizeRange.query.get_or_404(size_range_id)
     
     if request.method == 'GET':
@@ -915,25 +976,52 @@ def handle_size_range(size_range_id):
             'name': size_range.name,
             'regular_sizes': size_range.regular_sizes,
             'extended_sizes': size_range.extended_sizes,
-            'extended_markup_percent': float(size_range.extended_markup_percent),
+            'extended_markup_percent': size_range.extended_markup_percent,
             'description': size_range.description
         })
     
     elif request.method == 'PUT':
-        data = request.json
-        size_range.name = data.get('name', size_range.name).strip().upper()
-        size_range.regular_sizes = data.get('regular_sizes', size_range.regular_sizes).strip()
-        size_range.extended_sizes = data.get('extended_sizes', size_range.extended_sizes).strip()
-        size_range.extended_markup_percent = float(data.get('extended_markup_percent', size_range.extended_markup_percent))
-        size_range.description = data.get('description', size_range.description).strip()
-        db.session.commit()
-        return jsonify({'success': True})
+        try:
+            data = request.get_json()
+            
+            if 'name' in data:
+                name, error = validate_required_string(data.get('name'), 'Size range name', max_length=50)
+                if error:
+                    return jsonify({'success': False, 'error': error}), 400
+                size_range.name = name
+            
+            if 'regular_sizes' in data:
+                sizes, error = validate_required_string(data.get('regular_sizes'), 'Regular sizes', max_length=100)
+                if error:
+                    return jsonify({'success': False, 'error': error}), 400
+                size_range.regular_sizes = sizes
+            
+            if 'extended_sizes' in data:
+                size_range.extended_sizes = data.get('extended_sizes', '').strip() if data.get('extended_sizes') else None
+            
+            if 'extended_markup_percent' in data:
+                markup, error = validate_positive_number(data.get('extended_markup_percent'), 'Extended markup percent', required=False)
+                if error:
+                    return jsonify({'success': False, 'error': error}), 400
+                size_range.extended_markup_percent = markup or 15.0
+            
+            if 'description' in data:
+                size_range.description = data.get('description', '').strip() if data.get('description') else None
+            
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            app.logger.error(f"Error updating size range: {e}")
+            return jsonify({'success': False, 'error': 'Failed to update size range'}), 500
     
     elif request.method == 'DELETE':
-        db.session.delete(size_range)
-        db.session.commit()
-        return jsonify({'success': True})
-    
+        try:
+            db.session.delete(size_range)
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            app.logger.error(f"Error deleting size range: {e}")
+            return jsonify({'success': False, 'error': 'Failed to delete size range'}), 500
 
 # GLOBAL SETTINGS ENDPOINTS
 @app.route('/api/global-settings', methods=['GET'])
@@ -947,29 +1035,37 @@ def get_global_settings():
     } for s in settings])
 
 @app.route('/api/global-settings/<int:setting_id>', methods=['GET', 'PUT'])
-def handle_global_setting(setting_id):
-    # Check admin for write operations
-    auth_error = require_admin_for_write()
-    if auth_error:
-        return auth_error
-    
+@role_required('admin')
+def api_global_setting_detail(setting_id):
     setting = GlobalSetting.query.get_or_404(setting_id)
     
     if request.method == 'GET':
         return jsonify({
             'id': setting.id,
             'setting_key': setting.setting_key,
-            'setting_value': float(setting.setting_value),
+            'setting_value': setting.setting_value,
             'description': setting.description
         })
     
     elif request.method == 'PUT':
-        data = request.json
-        setting.setting_value = float(data.get('setting_value', setting.setting_value))
-        setting.description = data.get('description', setting.description)
-        db.session.commit()
-        return jsonify({'success': True})
-    
+        try:
+            data = request.get_json()
+            
+            if 'setting_value' in data:
+                value, error = validate_positive_number(data.get('setting_value'), 'Setting value', allow_zero=True)
+                if error:
+                    return jsonify({'success': False, 'error': error}), 400
+                setting.setting_value = value
+            
+            if 'description' in data:
+                setting.description = data.get('description', '').strip() if data.get('description') else None
+            
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            app.logger.error(f"Error updating global setting: {e}")
+            return jsonify({'success': False, 'error': 'Failed to update setting'}), 500
+
 
 @app.route('/import-colors')
 @admin_required
@@ -1017,58 +1113,75 @@ def import_colors():
     
 # COLOR ENDPOINTS
 @app.route('/api/colors', methods=['GET', 'POST'])
-def handle_colors():
-    # Check admin for write operations
-    auth_error = require_admin_for_write()
-    if auth_error:
-        return auth_error
-    
+def api_colors():
     if request.method == 'GET':
         colors = Color.query.order_by(Color.name).all()
-        return jsonify([{'id': c.id, 'name': c.name} for c in colors])
+        return jsonify([{'id': c.id, 'name': c.name, 'color_code': c.color_code} for c in colors])
     
     elif request.method == 'POST':
-        data = request.json
-        color_name = data.get('name', '').strip().upper()
-        
-        if not color_name:
-            return jsonify({'error': 'Color name required'}), 400
-        
-        # Check if exists
-        existing = Color.query.filter(func.lower(Color.name) == color_name.lower()).first()
-        if existing:
-            return jsonify({'success': True, 'id': existing.id, 'name': existing.name, 'existed': True})
-        
-        # Create new
-        color = Color(name=color_name)
-        db.session.add(color)
-        db.session.commit()
-        
-        return jsonify({'success': True, 'id': color.id, 'name': color.name, 'existed': False})
+        try:
+            data = request.get_json()
+            
+            # Validation
+            name, error = validate_required_string(data.get('name'), 'Color name', max_length=100)
+            if error:
+                return jsonify({'success': False, 'error': error}), 400
+            
+            # Check for duplicate
+            existing = Color.query.filter(func.lower(Color.name) == name.lower()).first()
+            if existing:
+                return jsonify({'success': False, 'error': 'Color already exists'}), 400
+            
+            color = Color(
+                name=name,
+                color_code=data.get('color_code', '').strip() if data.get('color_code') else None
+            )
+            db.session.add(color)
+            db.session.commit()
+            
+            return jsonify({'success': True, 'id': color.id})
+        except Exception as e:
+            app.logger.error(f"Error adding color: {e}")
+            return jsonify({'success': False, 'error': 'Failed to add color'}), 500
 
 @app.route('/api/colors/<int:color_id>', methods=['GET', 'PUT', 'DELETE'])
-def handle_color(color_id):
-    # Check admin for write operations
-    auth_error = require_admin_for_write()
-    if auth_error:
-        return auth_error
-    
+def api_color_detail(color_id):
     color = Color.query.get_or_404(color_id)
     
     if request.method == 'GET':
-        return jsonify({'id': color.id, 'name': color.name})
+        return jsonify({
+            'id': color.id,
+            'name': color.name,
+            'color_code': color.color_code
+        })
     
     elif request.method == 'PUT':
-        data = request.json
-        color.name = data.get('name', color.name).strip().upper()
-        db.session.commit()
-        return jsonify({'success': True})
+        try:
+            data = request.get_json()
+            
+            if 'name' in data:
+                name, error = validate_required_string(data.get('name'), 'Color name', max_length=100)
+                if error:
+                    return jsonify({'success': False, 'error': error}), 400
+                color.name = name
+            
+            if 'color_code' in data:
+                color.color_code = data.get('color_code', '').strip() if data.get('color_code') else None
+            
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            app.logger.error(f"Error updating color: {e}")
+            return jsonify({'success': False, 'error': 'Failed to update color'}), 500
     
     elif request.method == 'DELETE':
-        db.session.delete(color)
-        db.session.commit()
-        return jsonify({'success': True})
-
+        try:
+            db.session.delete(color)
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            app.logger.error(f"Error deleting color: {e}")
+            return jsonify({'success': False, 'error': 'Failed to delete color'}), 500
 
 
 # ===== Extended-size + Range helpers (robust) =====
@@ -1921,12 +2034,8 @@ def master_costs():
 
 # FABRIC VENDOR ENDPOINTS
 @app.route('/api/fabric-vendors/<int:vendor_id>', methods=['GET', 'PUT', 'DELETE'])
-def handle_fabric_vendor(vendor_id):
-    # Check admin for write operations
-    auth_error = require_admin_for_write()
-    if auth_error:
-        return auth_error
-    
+@role_required('admin')
+def api_fabric_vendor_detail(vendor_id):
     vendor = FabricVendor.query.get_or_404(vendor_id)
     
     if request.method == 'GET':
@@ -1937,38 +2046,60 @@ def handle_fabric_vendor(vendor_id):
         })
     
     elif request.method == 'PUT':
-        data = request.json
-        vendor.name = data.get('name', vendor.name)
-        vendor.vendor_code = data.get('vendor_code', vendor.vendor_code)
-        db.session.commit()
-        return jsonify({'success': True})
+        try:
+            data = request.get_json()
+            
+            if 'name' in data:
+                name, error = validate_required_string(data.get('name'), 'Vendor name', max_length=100)
+                if error:
+                    return jsonify({'success': False, 'error': error}), 400
+                vendor.name = name
+            
+            if 'vendor_code' in data:
+                vendor.vendor_code = data.get('vendor_code', '').strip() if data.get('vendor_code') else None
+            
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            app.logger.error(f"Error updating fabric vendor: {e}")
+            return jsonify({'success': False, 'error': 'Failed to update fabric vendor'}), 500
     
     elif request.method == 'DELETE':
-        db.session.delete(vendor)
-        db.session.commit()
-        return jsonify({'success': True})
+        try:
+            db.session.delete(vendor)
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            app.logger.error(f"Error deleting fabric vendor: {e}")
+            return jsonify({'success': False, 'error': 'Failed to delete fabric vendor'}), 500
 
 @app.route('/api/fabric-vendors', methods=['POST'])
-@admin_required
-def create_fabric_vendor():
-    data = request.json
-    vendor = FabricVendor(
-        name=data['name'],
-        vendor_code=data.get('vendor_code')
-    )
-    db.session.add(vendor)
-    db.session.commit()
-    return jsonify({'success': True, 'id': vendor.id})
-
+@role_required('admin')
+def api_add_fabric_vendor():
+    try:
+        data = request.get_json()
+        
+        # Validation
+        name, error = validate_required_string(data.get('name'), 'Vendor name', max_length=100)
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
+        
+        vendor = FabricVendor(
+            name=name,
+            vendor_code=data.get('vendor_code', '').strip() if data.get('vendor_code') else None
+        )
+        db.session.add(vendor)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'id': vendor.id})
+    except Exception as e:
+        app.logger.error(f"Error adding fabric vendor: {e}")
+        return jsonify({'success': False, 'error': 'Failed to add fabric vendor'}), 500
 
 # NOTION VENDOR ENDPOINTS
 @app.route('/api/notion-vendors/<int:vendor_id>', methods=['GET', 'PUT', 'DELETE'])
-def handle_notion_vendor(vendor_id):
-    # Check admin for write operations
-    auth_error = require_admin_for_write()
-    if auth_error:
-        return auth_error
-    
+@role_required('admin')
+def api_notion_vendor_detail(vendor_id):
     vendor = NotionVendor.query.get_or_404(vendor_id)
     
     if request.method == 'GET':
@@ -1979,86 +2110,156 @@ def handle_notion_vendor(vendor_id):
         })
     
     elif request.method == 'PUT':
-        data = request.json
-        vendor.name = data.get('name', vendor.name)
-        vendor.vendor_code = data.get('vendor_code', vendor.vendor_code)
-        db.session.commit()
-        return jsonify({'success': True})
+        try:
+            data = request.get_json()
+            
+            if 'name' in data:
+                name, error = validate_required_string(data.get('name'), 'Vendor name', max_length=100)
+                if error:
+                    return jsonify({'success': False, 'error': error}), 400
+                vendor.name = name
+            
+            if 'vendor_code' in data:
+                vendor.vendor_code = data.get('vendor_code', '').strip() if data.get('vendor_code') else None
+            
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            app.logger.error(f"Error updating notion vendor: {e}")
+            return jsonify({'success': False, 'error': 'Failed to update notion vendor'}), 500
     
     elif request.method == 'DELETE':
-        db.session.delete(vendor)
-        db.session.commit()
-        return jsonify({'success': True})
+        try:
+            db.session.delete(vendor)
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            app.logger.error(f"Error deleting notion vendor: {e}")
+            return jsonify({'success': False, 'error': 'Failed to delete notion vendor'}), 500
+
+
 
 @app.route('/api/notion-vendors', methods=['POST'])
-@admin_required
-def create_notion_vendor():
-    data = request.json
-    vendor = NotionVendor(
-        name=data['name'],
-        vendor_code=data.get('vendor_code')
-    )
-    db.session.add(vendor)
-    db.session.commit()
-    return jsonify({'success': True, 'id': vendor.id})
+@role_required('admin')
+def api_add_notion_vendor():
+    try:
+        data = request.get_json()
+        
+        # Validation
+        name, error = validate_required_string(data.get('name'), 'Vendor name', max_length=100)
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
+        
+        vendor = NotionVendor(
+            name=name,
+            vendor_code=data.get('vendor_code', '').strip() if data.get('vendor_code') else None
+        )
+        db.session.add(vendor)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'id': vendor.id})
+    except Exception as e:
+        app.logger.error(f"Error adding notion vendor: {e}")
+        return jsonify({'success': False, 'error': 'Failed to add notion vendor'}), 500
 
-
-# FABRIC ENDPOINTS
+# FABRIC ENDPOINTS   
 @app.route('/api/fabrics/<int:fabric_id>', methods=['GET', 'PUT', 'DELETE'])
-def handle_fabric(fabric_id):
-    # Check admin for write operations
-    auth_error = require_admin_for_write()
-    if auth_error:
-        return auth_error
-    
+@role_required('admin')
+def api_fabric_detail(fabric_id):
     fabric = Fabric.query.get_or_404(fabric_id)
     
     if request.method == 'GET':
         return jsonify({
             'id': fabric.id,
             'name': fabric.name,
-            'fabric_code': fabric.fabric_code,
             'cost_per_yard': fabric.cost_per_yard,
-            'fabric_vendor_id': fabric.fabric_vendor_id
+            'fabric_vendor_id': fabric.fabric_vendor_id,
+            'fabric_code': fabric.fabric_code,
+            'color': fabric.color
         })
     
     elif request.method == 'PUT':
-        data = request.json
-        fabric.name = data.get('name', fabric.name)
-        fabric.fabric_code = data.get('fabric_code', fabric.fabric_code)
-        fabric.cost_per_yard = float(data.get('cost_per_yard', fabric.cost_per_yard))
-        fabric.fabric_vendor_id = int(data.get('fabric_vendor_id', fabric.fabric_vendor_id))
-        db.session.commit()
-        return jsonify({'success': True})
+        try:
+            data = request.get_json()
+            
+            # Validation
+            if 'name' in data:
+                name, error = validate_required_string(data.get('name'), 'Fabric name', max_length=100)
+                if error:
+                    return jsonify({'success': False, 'error': error}), 400
+                fabric.name = name
+            
+            if 'cost_per_yard' in data:
+                cost, error = validate_positive_number(data.get('cost_per_yard'), 'Cost per yard')
+                if error:
+                    return jsonify({'success': False, 'error': error}), 400
+                fabric.cost_per_yard = cost
+            
+            if 'fabric_vendor_id' in data:
+                fabric.fabric_vendor_id = data.get('fabric_vendor_id')
+            
+            if 'fabric_code' in data:
+                fabric.fabric_code = data.get('fabric_code', '').strip() if data.get('fabric_code') else None
+            
+            if 'color' in data:
+                fabric.color = data.get('color', '').strip() if data.get('color') else None
+            
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            app.logger.error(f"Error updating fabric: {e}")
+            return jsonify({'success': False, 'error': 'Failed to update fabric'}), 500
     
     elif request.method == 'DELETE':
-        db.session.delete(fabric)
-        db.session.commit()
-        return jsonify({'success': True})
+        try:
+            db.session.delete(fabric)
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            app.logger.error(f"Error deleting fabric: {e}")
+            return jsonify({'success': False, 'error': 'Failed to delete fabric'}), 500
 
 @app.route('/api/fabrics', methods=['POST'])
-@admin_required
-def create_fabric():
-    data = request.json
-    fabric = Fabric(
-        name=data['name'],
-        fabric_code=data.get('fabric_code'),
-        cost_per_yard=float(data['cost_per_yard']),
-        fabric_vendor_id=int(data['fabric_vendor_id'])
-    )
-    db.session.add(fabric)
-    db.session.commit()
-    return jsonify({'success': True, 'id': fabric.id})
+@role_required('admin')
+def api_add_fabric():
+    try:
+        data = request.get_json()
+        
+        # Validation
+        name, error = validate_required_string(data.get('name'), 'Fabric name', max_length=100)
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
+        
+        cost, error = validate_positive_number(data.get('cost_per_yard'), 'Cost per yard')
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
+        
+        vendor_id = data.get('fabric_vendor_id')
+        if vendor_id:
+            vendor_id, error = validate_positive_integer(vendor_id, 'Vendor ID')
+            if error:
+                return jsonify({'success': False, 'error': error}), 400
+        
+        fabric = Fabric(
+            name=name,
+            cost_per_yard=cost,
+            fabric_vendor_id=vendor_id,
+            fabric_code=data.get('fabric_code', '').strip() if data.get('fabric_code') else None,
+            color=data.get('color', '').strip() if data.get('color') else None
+        )
+        db.session.add(fabric)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'id': fabric.id})
+    except Exception as e:
+        app.logger.error(f"Error adding fabric: {e}")
+        return jsonify({'success': False, 'error': 'Failed to add fabric'}), 500
 
 
-# NOTION ENDPOINTS
+# NOTION ENDPOINTS   
 @app.route('/api/notions/<int:notion_id>', methods=['GET', 'PUT', 'DELETE'])
-def handle_notion(notion_id):
-    # Check admin for write operations
-    auth_error = require_admin_for_write()
-    if auth_error:
-        return auth_error
-    
+@role_required('admin')
+def api_notion_detail(notion_id):
     notion = Notion.query.get_or_404(notion_id)
     
     if request.method == 'GET':
@@ -2066,47 +2267,87 @@ def handle_notion(notion_id):
             'id': notion.id,
             'name': notion.name,
             'cost_per_unit': notion.cost_per_unit,
-            'unit_type': notion.unit_type,
-            'notion_vendor_id': notion.notion_vendor_id
+            'notion_vendor_id': notion.notion_vendor_id,
+            'unit_type': notion.unit_type
         })
     
     elif request.method == 'PUT':
-        data = request.json
-        notion.name = data.get('name', notion.name)
-        notion.cost_per_unit = float(data.get('cost_per_unit', notion.cost_per_unit))
-        notion.unit_type = data.get('unit_type', notion.unit_type)
-        notion.notion_vendor_id = int(data.get('notion_vendor_id', notion.notion_vendor_id))
-        db.session.commit()
-        return jsonify({'success': True})
+        try:
+            data = request.get_json()
+            
+            if 'name' in data:
+                name, error = validate_required_string(data.get('name'), 'Notion name', max_length=100)
+                if error:
+                    return jsonify({'success': False, 'error': error}), 400
+                notion.name = name
+            
+            if 'cost_per_unit' in data:
+                cost, error = validate_positive_number(data.get('cost_per_unit'), 'Cost per unit')
+                if error:
+                    return jsonify({'success': False, 'error': error}), 400
+                notion.cost_per_unit = cost
+            
+            if 'notion_vendor_id' in data:
+                notion.notion_vendor_id = data.get('notion_vendor_id')
+            
+            if 'unit_type' in data:
+                notion.unit_type = data.get('unit_type', 'each')
+            
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            app.logger.error(f"Error updating notion: {e}")
+            return jsonify({'success': False, 'error': 'Failed to update notion'}), 500
     
     elif request.method == 'DELETE':
-        db.session.delete(notion)
-        db.session.commit()
-        return jsonify({'success': True})
+        try:
+            db.session.delete(notion)
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            app.logger.error(f"Error deleting notion: {e}")
+            return jsonify({'success': False, 'error': 'Failed to delete notion'}), 500
 
 @app.route('/api/notions', methods=['POST'])
-@admin_required
-def create_notion():
-    data = request.json
-    notion = Notion(
-        name=data['name'],
-        cost_per_unit=float(data['cost_per_unit']),
-        unit_type=data['unit_type'],
-        notion_vendor_id=int(data['notion_vendor_id'])
-    )
-    db.session.add(notion)
-    db.session.commit()
-    return jsonify({'success': True, 'id': notion.id})
+@role_required('admin')
+def api_add_notion():
+    try:
+        data = request.get_json()
+        
+        # Validation
+        name, error = validate_required_string(data.get('name'), 'Notion name', max_length=100)
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
+        
+        cost, error = validate_positive_number(data.get('cost_per_unit'), 'Cost per unit')
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
+        
+        vendor_id = data.get('notion_vendor_id')
+        if vendor_id:
+            vendor_id, error = validate_positive_integer(vendor_id, 'Vendor ID')
+            if error:
+                return jsonify({'success': False, 'error': error}), 400
+        
+        notion = Notion(
+            name=name,
+            cost_per_unit=cost,
+            notion_vendor_id=vendor_id,
+            unit_type=data.get('unit_type', 'each')
+        )
+        db.session.add(notion)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'id': notion.id})
+    except Exception as e:
+        app.logger.error(f"Error adding notion: {e}")
+        return jsonify({'success': False, 'error': 'Failed to add notion'}), 500
 
 
 # LABOR OPERATION ENDPOINTS
 @app.route('/api/labors/<int:labor_id>', methods=['GET', 'PUT', 'DELETE'])
-def handle_labor(labor_id):
-    # Check admin for write operations
-    auth_error = require_admin_for_write()
-    if auth_error:
-        return auth_error
-    
+@role_required('admin')
+def api_labor_detail(labor_id):
     labor = LaborOperation.query.get_or_404(labor_id)
     
     if request.method == 'GET':
@@ -2120,67 +2361,166 @@ def handle_labor(labor_id):
         })
     
     elif request.method == 'PUT':
-        data = request.json
-        labor.name = data.get('name', labor.name)
-        labor.cost_type = data.get('cost_type', labor.cost_type)
-        labor.fixed_cost = float(data['fixed_cost']) if data.get('fixed_cost') else None
-        labor.cost_per_hour = float(data['cost_per_hour']) if data.get('cost_per_hour') else None
-        labor.cost_per_piece = float(data['cost_per_piece']) if data.get('cost_per_piece') else None
-        db.session.commit()
-        return jsonify({'success': True})
+        try:
+            data = request.get_json()
+            
+            if 'name' in data:
+                name, error = validate_required_string(data.get('name'), 'Labor operation name', max_length=100)
+                if error:
+                    return jsonify({'success': False, 'error': error}), 400
+                labor.name = name
+            
+            if 'cost_type' in data:
+                cost_type, error = validate_choice(
+                    data.get('cost_type'), 
+                    'Cost type', 
+                    ['flat_rate', 'hourly', 'per_piece']
+                )
+                if error:
+                    return jsonify({'success': False, 'error': error}), 400
+                labor.cost_type = cost_type
+            
+            if 'fixed_cost' in data:
+                cost, error = validate_positive_number(data.get('fixed_cost'), 'Fixed cost', required=False)
+                if error:
+                    return jsonify({'success': False, 'error': error}), 400
+                labor.fixed_cost = cost
+            
+            if 'cost_per_hour' in data:
+                cost, error = validate_positive_number(data.get('cost_per_hour'), 'Cost per hour', required=False)
+                if error:
+                    return jsonify({'success': False, 'error': error}), 400
+                labor.cost_per_hour = cost
+            
+            if 'cost_per_piece' in data:
+                cost, error = validate_positive_number(data.get('cost_per_piece'), 'Cost per piece', required=False)
+                if error:
+                    return jsonify({'success': False, 'error': error}), 400
+                labor.cost_per_piece = cost
+            
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            app.logger.error(f"Error updating labor: {e}")
+            return jsonify({'success': False, 'error': 'Failed to update labor operation'}), 500
     
     elif request.method == 'DELETE':
-        db.session.delete(labor)
-        db.session.commit()
-        return jsonify({'success': True})
+        try:
+            db.session.delete(labor)
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            app.logger.error(f"Error deleting labor: {e}")
+            return jsonify({'success': False, 'error': 'Failed to delete labor operation'}), 500
+        
+
 
 @app.route('/api/labors', methods=['POST'])
-@admin_required
-def create_labor():
-    data = request.json
-    labor = LaborOperation(
-        name=data['name'],
-        cost_type=data['cost_type'],
-        fixed_cost=float(data['fixed_cost']) if data.get('fixed_cost') else None,
-        cost_per_hour=float(data['cost_per_hour']) if data.get('cost_per_hour') else None,
-        cost_per_piece=float(data['cost_per_piece']) if data.get('cost_per_piece') else None
-    )
-    db.session.add(labor)
-    db.session.commit()
-    return jsonify({'success': True, 'id': labor.id})
+@role_required('admin')
+def api_add_labor():
+    try:
+        data = request.get_json()
+        
+        # Validation
+        name, error = validate_required_string(data.get('name'), 'Labor operation name', max_length=100)
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
+        
+        cost_type, error = validate_choice(
+            data.get('cost_type'), 
+            'Cost type', 
+            ['flat_rate', 'hourly', 'per_piece']
+        )
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
+        
+        # Validate cost based on type
+        fixed_cost = None
+        cost_per_hour = None
+        cost_per_piece = None
+        
+        if cost_type == 'flat_rate':
+            fixed_cost, error = validate_positive_number(data.get('fixed_cost'), 'Fixed cost')
+            if error:
+                return jsonify({'success': False, 'error': error}), 400
+        elif cost_type == 'hourly':
+            cost_per_hour, error = validate_positive_number(data.get('cost_per_hour'), 'Cost per hour')
+            if error:
+                return jsonify({'success': False, 'error': error}), 400
+        else:  # per_piece
+            cost_per_piece, error = validate_positive_number(data.get('cost_per_piece'), 'Cost per piece')
+            if error:
+                return jsonify({'success': False, 'error': error}), 400
+        
+        labor = LaborOperation(
+            name=name,
+            cost_type=cost_type,
+            fixed_cost=fixed_cost,
+            cost_per_hour=cost_per_hour,
+            cost_per_piece=cost_per_piece
+        )
+        db.session.add(labor)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'id': labor.id})
+    except Exception as e:
+        app.logger.error(f"Error adding labor: {e}")
+        return jsonify({'success': False, 'error': 'Failed to add labor operation'}), 500
 
 
 # CLEANING COST ENDPOINTS
 @app.route('/api/cleanings/<int:cleaning_id>', methods=['GET', 'PUT', 'DELETE'])
-def handle_cleaning(cleaning_id):
-    # Check admin for write operations
-    auth_error = require_admin_for_write()
-    if auth_error:
-        return auth_error
-    
+@role_required('admin')
+def api_cleaning_detail(cleaning_id):
     cleaning = CleaningCost.query.get_or_404(cleaning_id)
     
     if request.method == 'GET':
         return jsonify({
             'id': cleaning.id,
             'garment_type': cleaning.garment_type,
-            'avg_minutes': cleaning.avg_minutes,
-            'fixed_cost': cleaning.fixed_cost
+            'fixed_cost': cleaning.fixed_cost,
+            'avg_minutes': cleaning.avg_minutes
         })
     
     elif request.method == 'PUT':
-        data = request.json
-        cleaning.garment_type = data.get('garment_type', cleaning.garment_type)
-        cleaning.avg_minutes = int(data.get('avg_minutes', cleaning.avg_minutes))
-        cleaning.fixed_cost = float(data.get('fixed_cost', cleaning.fixed_cost))
-        db.session.commit()
-        return jsonify({'success': True})
+        try:
+            data = request.get_json()
+            
+            if 'garment_type' in data:
+                garment_type, error = validate_required_string(data.get('garment_type'), 'Garment type', max_length=50)
+                if error:
+                    return jsonify({'success': False, 'error': error}), 400
+                cleaning.garment_type = garment_type
+            
+            if 'fixed_cost' in data:
+                cost, error = validate_positive_number(data.get('fixed_cost'), 'Fixed cost')
+                if error:
+                    return jsonify({'success': False, 'error': error}), 400
+                cleaning.fixed_cost = cost
+            
+            if 'avg_minutes' in data:
+                minutes, error = validate_positive_integer(data.get('avg_minutes'), 'Average minutes')
+                if error:
+                    return jsonify({'success': False, 'error': error}), 400
+                cleaning.avg_minutes = minutes
+            
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            app.logger.error(f"Error updating cleaning cost: {e}")
+            return jsonify({'success': False, 'error': 'Failed to update cleaning cost'}), 500
     
     elif request.method == 'DELETE':
-        db.session.delete(cleaning)
-        db.session.commit()
-        return jsonify({'success': True})
-    
+        try:
+            db.session.delete(cleaning)
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            app.logger.error(f"Error deleting cleaning cost: {e}")
+            return jsonify({'success': False, 'error': 'Failed to delete cleaning cost'}), 500
+
+
+
 @app.get("/api/cleaning-cost")
 def get_cleaning_cost():
     """Get cleaning cost for a garment type"""
@@ -2198,17 +2538,36 @@ def get_cleaning_cost():
     return jsonify({"error": "Not found"}), 404
 
 @app.route('/api/cleanings', methods=['POST'])
-@admin_required
-def create_cleaning():
-    data = request.json
-    cleaning = CleaningCost(
-        garment_type=data['garment_type'],
-        avg_minutes=int(data['avg_minutes']),
-        fixed_cost=float(data['fixed_cost'])
-    )
-    db.session.add(cleaning)
-    db.session.commit()
-    return jsonify({'success': True, 'id': cleaning.id})
+@role_required('admin')
+def api_add_cleaning():
+    try:
+        data = request.get_json()
+        
+        # Validation
+        garment_type, error = validate_required_string(data.get('garment_type'), 'Garment type', max_length=50)
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
+        
+        fixed_cost, error = validate_positive_number(data.get('fixed_cost'), 'Fixed cost')
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
+        
+        avg_minutes, error = validate_positive_integer(data.get('avg_minutes'), 'Average minutes')
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
+        
+        cleaning = CleaningCost(
+            garment_type=garment_type,
+            fixed_cost=fixed_cost,
+            avg_minutes=avg_minutes
+        )
+        db.session.add(cleaning)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'id': cleaning.id})
+    except Exception as e:
+        app.logger.error(f"Error adding cleaning cost: {e}")
+        return jsonify({'success': False, 'error': 'Failed to add cleaning cost'}), 500
 # ===== PLACEHOLDER ROUTES FOR FUTURE FEATURES =====
 @app.route("/style/new")
 @login_required
@@ -2420,57 +2779,68 @@ def api_style_by_name():
 
 # VARIABLE ENDPOINTS
 @app.route('/api/variables', methods=['GET', 'POST'])
-def handle_variables():
-    # Check admin for write operations
-    auth_error = require_admin_for_write()
-    if auth_error:
-        return auth_error
-    
+def api_variables():
     if request.method == 'GET':
         variables = Variable.query.order_by(Variable.name).all()
         return jsonify([{'id': v.id, 'name': v.name} for v in variables])
     
     elif request.method == 'POST':
-        data = request.json
-        variable_name = data.get('name', '').strip().upper()
-        
-        if not variable_name:
-            return jsonify({'error': 'Variable name required'}), 400
-        
-        # Check if exists
-        existing = Variable.query.filter(func.lower(Variable.name) == variable_name.lower()).first()
-        if existing:
-            return jsonify({'success': True, 'id': existing.id, 'name': existing.name, 'existed': True})
-        
-        # Create new
-        variable = Variable(name=variable_name)
-        db.session.add(variable)
-        db.session.commit()
-        
-        return jsonify({'success': True, 'id': variable.id, 'name': variable.name, 'existed': False})
+        try:
+            data = request.get_json()
+            
+            # Validation
+            name, error = validate_required_string(data.get('name'), 'Variable name', max_length=100)
+            if error:
+                return jsonify({'success': False, 'error': error}), 400
+            
+            # Check for duplicate
+            existing = Variable.query.filter(func.lower(Variable.name) == name.lower()).first()
+            if existing:
+                return jsonify({'success': False, 'error': 'Variable already exists'}), 400
+            
+            variable = Variable(name=name)
+            db.session.add(variable)
+            db.session.commit()
+            
+            return jsonify({'success': True, 'id': variable.id})
+        except Exception as e:
+            app.logger.error(f"Error adding variable: {e}")
+            return jsonify({'success': False, 'error': 'Failed to add variable'}), 500
 
 @app.route('/api/variables/<int:variable_id>', methods=['GET', 'PUT', 'DELETE'])
-def handle_variable(variable_id):
-    # Check admin for write operations
-    auth_error = require_admin_for_write()
-    if auth_error:
-        return auth_error
-    
+def api_variable_detail(variable_id):
     variable = Variable.query.get_or_404(variable_id)
     
     if request.method == 'GET':
-        return jsonify({'id': variable.id, 'name': variable.name})
+        return jsonify({
+            'id': variable.id,
+            'name': variable.name
+        })
     
     elif request.method == 'PUT':
-        data = request.json
-        variable.name = data.get('name', variable.name).strip().upper()
-        db.session.commit()
-        return jsonify({'success': True})
+        try:
+            data = request.get_json()
+            
+            if 'name' in data:
+                name, error = validate_required_string(data.get('name'), 'Variable name', max_length=100)
+                if error:
+                    return jsonify({'success': False, 'error': error}), 400
+                variable.name = name
+            
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            app.logger.error(f"Error updating variable: {e}")
+            return jsonify({'success': False, 'error': 'Failed to update variable'}), 500
     
     elif request.method == 'DELETE':
-        db.session.delete(variable)
-        db.session.commit()
-        return jsonify({'success': True})
+        try:
+            db.session.delete(variable)
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            app.logger.error(f"Error deleting variable: {e}")
+            return jsonify({'success': False, 'error': 'Failed to delete variable'}), 500
     
 @app.route('/api/styles/search', methods=['GET'])
 def search_styles():
