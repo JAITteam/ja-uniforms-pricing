@@ -9,6 +9,9 @@ from sqlalchemy import func
 from flask_mail import Mail, Message
 from flask_migrate import Migrate
 import pytz
+from datetime import timedelta
+
+
 
 # ===== LOAD ENVIRONMENT VARIABLES =====
 from dotenv import load_dotenv
@@ -38,6 +41,19 @@ from models import (
 )
 import pytz
 load_dotenv()
+import re
+
+def validate_password(password):
+    """Validate password strength"""
+    if len(password) < 8:
+        return False, "Password must be at least 8 characters"
+    if not re.search(r'[A-Z]', password):
+        return False, "Password must contain at least one uppercase letter"
+    if not re.search(r'[a-z]', password):
+        return False, "Password must contain at least one lowercase letter"
+    if not re.search(r'\d', password):
+        return False, "Password must contain at least one number"
+    return True, "Valid"
 
 # Initialize Mail
 mail = Mail()
@@ -82,6 +98,7 @@ def setup_logging(app):
 
 # Initialize Flask app
 app = Flask(__name__)
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)  # 30 days instead of 365
 setup_logging(app)
 # Rate Limiter - prevents abuse
 limiter = Limiter(
@@ -415,7 +432,7 @@ def login():
         user = User.query.filter_by(username=email).first()
         
         if user and user.check_password(password):
-            login_user(user)
+            login_user(user, remember=request.form.get('remember'))
             flash(f'Welcome back, {user.username}!', 'success')
             next_page = request.args.get('next')
             return redirect(next_page or url_for('index'))
@@ -453,6 +470,10 @@ def register():
             # Validation
             if not email or not email.endswith('@jauniforms.com'):
                 return jsonify({'success': False, 'error': 'Only company emails (@jauniforms.com) are allowed'}), 200
+            
+            is_valid, message = validate_password(password)
+            if not is_valid:
+                return jsonify({'success': False, 'error': message}), 200
             
             if User.query.filter_by(username=email).first():
                 return jsonify({'success': False, 'error': 'Email already registered'}), 200

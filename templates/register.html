@@ -32,6 +32,53 @@
     document.documentElement.style.setProperty('--shadow-color', theme.shadow);
     document.documentElement.style.setProperty('--filled-bg', theme.filled);
     </script>
+    
+    <!-- Password Requirements Styles -->
+    <style>
+    .password-requirements {
+        margin-top: 0.75rem;
+        padding: 0.75rem;
+        background: #f8fafc;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
+    .req-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+    }
+    .req-item {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.75rem;
+        color: #94a3b8;
+        transition: all 0.2s;
+    }
+    .req-item.valid {
+        color: #10b981;
+    }
+    .req-item .req-icon {
+        width: 14px;
+        height: 14px;
+    }
+    .confirm-match {
+        font-size: 0.75rem;
+        margin-top: 0.5rem;
+        display: none;
+    }
+    .confirm-match.show {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+    .confirm-match.match {
+        color: #10b981;
+    }
+    .confirm-match.no-match {
+        color: #ef4444;
+    }
+    </style>
 </head>
 <body>
     <div class="auth-container" style="background: var(--dynamic-gradient); background-size: 200% 200%; animation: gradientShift 15s ease infinite;">
@@ -111,6 +158,28 @@
                             <div class="password-strength-bar" id="strengthBar"></div>
                         </div>
                         <div class="password-strength-text" id="strengthText"></div>
+                        
+                        <!-- Password Requirements Checklist -->
+                        <div class="password-requirements" id="passwordRequirements">
+                            <div class="req-grid">
+                                <span class="req-item" id="req-length">
+                                    <i data-feather="x-circle" class="req-icon"></i>
+                                    8+ characters
+                                </span>
+                                <span class="req-item" id="req-uppercase">
+                                    <i data-feather="x-circle" class="req-icon"></i>
+                                    Uppercase (A-Z)
+                                </span>
+                                <span class="req-item" id="req-lowercase">
+                                    <i data-feather="x-circle" class="req-icon"></i>
+                                    Lowercase (a-z)
+                                </span>
+                                <span class="req-item" id="req-number">
+                                    <i data-feather="x-circle" class="req-icon"></i>
+                                    Number (0-9)
+                                </span>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -121,6 +190,10 @@
                             <button type="button" class="password-toggle" onclick="togglePassword('confirmPassword')">
                                 <i data-feather="eye" id="confirmPassword-eye"></i>
                             </button>
+                        </div>
+                        <div class="confirm-match" id="confirmMatch">
+                            <i data-feather="check-circle" style="width: 14px; height: 14px;"></i>
+                            <span id="confirmMatchText">Passwords match</span>
                         </div>
                     </div>
 
@@ -185,6 +258,97 @@
     <script src="{{ url_for('static', filename='js/register.js') }}"></script>
     <script>
         feather.replace();
+        
+        // Password Requirements Validation
+        document.getElementById('password').addEventListener('input', function() {
+            const password = this.value;
+            
+            const requirements = {
+                'req-length': password.length >= 8,
+                'req-uppercase': /[A-Z]/.test(password),
+                'req-lowercase': /[a-z]/.test(password),
+                'req-number': /\d/.test(password)
+            };
+            
+            for (const [id, passed] of Object.entries(requirements)) {
+                const el = document.getElementById(id);
+                if (passed) {
+                    el.classList.add('valid');
+                    el.querySelector('.req-icon').setAttribute('data-feather', 'check-circle');
+                } else {
+                    el.classList.remove('valid');
+                    el.querySelector('.req-icon').setAttribute('data-feather', 'x-circle');
+                }
+            }
+            
+            feather.replace();
+            
+            // Update strength bar
+            const passedCount = Object.values(requirements).filter(Boolean).length;
+            const strengthBar = document.getElementById('strengthBar');
+            const strengthText = document.getElementById('strengthText');
+            
+            strengthBar.style.width = (passedCount * 25) + '%';
+            
+            if (passedCount === 0) {
+                strengthBar.style.background = '#e2e8f0';
+                strengthText.textContent = '';
+            } else if (passedCount === 1) {
+                strengthBar.style.background = '#ef4444';
+                strengthText.textContent = 'Weak';
+                strengthText.style.color = '#ef4444';
+            } else if (passedCount === 2) {
+                strengthBar.style.background = '#f59e0b';
+                strengthText.textContent = 'Fair';
+                strengthText.style.color = '#f59e0b';
+            } else if (passedCount === 3) {
+                strengthBar.style.background = '#3b82f6';
+                strengthText.textContent = 'Good';
+                strengthText.style.color = '#3b82f6';
+            } else {
+                strengthBar.style.background = '#10b981';
+                strengthText.textContent = 'Strong';
+                strengthText.style.color = '#10b981';
+            }
+            
+            // Also check confirm password if it has value
+            const confirmPassword = document.getElementById('confirmPassword');
+            if (confirmPassword.value) {
+                checkPasswordMatch();
+            }
+        });
+
+        // Confirm Password Match
+        document.getElementById('confirmPassword').addEventListener('input', checkPasswordMatch);
+        
+        function checkPasswordMatch() {
+            const password = document.getElementById('password').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            const matchDiv = document.getElementById('confirmMatch');
+            const matchText = document.getElementById('confirmMatchText');
+            const confirmInput = document.getElementById('confirmPassword');
+            
+            if (confirm) {
+                matchDiv.classList.add('show');
+                if (confirm === password) {
+                    matchDiv.classList.remove('no-match');
+                    matchDiv.classList.add('match');
+                    matchText.textContent = 'Passwords match';
+                    matchDiv.querySelector('svg').setAttribute('data-feather', 'check-circle');
+                    confirmInput.style.borderColor = '#10b981';
+                } else {
+                    matchDiv.classList.remove('match');
+                    matchDiv.classList.add('no-match');
+                    matchText.textContent = 'Passwords do not match';
+                    matchDiv.querySelector('svg').setAttribute('data-feather', 'x-circle');
+                    confirmInput.style.borderColor = '#ef4444';
+                }
+                feather.replace();
+            } else {
+                matchDiv.classList.remove('show');
+                confirmInput.style.borderColor = '';
+            }
+        }
         
         function togglePassword(inputId) {
             const input = document.getElementById(inputId);
