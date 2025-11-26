@@ -12,3 +12,9 @@
 [2025-11-26 11:51:25,927] INFO in app: === J.A. Uniforms Application Started ===
 [2025-11-26 13:19:39,406] INFO in app: === J.A. Uniforms Application Started ===
 [2025-11-26 13:48:03,036] INFO in app: === J.A. Uniforms Application Started ===
+[2025-11-26 13:58:57,355] INFO in app: === J.A. Uniforms Application Started ===
+[2025-11-26 13:59:13,876] INFO in app: === J.A. Uniforms Application Started ===
+[2025-11-26 14:03:05,979] INFO in app: Verification error: 'password_hash'
+[2025-11-26 14:03:16,547] INFO in app: Verification error: 'password_hash'
+[2025-11-26 14:04:04,453] INFO in app: Verification error: 'password_hash'
+[2025-11-26 14:07:32,606] INFO in app: === J.A. Uniforms Application Started ===

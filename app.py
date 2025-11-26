@@ -1,50 +1,49 @@
-# ===== CLEANED IMPORTS FOR app.py =====
-# Copy lines 1-46 and replace the messy imports at the top of your app.py
-
-import pandas as pd
-import logging
-from logging.handlers import RotatingFileHandler
-from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, Response, flash, session
-from sqlalchemy import func
-from flask_mail import Mail, Message
-from flask_migrate import Migrate
-import pytz
-from datetime import timedelta
-
-
-
-# ===== LOAD ENVIRONMENT VARIABLES =====
-from dotenv import load_dotenv
-load_dotenv()
-# ======================================
-
-from config import Config
-from database import db
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+# ===== STANDARD LIBRARY =====
+import os
+import re
+import csv
 import random
 import string
-from datetime import datetime, timedelta
-import os
-import csv
-from dotenv import load_dotenv
+import logging
 from io import StringIO
-from werkzeug.utils import secure_filename
-from flask_wtf.csrf import CSRFProtect
+from datetime import datetime, timedelta
+from logging.handlers import RotatingFileHandler
+
+# ===== THIRD PARTY =====
+import pytz
+import pandas as pd
+from dotenv import load_dotenv
+from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, Response, flash, session
+from flask_mail import Mail, Message
+from flask_migrate import Migrate
 from flask_login import login_user, logout_user, current_user, login_required
+from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from sqlalchemy import func
+from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash
+
+# ===== LOCAL IMPORTS =====
+from config import Config
+from database import db
 from auth import init_auth, admin_required, login_required_custom, role_required, get_user_permissions
 from models import (
-    Style, Fabric, User, FabricVendor, Notion, NotionVendor, 
-    LaborOperation, CleaningCost, StyleFabric, StyleNotion, 
+    Style, Fabric, User, FabricVendor, Notion, NotionVendor,
+    LaborOperation, CleaningCost, StyleFabric, StyleNotion,
     StyleLabor, Color, StyleColor, Variable, StyleVariable,
     SizeRange, GlobalSetting, StyleImage
 )
-import pytz
-load_dotenv()
-import re
 
+# ===== LOAD ENVIRONMENT VARIABLES (ONCE!) =====
+load_dotenv()
+
+
+# ===== HELPER FUNCTIONS =====
 def validate_password(password):
     """Validate password strength"""
+    if not password:
+        return False, "Password is required"
     if len(password) < 8:
         return False, "Password must be at least 8 characters"
     if not re.search(r'[A-Z]', password):
@@ -359,7 +358,7 @@ def verify_code():
             last_name=user_data.get('last_name'),
             full_name=f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip()
         )
-        user.set_password(user_data['password'])
+        user.password_hash = user_data['password_hash']
 
         if email == 'it@jauniforms.com':
             user.role = 'admin'
@@ -485,7 +484,7 @@ def register():
                 'user_data': {
                     'first_name': first_name,
                     'last_name': last_name,
-                    'password': password
+                    'password_hash': generate_password_hash(password)  # ✅ Hashed!
                 }
             }
             
@@ -801,7 +800,7 @@ def upload_style_image(style_id):
             style_id=style_id,
             filename=filename,
             is_primary=is_primary,
-            upload_date=datetime.utcnow()
+            upload_date=datetime.now()
         )
         
         db.session.add(new_image)
@@ -1600,10 +1599,7 @@ def delete_style(style_id):
         style = Style.query.get_or_404(style_id)
         
         # Delete style images first (foreign key constraint)
-        db.session.execute(
-            db.text("DELETE FROM style_images WHERE style_id = :style_id"),
-            {"style_id": style_id}
-        )
+        StyleImage.query.filter_by(style_id=style_id).delete()
         
         # Delete all other relationships
         StyleFabric.query.filter_by(style_id=style_id).delete()
@@ -1741,11 +1737,8 @@ def bulk_delete_styles():
             # (Images first, then other relationships, then the style itself)
             
             # Delete style images
-            db.session.execute(
-                db.text("DELETE FROM style_images WHERE style_id = :style_id"),
-                {"style_id": style_id}
-            )
-            
+            StyleImage.query.filter_by(style_id=style_id).delete()
+
             # Delete other relationships
             StyleFabric.query.filter_by(style_id=style_id).delete()
             StyleNotion.query.filter_by(style_id=style_id).delete()
