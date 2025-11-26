@@ -5,7 +5,9 @@ __pycache__/
 *.pyc
 venv/
 .venv/     
+# Environment variables
 .env
+!.env.example
 
 # Database
 *.db
