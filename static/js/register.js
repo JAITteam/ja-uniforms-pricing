@@ -175,6 +175,7 @@ verifyBtn.addEventListener('click', function() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
         },
         body: JSON.stringify({
             email: emailInput.value,
@@ -235,6 +236,7 @@ resendLink.addEventListener('click', function(e) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
             },
             body: JSON.stringify({
                 email: emailInput.value

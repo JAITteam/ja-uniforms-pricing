@@ -67,11 +67,12 @@ def setup_logging(app):
     if not os.path.exists('logs'):
         os.makedirs('logs')
     
-    # Main log file - captures everything
+    # Main log file - captures everything (with UTF-8 encoding for emojis)
     file_handler = RotatingFileHandler(
         'logs/ja_uniforms.log',
         maxBytes=10 * 1024 * 1024,  # 10MB max size
-        backupCount=10               # Keep 10 backup files
+        backupCount=10,              # Keep 10 backup files
+        encoding='utf-8'             # Support emojis and special characters
     )
     file_handler.setFormatter(logging.Formatter(
         '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
@@ -82,16 +83,25 @@ def setup_logging(app):
     error_handler = RotatingFileHandler(
         'logs/ja_uniforms_errors.log',
         maxBytes=10 * 1024 * 1024,
-        backupCount=10
+        backupCount=10,
+        encoding='utf-8'             # Support emojis and special characters
     )
     error_handler.setFormatter(logging.Formatter(
         '[%(asctime)s] %(levelname)s in %(pathname)s:%(lineno)d\n%(message)s\n'
     ))
     error_handler.setLevel(logging.ERROR)
     
+    # Console handler with UTF-8 support (fixes Windows emoji issue)
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(logging.Formatter(
+        '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
+    ))
+    console_handler.setLevel(logging.INFO)
+    
     # Add handlers to app
     app.logger.addHandler(file_handler)
     app.logger.addHandler(error_handler)
+    app.logger.addHandler(console_handler)
     app.logger.setLevel(logging.INFO)
     
     app.logger.info('=== J.A. Uniforms Application Started ===')
@@ -347,7 +357,7 @@ def ratelimit_handler(e):
 
 
 @app.route('/api/send-verification-code', methods=['POST'])
-@csrf.exempt
+
 @limiter.limit("3 per minute")   # ← ADD THIS
 @limiter.limit("10 per hour") 
 def send_verification_code():
@@ -391,7 +401,7 @@ def send_verification_code():
         return jsonify({'success': False, 'error': 'Failed to send email'}), 500
     
 @app.route('/api/verify-code', methods=['POST'])
-@csrf.exempt
+
 @limiter.limit("5 per minute")
 def verify_code():
     """Verify the email verification code"""
@@ -451,7 +461,7 @@ def verify_code():
         return jsonify({'success': False, 'error': 'Verification failed'}), 200
 
 @app.route('/api/resend-verification-code', methods=['POST'])
-@csrf.exempt
+
 @limiter.limit("2 per minute")
 @limiter.limit("5 per hour")
 def resend_verification_code():

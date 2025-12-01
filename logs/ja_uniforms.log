@@ -79,3 +79,7 @@ AttributeError: type object 'Style' has no attribute 'style_labors'
 [2025-12-01 15:33:45,116] INFO in app: === J.A. Uniforms Application Started ===
 [2025-12-01 15:36:02,405] INFO in app: === J.A. Uniforms Application Started ===
 [2025-12-01 15:44:31,759] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-01 16:21:38,440] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-01 16:23:27,918] INFO in app: Verification code sent to operations@jauniforms.com
+[2025-12-01 16:26:47,183] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-01 16:35:56,870] INFO in app: === J.A. Uniforms Application Started ===
