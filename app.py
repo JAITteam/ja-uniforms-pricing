@@ -238,7 +238,7 @@ J.A. Uniforms Team
         mail.send(msg)
         return True
     except Exception as e:
-        app.logger.info(f"Error sending email: {e}")
+        app.logger.error(f"Error sending email: {e}")
         return False
 
 # ===== VALIDATION HELPER FUNCTIONS =====
@@ -425,8 +425,10 @@ def verify_code():
             full_name=f"{verification.first_name or ''} {verification.last_name or ''}".strip()
         )
         user.password_hash = verification.password_hash
-        
-        if email == 'it@jauniforms.com':
+        # Assign role based on email
+
+        admin_emails = os.getenv('ADMIN_EMAILS', 'it@jauniforms.com').split(',')
+        if email in [e.strip() for e in admin_emails]:
             user.role = 'admin'
         else:
             user.role = 'user'
@@ -988,14 +990,14 @@ def upload_style_image(style_id):
     
     # Check if file is in request
     if 'image' not in request.files:
-        app.logger.info("❌ ERROR: 'image' key not found in request.files")
+        app.logger.error("❌ ERROR: 'image' key not found in request.files")
         return jsonify({'error': 'No file provided'}), 400
     
     file = request.files['image']
     
     # Check if filename is empty
     if file.filename == '':
-        app.logger.info("❌ ERROR: file.filename is empty")
+        app.logger.error("❌ ERROR: file.filename is empty")
         return jsonify({'error': 'No file selected'}), 400
     
     app.logger.info(f"✅ File received: {file.filename}")
@@ -1084,7 +1086,8 @@ def delete_style_image(image_id):
         try:
             os.remove(filepath)
         except Exception as e:
-            app.logger.info(f"Error deleting file: {e}")
+            app.logger.error(f"Error deleting file: {e}")
+
             # Continue anyway to remove from database
     
     # Delete database record
@@ -1925,7 +1928,7 @@ def delete_style(style_id):
         db.session.rollback()
         import traceback
         error_details = traceback.format_exc()
-        app.logger.info(f"Delete error: {error_details}")
+        app.logger.error(f"Delete error: {error_details}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route('/api/style/duplicate/<int:style_id>', methods=['POST'])
@@ -2025,7 +2028,7 @@ def duplicate_style(style_id):
         db.session.rollback()
         import traceback
         error_details = traceback.format_exc()
-        app.logger.info(f"Duplicate error: {error_details}")
+        app.logger.error(f"Duplicate error: {error_details}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route('/api/styles/bulk-delete', methods=['POST'])
@@ -2067,7 +2070,7 @@ def bulk_delete_styles():
         db.session.rollback()
         import traceback
         error_details = traceback.format_exc()
-        app.logger.info(f"Bulk delete error: {error_details}")
+        app.logger.error(f"Bulk delete error: {error_details}")
         return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route('/api/style/load-for-duplicate/<int:style_id>')
