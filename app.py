@@ -32,7 +32,7 @@ from models import (
     Style, Fabric, User, FabricVendor, Notion, NotionVendor,
     LaborOperation, CleaningCost, StyleFabric, StyleNotion,
     StyleLabor, Color, StyleColor, Variable, StyleVariable,
-    SizeRange, GlobalSetting, StyleImage
+    SizeRange, GlobalSetting, StyleImage, VerificationCode
 )
 
 # ===== LOAD ENVIRONMENT VARIABLES (ONCE!) =====
@@ -56,8 +56,7 @@ def validate_password(password):
 
 # Initialize Mail
 mail = Mail()
-# Store verification codes
-verification_codes = {}
+
 
 def setup_logging(app):
     """Configure application logging"""
@@ -365,94 +364,105 @@ def send_verification_code():
     
     # Generate and store verification code
     code = generate_verification_code()
-    verification_codes[email] = {
-        'code': code,
-        'expires': datetime.now() + timedelta(minutes=2)
-    }
+    
+    # Delete any existing code for this email
+    VerificationCode.query.filter_by(email=email).delete()
+    
+    # Save to database
+    verification = VerificationCode(
+        email=email,
+        code=code,
+        password_hash='pending',  # Will be set in register route
+        first_name='',
+        last_name='',
+        expires_at=datetime.now() + timedelta(minutes=10)
+    )
+    db.session.add(verification)
+    db.session.commit()
     
     # Send email
     if send_verification_email(email, code):
         return jsonify({'success': True, 'message': 'Verification code sent successfully'}), 200
     else:
         return jsonify({'success': False, 'error': 'Failed to send email'}), 500
-
-# Add these routes AFTER your register route
-
+    
 @app.route('/api/verify-code', methods=['POST'])
 @limiter.limit("5 per minute")
-@csrf.exempt
 def verify_code():
     """Verify the email verification code"""
     try:
         data = request.get_json()
-        email = data.get('email')
-        code = data.get('code')
+        email = data.get('email', '').strip().lower()
+        code = data.get('code', '').strip()
         
-        if email not in verification_codes:
+        # Get from database
+        verification = VerificationCode.query.filter_by(email=email).first()
+        
+        if not verification:
             return jsonify({'success': False, 'error': 'No verification code found'}), 200
         
-        stored = verification_codes[email]
-        
-        # Check if code expired
-        if datetime.now() > stored['expires']:
-            del verification_codes[email]
+        # Check if expired
+        if verification.is_expired():
+            db.session.delete(verification)
+            db.session.commit()
             return jsonify({'success': False, 'error': 'Code expired. Please register again'}), 200
         
         # Check if code matches
-        if stored['code'] != code:
-            return jsonify({'success': False, 'error': 'Invalid verification code'}), 200
+        if verification.code != code:
+            return jsonify({'success': False, 'error': 'Invalid code'}), 200
         
-        # Create user account
-        user_data = stored['user_data']
+        # Create user
         user = User(
             username=email,
             email=email,
-            first_name=user_data.get('first_name'),
-            last_name=user_data.get('last_name'),
-            full_name=f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip()
+            first_name=verification.first_name,
+            last_name=verification.last_name,
+            full_name=f"{verification.first_name or ''} {verification.last_name or ''}".strip()
         )
-        user.password_hash = user_data['password_hash']
-
+        user.password_hash = verification.password_hash
+        
         if email == 'it@jauniforms.com':
             user.role = 'admin'
         else:
             user.role = 'user'
-
-        db.session.add(user)
-        db.session.commit()
         
-        # Clean up
-        del verification_codes[email]
+        db.session.add(user)
+        
+        # Delete verification record
+        db.session.delete(verification)
+        db.session.commit()
         
         return jsonify({
             'success': True,
-            'message': 'Email verified successfully',
-            'redirect': '/login'
-        }), 200
+            'message': 'Verification successful',
+            'redirect': url_for('login')
+        })
         
     except Exception as e:
-        app.logger.info(f"Verification error: {e}")
         db.session.rollback()
+        app.logger.error(f"Verification error: {e}")
         return jsonify({'success': False, 'error': 'Verification failed'}), 200
 
-
 @app.route('/api/resend-verification-code', methods=['POST'])
-@limiter.limit("2 per minute")   # ← ADD THIS
-@limiter.limit("5 per hour") 
-@csrf.exempt
+@limiter.limit("2 per minute")
+@limiter.limit("5 per hour")
 def resend_verification_code():
     """Resend verification code"""
     try:
         data = request.get_json()
-        email = data.get('email')
+        email = data.get('email', '').strip().lower()
         
-        if email not in verification_codes:
+        # Get from database
+        verification = VerificationCode.query.filter_by(email=email).first()
+        
+        if not verification:
             return jsonify({'success': False, 'error': 'No registration found'}), 200
         
         # Generate new code
         new_code = generate_verification_code()
-        verification_codes[email]['code'] = new_code
-        verification_codes[email]['expires'] = datetime.now() + timedelta(minutes=2)
+        verification.code = new_code
+        verification.expires_at = datetime.now() + timedelta(minutes=10)
+        db.session.commit()
         
         # Send new email
         if send_verification_email(email, new_code):
@@ -461,9 +471,9 @@ def resend_verification_code():
             return jsonify({'success': False, 'error': 'Error sending email'}), 200
             
     except Exception as e:
-        app.logger.info(f"Resend error: {e}")
+        db.session.rollback()
+        app.logger.error(f"Resend verification error: {e}")
         return jsonify({'success': False, 'error': 'Failed to resend code'}), 200
-    
 
 # ===== AUTHENTICATION ROUTES =====
 @app.route('/login', methods=['GET', 'POST'])
@@ -514,9 +524,9 @@ def register():
     if request.method == 'POST':
         try:
             # Get form data
-            first_name = request.form.get('firstName')
-            last_name = request.form.get('lastName')
-            email = request.form.get('email')
+            first_name = request.form.get('firstName', '').strip()
+            last_name = request.form.get('lastName', '').strip()
+            email = request.form.get('email', '').strip().lower()
             password = request.form.get('password')
             
             # Validation
@@ -530,29 +540,37 @@ def register():
             if User.query.filter_by(username=email).first():
                 return jsonify({'success': False, 'error': 'Email already registered'}), 200
             
-            # Store user data temporarily
-            verification_codes[email] = {
-                'code': generate_verification_code(),
-                'expires': datetime.now() + timedelta(minutes=2),
-                'user_data': {
-                    'first_name': first_name,
-                    'last_name': last_name,
-                    'password_hash': generate_password_hash(password)  # ✅ Hashed!
-                }
-            }
+            # Generate code
+            code = generate_verification_code()
+            
+            # Delete any existing code for this email
+            VerificationCode.query.filter_by(email=email).delete()
+            
+            # Store in database (survives restart!)
+            verification = VerificationCode(
+                email=email,
+                code=code,
+                password_hash=generate_password_hash(password),
+                first_name=first_name,
+                last_name=last_name,
+                expires_at=datetime.now() + timedelta(minutes=10)
+            )
+            db.session.add(verification)
+            db.session.commit()
             
             # Send verification email
-            if send_verification_email(email, verification_codes[email]['code']):
+            if send_verification_email(email, code):
+                app.logger.info(f"Verification code sent to {email}")
                 return jsonify({'success': True, 'message': 'Verification code sent'}), 200
             else:
                 return jsonify({'success': False, 'error': 'Error sending email'}), 200
                 
         except Exception as e:
-            app.logger.info(f"Registration error: {e}")
+            db.session.rollback()
+            app.logger.error(f"Registration error: {e}")
             return jsonify({'success': False, 'error': 'Registration failed'}), 200
     
     return render_template('register.html')
-
 # ===== USER MANAGEMENT ROUTES (ADMIN ONLY) =====
 
 @app.route('/admin/users')

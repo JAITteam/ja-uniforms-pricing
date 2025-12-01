@@ -5,8 +5,8 @@ from flask_login import UserMixin
 import pytz
 
 
-def get_utc_now():
-    """Get current UTC time - use this for all database timestamps"""
+def get_current_time():
+    """Get current  time - use this for all database timestamps"""
     return datetime.now()
 # ===== AUTHENTICATION =====
 class User(UserMixin, db.Model):
