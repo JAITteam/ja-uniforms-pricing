@@ -22,3 +22,44 @@
 [2025-11-26 15:35:54,391] INFO in app: === J.A. Uniforms Application Started ===
 [2025-12-01 09:40:58,389] INFO in app: === J.A. Uniforms Application Started ===
 [2025-12-01 10:26:11,880] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-01 10:27:57,776] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-01 10:29:37,610] INFO in app: Verification code sent to operations@jauniforms.com
+[2025-12-01 10:30:24,514] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-01 10:34:41,784] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-01 10:37:54,601] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-01 10:39:51,603] INFO in app: Verification code sent to operations@jauniforms.com
+[2025-12-01 10:51:18,363] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-01 10:53:05,815] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-01 10:55:12,697] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-01 10:55:39,782] INFO in app: Verification code sent to operations@jauniforms.com
+[2025-12-01 10:55:48,947] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-01 10:57:07,968] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-01 11:31:38,902] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-01 11:46:11,191] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-01 11:46:20,072] ERROR in app: Exception on / [GET]
+Traceback (most recent call last):
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\app.py", line 744, in index
+    joinedload(Style.style_labors).joinedload(StyleLabor.labor_operation)
+               ^^^^^^^^^^^^^^^^^^
+AttributeError: type object 'Style' has no attribute 'style_labors'
+[2025-12-01 11:50:56,266] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-01 13:42:22,018] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-01 13:42:32,347] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-01 13:44:14,166] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-01 13:44:25,150] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-01 13:44:41,923] INFO in app: === J.A. Uniforms Application Started ===

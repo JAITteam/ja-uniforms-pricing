@@ -1,0 +1,22 @@
+[2025-12-01 11:46:20,072] ERROR in C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py:825
+Exception on / [GET]
+Traceback (most recent call last):
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\app.py", line 744, in index
+    joinedload(Style.style_labors).joinedload(StyleLabor.labor_operation)
+               ^^^^^^^^^^^^^^^^^^
+AttributeError: type object 'Style' has no attribute 'style_labors'

@@ -2,7 +2,6 @@ from database import db
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
-import pytz
 
 class VerificationCode(db.Model):
     __tablename__ = 'verification_codes'
@@ -246,24 +245,24 @@ class Style(db.Model):
 # ===== JUNCTION TABLES =====
 class StyleFabric(db.Model):
     __tablename__ = 'style_fabrics'
-    
+
     id = db.Column(db.Integer, primary_key=True)
-    style_id = db.Column(db.Integer, db.ForeignKey('styles.id'), nullable=False)
-    fabric_id = db.Column(db.Integer, db.ForeignKey('fabrics.id'), nullable=False)
+    style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False)
+    fabric_id = db.Column(db.Integer, db.ForeignKey('fabrics.id', ondelete='CASCADE'), nullable=False)
     yards_required = db.Column(db.Float, nullable=False)
     is_primary = db.Column(db.Boolean, default=False)
-    is_sublimation = db.Column(db.Boolean, default=False)  # ADD THIS
+    is_sublimation = db.Column(db.Boolean, default=False)
     notes = db.Column(db.String(200))
-    
-    style = db.relationship('Style', backref='style_fabrics')
+
+    style = db.relationship('Style', backref=db.backref('style_fabrics', cascade='all, delete-orphan'))
     fabric = db.relationship('Fabric')
 
 class StyleNotion(db.Model):
     __tablename__ = 'style_notions'
     
     id = db.Column(db.Integer, primary_key=True)
-    style_id = db.Column(db.Integer, db.ForeignKey('styles.id'), nullable=False)
-    notion_id = db.Column(db.Integer, db.ForeignKey('notions.id'), nullable=False)
+    style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False)
+    notion_id = db.Column(db.Integer, db.ForeignKey('notions.id', ondelete='CASCADE'), nullable=False)
     quantity_required = db.Column(db.Integer, nullable=False)
     notes = db.Column(db.String(200))
     
@@ -291,51 +290,50 @@ class Variable(db.Model):
     def __repr__(self):
         return f'<Variable {self.name}>'
 
+
 class StyleVariable(db.Model):
     __tablename__ = 'style_variables'
-    
+
     id = db.Column(db.Integer, primary_key=True)
-    style_id = db.Column(db.Integer, db.ForeignKey('styles.id'), nullable=False)
-    variable_id = db.Column(db.Integer, db.ForeignKey('variables.id'), nullable=False)
-    
-    style = db.relationship('Style')
+    style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False)
+    variable_id = db.Column(db.Integer, db.ForeignKey('variables.id', ondelete='CASCADE'), nullable=False)
+
+    style = db.relationship('Style', backref=db.backref('style_variables', cascade='all, delete-orphan'))
     variable = db.relationship('Variable')
     
 # Create junction table for Style-Color relationship
 class StyleColor(db.Model):
     __tablename__ = 'style_colors'
-    
+
     id = db.Column(db.Integer, primary_key=True)
-    style_id = db.Column(db.Integer, db.ForeignKey('styles.id'), nullable=False)
-    color_id = db.Column(db.Integer, db.ForeignKey('colors.id'), nullable=False)
-    
+    style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False)
+    color_id = db.Column(db.Integer, db.ForeignKey('colors.id', ondelete='CASCADE'), nullable=False)
+
     style = db.relationship('Style', back_populates='colors')
     color = db.relationship('Color')
 
 class StyleImage(db.Model):
     __tablename__ = 'style_images'
-    
+
     id = db.Column(db.Integer, primary_key=True)
-    style_id = db.Column(db.Integer, db.ForeignKey('styles.id'), nullable=False)
+    style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False)
     filename = db.Column(db.String(255), nullable=False)
     is_primary = db.Column(db.Boolean, default=False)
     upload_date = db.Column(db.DateTime, default=datetime.now)
-    
-    style = db.relationship('Style', backref='images')
+
+    style = db.relationship('Style', backref=db.backref('images', cascade='all, delete-orphan'))
 
 class StyleLabor(db.Model):
     __tablename__ = 'style_labor'
     
     id = db.Column(db.Integer, primary_key=True)
-    style_id = db.Column(db.Integer, db.ForeignKey('styles.id'), nullable=False)
-    labor_operation_id = db.Column(db.Integer, db.ForeignKey('labor_operations.id'), nullable=False)
-    time_hours = db.Column(db.Float)  # For hourly operations
-    # Standardize on minutes everywhere
-    #time_minutes = db.Column(db.Float)  # Instead of time_hours
-    quantity = db.Column(db.Integer, default=1)  # For flat rate/per piece operations
+    style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False)
+    labor_operation_id = db.Column(db.Integer, db.ForeignKey('labor_operations.id', ondelete='CASCADE'), nullable=False)
+    time_hours = db.Column(db.Float)
+    quantity = db.Column(db.Integer, default=1)
     notes = db.Column(db.String(200))
-    
-    style = db.relationship('Style', backref='style_labor')
+
+    style = db.relationship('Style', backref=db.backref('style_labor', cascade='all, delete-orphan'))
     labor_operation = db.relationship('LaborOperation')
 
 class GlobalSetting(db.Model):
@@ -350,100 +348,3 @@ class GlobalSetting(db.Model):
     def __repr__(self):
         return f'<GlobalSetting {self.setting_key}={self.setting_value}>'
 
-# ===== SAMPLE DATA FUNCTION =====
-def create_complete_sample():
-    """Create complete sample data with all your business requirements"""
-    
-    if User.query.first():
-        return "Sample data already exists"
-    
-    # Create users
-    admin = User(username='ruben', role='admin')
-    admin.set_password('admin123')
-    viewer = User(username='employee', role='viewer')
-    viewer.set_password('view123')
-    db.session.add_all([admin, viewer])
-    
-    # Create vendors
-    carr = FabricVendor(name='CARR TEXTILES', vendor_code='V100')
-    wawak = NotionVendor(name='WAWAK', vendor_code='N100')
-    db.session.add_all([carr, wawak])
-    db.session.flush()
-    
-    # Create your 5 labor operations
-    labor_ops = [
-        LaborOperation(name='FUSION', cost_type='flat_rate', fixed_cost=1.50),
-        LaborOperation(name='Marker+Cut', cost_type='flat_rate', fixed_cost=1.50),
-        LaborOperation(name='Sewing', cost_type='hourly', cost_per_hour=19.32),
-        LaborOperation(name='Button/Snap/Grommet', cost_type='per_piece', cost_per_piece=0.15),
-    ]
-    db.session.add_all(labor_ops)
-    
-    # Create cleaning costs
-    cleaning_costs = [
-        CleaningCost(garment_type='APRON', fixed_cost=0.96, avg_minutes=3),
-        CleaningCost(garment_type='VEST', fixed_cost=1.28, avg_minutes=4),
-        CleaningCost(garment_type='SS TOP/SS DRESS', fixed_cost=1.60, avg_minutes=5),
-        CleaningCost(garment_type='LS TOP/LS DRESS', fixed_cost=2.24, avg_minutes=7),
-        CleaningCost(garment_type='SHORTS/SKIRTS', fixed_cost=1.28, avg_minutes=4),
-        CleaningCost(garment_type='PANTS', fixed_cost=1.60, avg_minutes=5),
-        CleaningCost(garment_type='SS JACKET/LINED SS DRESS', fixed_cost=3.20, avg_minutes=10),
-        CleaningCost(garment_type='LS JACKET/LINED LS DRESS', fixed_cost=3.84, avg_minutes=12),
-    ]
-    db.session.add_all(cleaning_costs)
-    
-    # Create size variants
-    sizes = [
-        SizeVariant(size_name='XS', size_category='regular', price_multiplier=1.0),
-        SizeVariant(size_name='S', size_category='regular', price_multiplier=1.0),
-        SizeVariant(size_name='M', size_category='regular', price_multiplier=1.0),
-        SizeVariant(size_name='L', size_category='regular', price_multiplier=1.0),
-        SizeVariant(size_name='XL', size_category='regular', price_multiplier=1.0),
-        SizeVariant(size_name='2XL', size_category='extended', price_multiplier=1.15),
-        SizeVariant(size_name='3XL', size_category='extended', price_multiplier=1.15),
-        SizeVariant(size_name='4XL', size_category='extended', price_multiplier=1.15),
-    ]
-    db.session.add_all(sizes)
-    db.session.flush()
-    
-    # Create products
-    fabric = Fabric(name='XANADU', fabric_code='3202', cost_per_yard=6.00, color='TEAL', fabric_vendor_id=carr.id)
-    notion = Notion(name='18L SPORT BUTTON', cost_per_unit=0.04, unit_type='each', notion_vendor_id=wawak.id)
-    db.session.add_all([fabric, notion])
-    db.session.flush()
-    
-    # Create sample style
-    style = Style(
-        vendor_style='21324-3202',
-        base_item_number='21324',
-        variant_code='3202',
-        style_name='SHIRT, MENS LARGO CAMP W/ SLEEVE TAB',
-        gender='MENS',
-        garment_type='SS TOP/SS DRESS',
-        size_range='XS-4XL',
-        base_margin_percent=60.0
-    )
-    db.session.add(style)
-    db.session.flush()
-    
-    # Create BOM relationships
-    style_fabric = StyleFabric(style_id=style.id, fabric_id=fabric.id, yards_required=1.5, is_primary=True)
-    style_notion = StyleNotion(style_id=style.id, notion_id=notion.id, quantity_required=7)
-    
-    # Add labor operations to style
-    sewing_op = LaborOperation.query.filter_by(name='Sewing').first()
-    fusion_op = LaborOperation.query.filter_by(name='FUSION').first()
-    marker_op = LaborOperation.query.filter_by(name='Marker+Cut').first()
-    button_op = LaborOperation.query.filter_by(name='Button/Snap/Grommet').first()
-    
-    style_labor = [
-        StyleLabor(style_id=style.id, labor_operation_id=fusion_op.id, quantity=1),
-        StyleLabor(style_id=style.id, labor_operation_id=marker_op.id, quantity=1),
-        StyleLabor(style_id=style.id, labor_operation_id=sewing_op.id, time_hours=0.55),
-        StyleLabor(style_id=style.id, labor_operation_id=button_op.id, quantity=7),
-    ]
-    
-    db.session.add_all([style_fabric, style_notion] + style_labor)
-    db.session.commit()
-    
-    return "Complete uniform pricing sample data created successfully!"

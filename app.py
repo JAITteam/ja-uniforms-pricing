@@ -23,6 +23,7 @@ from flask_limiter.util import get_remote_address
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash
+from sqlalchemy.orm import joinedload
 
 # ===== LOCAL IMPORTS =====
 from config import Config
@@ -334,7 +335,7 @@ def ratelimit_handler(e):
         return jsonify({
             "ok": False,
             "error": "Too many requests. Please slow down."
-        }), 429
+        }), 429@app.route('/register', methods=['GET', 'POST'])
     
     flash("Too many requests. Please wait a moment and try again.", "warning")
     return redirect(request.referrer or url_for('index'))
@@ -344,6 +345,7 @@ def ratelimit_handler(e):
 
 
 @app.route('/api/send-verification-code', methods=['POST'])
+@csrf.exempt
 @limiter.limit("3 per minute")   # ← ADD THIS
 @limiter.limit("10 per hour") 
 def send_verification_code():
@@ -387,6 +389,7 @@ def send_verification_code():
         return jsonify({'success': False, 'error': 'Failed to send email'}), 500
     
 @app.route('/api/verify-code', methods=['POST'])
+@csrf.exempt
 @limiter.limit("5 per minute")
 def verify_code():
     """Verify the email verification code"""
@@ -444,6 +447,7 @@ def verify_code():
         return jsonify({'success': False, 'error': 'Verification failed'}), 200
 
 @app.route('/api/resend-verification-code', methods=['POST'])
+@csrf.exempt
 @limiter.limit("2 per minute")
 @limiter.limit("5 per hour")
 def resend_verification_code():
@@ -515,7 +519,7 @@ def logout():
     return redirect(url_for('login'))
 
 @app.route('/register', methods=['GET', 'POST'])
-@limiter.limit("5 per minute") 
+@limiter.limit("10 per minute") 
 def register():
     """Main registration page - single page with modal verification"""
     if current_user.is_authenticated:
@@ -730,29 +734,32 @@ def index():
     total_fabric_vendors = FabricVendor.query.count()
     total_notion_vendors = NotionVendor.query.count()
     
-    # Get recent styles (last 4)
-    #ecent_styles = Style.query.order_by(Style.id.desc()).limit(4).all()
+    
     recent_styles = Style.query.order_by(Style.updated_at.desc()).limit(4).all()
-    
-    # Calculate analytics
-    styles = Style.query.all()
-    
+
+    # Calculate analytics with eager loading (faster!)
+    styles = Style.query.options(
+        joinedload(Style.style_fabrics).joinedload(StyleFabric.fabric),
+        joinedload(Style.style_notions).joinedload(StyleNotion.notion),
+        joinedload(Style.style_labor).joinedload(StyleLabor.labor_operation)
+    ).all()
+
+    # Cache label cost (1 query instead of N)
+    label_setting = GlobalSetting.query.filter_by(setting_key='avg_label_cost').first()
+    label_cost = label_setting.setting_value if label_setting else 0.20
+
     # Average cost per style
     if styles:
-        total_cost = sum([s.get_total_cost() for s in styles])
-        avg_cost = total_cost / len(styles) if len(styles) > 0 else 0
-    else:
-        avg_cost = 0
-    
-    # Price range (min-max)
-    if styles:
-        costs = [s.get_total_cost() for s in styles]
+        costs = [s.get_total_fabric_cost() + s.get_total_notion_cost() + s.get_total_labor_cost() + label_cost for s in styles]
+        total_cost = sum(costs)
+        avg_cost = total_cost / len(styles)
         min_cost = min(costs) if costs else 0
         max_cost = max(costs) if costs else 0
         price_range = f"${min_cost:.0f}-${max_cost:.0f}"
     else:
+        avg_cost = 0
         price_range = "$0-$0"
-    
+
     # Top fabric (most used)
     from sqlalchemy import func
     top_fabric_query = db.session.query(
@@ -781,6 +788,7 @@ def index():
 
 
 @app.route('/style/<vendor_style>')
+@login_required
 def view_style(vendor_style):
     style = Style.query.filter_by(vendor_style=vendor_style).first()
     if style:
@@ -789,6 +797,7 @@ def view_style(vendor_style):
 
 # ===== ADMIN ROUTES (Future expansion) =====
 @app.route('/api/recent-styles')
+@login_required
 def api_recent_styles():
     styles = Style.query.order_by(Style.updated_at.desc()).limit(5).all()
     return jsonify([{
@@ -799,14 +808,30 @@ def api_recent_styles():
     } for s in styles])
 
 @app.route('/api/dashboard-stats')
+@login_required
 def api_dashboard_stats():
     total_styles = Style.query.count()
-    styles = Style.query.all()
-    avg_cost = sum(s.get_total_cost() for s in styles) / len(styles) if styles else 0
     
+    # Eager load to avoid N+1 queries
+    styles = Style.query.options(
+        joinedload(Style.style_fabrics).joinedload(StyleFabric.fabric),
+        joinedload(Style.style_notions).joinedload(StyleNotion.notion),
+        joinedload(Style.style_labor).joinedload(StyleLabor.labor_operation)
+    ).all()
+    
+    # Cache label cost
+    label_setting = GlobalSetting.query.filter_by(setting_key='avg_label_cost').first()
+    label_cost = label_setting.setting_value if label_setting else 0.20
+    
+    if styles:
+        total_cost = sum(s.get_total_fabric_cost() + s.get_total_notion_cost() + s.get_total_labor_cost() + label_cost for s in styles)
+        avg_cost = total_cost / len(styles)
+    else:
+        avg_cost = 0
+
     return jsonify({
         'total_styles': total_styles,
-        'avg_cost': avg_cost
+         'avg_cost': round(avg_cost, 2)
     })
 
 @app.route('/api/style/<int:style_id>/upload-image', methods=['POST'])
@@ -892,6 +917,7 @@ def upload_style_image(style_id):
     return jsonify({'error': 'Invalid file type. Allowed: png, jpg, jpeg, gif'}), 400
 
 @app.route('/api/style/<int:style_id>/images', methods=['GET'])
+@login_required
 def get_style_images(style_id):
     """Get all images for a style"""
     # Check if style exists
@@ -942,6 +968,7 @@ def delete_style_image(image_id):
     
 # SIZE RANGE ENDPOINTS
 @app.route('/api/size-ranges', methods=['GET', 'POST'])
+@login_required
 def api_size_ranges():
     if request.method == 'GET':
         ranges = SizeRange.query.all()
@@ -986,6 +1013,8 @@ def api_size_ranges():
             return jsonify({'success': False, 'error': 'Failed to add size range'}), 500
 
 @app.route('/api/size-ranges/<int:size_range_id>', methods=['GET', 'PUT', 'DELETE'])
+@login_required
+
 def api_size_range_detail(size_range_id):
     size_range = SizeRange.query.get_or_404(size_range_id)
     
@@ -1044,6 +1073,8 @@ def api_size_range_detail(size_range_id):
 
 # GLOBAL SETTINGS ENDPOINTS
 @app.route('/api/global-settings', methods=['GET'])
+@login_required
+@role_required('admin')
 def get_global_settings():
     settings = GlobalSetting.query.all()
     return jsonify([{
@@ -1054,6 +1085,7 @@ def get_global_settings():
     } for s in settings])
 
 @app.route('/api/global-settings/<int:setting_id>', methods=['GET', 'PUT'])
+@login_required
 @role_required('admin')
 def api_global_setting_detail(setting_id):
     setting = GlobalSetting.query.get_or_404(setting_id)
@@ -1132,6 +1164,7 @@ def import_colors():
     
 # COLOR ENDPOINTS
 @app.route('/api/colors', methods=['GET', 'POST'])
+@login_required
 def api_colors():
     if request.method == 'GET':
         colors = Color.query.order_by(Color.name).all()
@@ -1164,6 +1197,7 @@ def api_colors():
             return jsonify({'success': False, 'error': 'Failed to add color'}), 500
 
 @app.route('/api/colors/<int:color_id>', methods=['GET', 'PUT', 'DELETE'])
+@login_required
 def api_color_detail(color_id):
     color = Color.query.get_or_404(color_id)
     
@@ -1327,6 +1361,7 @@ def validate_style_for_export(style):
 
 # ===== SINGLE STYLE EXPORT =====
 @app.route('/export-sap-single-style', methods=['POST'])
+@login_required
 def export_sap_single_style():
     """Export a single style in SAP B1 format - STRICT VALIDATION"""
     try:
@@ -1492,6 +1527,7 @@ def export_sap_single_style():
 
 # ===== BULK EXPORT =====
 @app.route('/export-sap-format', methods=['POST'])
+@login_required
 def export_sap_format():
     """Export selected styles in SAP B1 format - STRICT VALIDATION"""
     try:
@@ -1705,11 +1741,20 @@ def export_sap_format():
 @role_required('admin', 'user')  # Only admin and user roles allowed
 def view_all_styles():
     """View all styles with filters - RBAC enabled (Admin and User only)"""
-    styles = Style.query.all()
-    
+    # Eager load to avoid N+1 queries
+    styles = Style.query.options(
+        joinedload(Style.style_fabrics).joinedload(StyleFabric.fabric),
+        joinedload(Style.style_notions).joinedload(StyleNotion.notion),
+        joinedload(Style.style_labor).joinedload(StyleLabor.labor_operation)
+    ).all()
+
+    # Cache label cost
+    label_setting = GlobalSetting.query.filter_by(setting_key='avg_label_cost').first()
+    label_cost = label_setting.setting_value if label_setting else 0.20
+
     # Calculate stats
     total_styles = len(styles)
-    total_value = sum([s.get_total_cost() for s in styles])
+    total_value = sum(s.get_total_fabric_cost() + s.get_total_notion_cost() + s.get_total_labor_cost() + label_cost for s in styles)
     avg_cost = total_value / total_styles if total_styles > 0 else 0
     
     # Get user permissions for frontend
@@ -1897,6 +1942,7 @@ def bulk_delete_styles():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route('/api/style/load-for-duplicate/<int:style_id>')
+@login_required
 def load_style_for_duplicate(style_id):
     """Load a style's data for duplication"""
     try:
@@ -1997,6 +2043,7 @@ def load_style_for_duplicate(style_id):
         return jsonify({"ok": False, "error": str(e)}), 500
     
 @app.route('/api/style/check-vendor-style')
+@login_required
 def check_vendor_style():
     """Check if a vendor_style already exists"""
     vendor_style = request.args.get('vendor_style', '').strip()
@@ -2026,6 +2073,7 @@ def toggle_favorite(style_id):
         return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route('/master-costs')
+@login_required
 def master_costs():
     """Display editable master cost lists"""
     fabrics = Fabric.query.order_by(Fabric.name).all()
@@ -2800,6 +2848,7 @@ def api_style_by_name():
 
 # VARIABLE ENDPOINTS
 @app.route('/api/variables', methods=['GET', 'POST'])
+@login_required
 def api_variables():
     if request.method == 'GET':
         variables = Variable.query.order_by(Variable.name).all()
@@ -2829,6 +2878,7 @@ def api_variables():
             return jsonify({'success': False, 'error': 'Failed to add variable'}), 500
 
 @app.route('/api/variables/<int:variable_id>', methods=['GET', 'PUT', 'DELETE'])
+@login_required
 def api_variable_detail(variable_id):
     variable = Variable.query.get_or_404(variable_id)
     
@@ -2864,6 +2914,7 @@ def api_variable_detail(variable_id):
             return jsonify({'success': False, 'error': 'Failed to delete variable'}), 500
     
 @app.route('/api/styles/search', methods=['GET'])
+@login_required
 def search_styles():
     """Search styles by vendor_style or style_name"""
     query = request.args.get('q', '').strip()
