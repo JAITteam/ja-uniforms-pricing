@@ -14,10 +14,134 @@
     
     <!-- ADD THIS LINE! -->
     {% block extra_css %}{% endblock %}
+    
+    <!-- Toast Notification Styles -->
+    <style>
+    .toast-container {
+        position: fixed;
+        top: 100px;
+        right: 20px;
+        z-index: 9999;
+        max-width: 400px;
+        pointer-events: none;
+    }
+
+    .toast {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+        padding: 16px 20px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08);
+        animation: toastSlideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        pointer-events: auto;
+        min-width: 300px;
+        border-left: 4px solid;
+    }
+
+    .toast-success {
+        border-left-color: #10b981;
+        background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    }
+
+    .toast-info {
+        border-left-color: #3b82f6;
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    }
+
+    .toast-warning {
+        border-left-color: #f59e0b;
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    }
+
+    .toast-danger, .toast-error {
+        border-left-color: #ef4444;
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    }
+
+    .toast-icon {
+        flex-shrink: 0;
+        width: 24px;
+        height: 24px;
+    }
+
+    .toast-success .toast-icon { color: #10b981; }
+    .toast-info .toast-icon { color: #3b82f6; }
+    .toast-warning .toast-icon { color: #f59e0b; }
+    .toast-danger .toast-icon, .toast-error .toast-icon { color: #ef4444; }
+
+    .toast-message {
+        flex: 1;
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 1.4;
+        color: #1f2937;
+    }
+
+    .toast-close {
+        background: none;
+        border: none;
+        color: #9ca3af;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+
+    .toast-close:hover {
+        background: rgba(0,0,0,0.1);
+        color: #4b5563;
+    }
+
+    @keyframes toastSlideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes toastSlideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+    }
+
+    .toast-exit {
+        animation: toastSlideOut 0.3s ease-in forwards;
+    }
+
+    @media (max-width: 768px) {
+        .toast-container {
+            left: 10px;
+            right: 10px;
+            top: 90px;
+            max-width: none;
+        }
+        
+        .toast {
+            min-width: auto;
+        }
+    }
+    </style>
 </head>
 
 <body>
     {% include 'includes/navbar.html' %}
+    
+    <!-- Toast Notifications Container -->
+    <div class="toast-container" id="toastContainer"></div>
+    
     <div class="container mt-4">
     <div class="container-fluid mt-4" style="padding: 0;">
         {% block content %}{% endblock %}
@@ -49,6 +173,112 @@
             return originalFetch(url, options);
         };
     })();
+    </script>
+    
+    <!-- Toast Notifications System -->
+    <script id="flashMessages" type="application/json">
+    [
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    {
+                        "category": "{{ category }}",
+                        "message": {{ message|tojson }}
+                    }{% if not loop.last %},{% endif %}
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    ]
+    </script>
+    
+    <script>
+    // Toast notification system
+    document.addEventListener('DOMContentLoaded', function() {
+        const messagesScript = document.getElementById('flashMessages');
+        if (!messagesScript) return;
+        
+        let messages = [];
+        try {
+            messages = JSON.parse(messagesScript.textContent || '[]');
+        } catch (e) {
+            console.error('Error parsing flash messages:', e);
+            return;
+        }
+        
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+        
+        const icons = {
+            success: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+            info: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+            warning: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+            danger: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+            error: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
+        };
+        
+        messages.forEach(function(msg, index) {
+            setTimeout(function() {
+                const toast = document.createElement('div');
+                toast.className = 'toast toast-' + msg.category;
+                
+                const icon = icons[msg.category] || icons.info;
+                
+                toast.innerHTML = icon + 
+                    '<span class="toast-message">' + msg.message + '</span>' +
+                    '<button class="toast-close" onclick="this.parentElement.classList.add(\'toast-exit\'); setTimeout(() => this.parentElement.remove(), 300);">' +
+                    '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+                    '</button>';
+                
+                container.appendChild(toast);
+                
+                // Auto-dismiss after 5 seconds
+                setTimeout(function() {
+                    if (toast.parentElement) {
+                        toast.classList.add('toast-exit');
+                        setTimeout(function() {
+                            toast.remove();
+                        }, 300);
+                    }
+                }, 5000);
+            }, index * 150);
+        });
+    });
+    
+    // Global function to show toast from JavaScript
+    window.showToast = function(message, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+        
+        const icons = {
+            success: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+            info: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+            warning: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+            danger: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+            error: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>'
+        };
+        
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-' + type;
+        
+        const icon = icons[type] || icons.info;
+        
+        toast.innerHTML = icon + 
+            '<span class="toast-message">' + message + '</span>' +
+            '<button class="toast-close" onclick="this.parentElement.classList.add(\'toast-exit\'); setTimeout(() => this.parentElement.remove(), 300);">' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+            '</button>';
+        
+        container.appendChild(toast);
+        
+        setTimeout(function() {
+            if (toast.parentElement) {
+                toast.classList.add('toast-exit');
+                setTimeout(function() {
+                    toast.remove();
+                }, 300);
+            }
+        }, 5000);
+    };
     </script>
     
     <!-- ADD THIS LINE BEFORE navbar.js! -->
