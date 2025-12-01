@@ -4,11 +4,27 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 import pytz
 
+class VerificationCode(db.Model):
+    __tablename__ = 'verification_codes'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), nullable=False, unique=True, index=True)
+    code = db.Column(db.String(6), nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    first_name = db.Column(db.String(50))
+    last_name = db.Column(db.String(50))
+    expires_at = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    
+    def is_expired(self):
+        return datetime.now() > self.expires_at
+    
 
 def get_current_time():
     """Get current  time - use this for all database timestamps"""
     return datetime.now()
-# ===== AUTHENTICATION =====
+
+        
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
     
