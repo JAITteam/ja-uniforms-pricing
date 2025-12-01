@@ -1,9 +1,14 @@
+# ===== LOAD ENVIRONMENT VARIABLES (ONCE!) =====
+from dotenv import load_dotenv
+load_dotenv()
+
 # ===== STANDARD LIBRARY =====
 import os
 import re
 import csv
 import random
 import string
+import secrets
 import logging
 from io import StringIO
 from datetime import datetime, timedelta
@@ -12,7 +17,6 @@ from logging.handlers import RotatingFileHandler
 # ===== THIRD PARTY =====
 import pytz
 import pandas as pd
-from dotenv import load_dotenv
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, Response, flash, session
 from flask_mail import Mail, Message
 from flask_migrate import Migrate
@@ -36,8 +40,6 @@ from models import (
     SizeRange, GlobalSetting, StyleImage, VerificationCode
 )
 
-# ===== LOAD ENVIRONMENT VARIABLES (ONCE!) =====
-load_dotenv()
 
 
 # ===== HELPER FUNCTIONS =====
@@ -499,7 +501,11 @@ def login():
         
         if user and user.check_password(password):
             login_user(user, remember=request.form.get('remember'))
-            flash(f'Welcome back, {user.username}!', 'success')
+            
+            # Don't show welcome message if user needs to change password
+            if not user.must_change_password:
+                flash(f'Welcome back, {user.username}!', 'success')
+            
             next_page = request.args.get('next')
             return redirect(next_page or url_for('index'))
         else:
@@ -690,6 +696,111 @@ def delete_user(user_id):
         return jsonify({'success': False, 'error': str(e)}), 500
     
 
+# ===== PASSWORD RESET ROUTES =====
+
+@app.route('/api/users/<int:user_id>/reset-password', methods=['POST'])
+@limiter.limit("5 per minute")
+@login_required
+@admin_required
+def admin_reset_password(user_id):
+    """
+    Admin resets a user's password to a temporary one.
+    User will be forced to change it on next login.
+    """
+    try:
+        user = User.query.get_or_404(user_id)
+        
+        # Don't allow resetting your own password this way
+        if user.id == current_user.id:
+            return jsonify({
+                'success': False, 
+                'error': 'Cannot reset your own password. Use the change password feature instead.'
+            }), 400
+        
+        # Generate a secure temporary password (12 characters)
+        temp_password = secrets.token_urlsafe(9)[:12]
+        
+        # Set the temporary password
+        user.set_password(temp_password)
+        user.must_change_password = True
+        user.temp_password_created_at = datetime.now()
+        
+        db.session.commit()
+        
+        app.logger.info(f"🔑 Admin {current_user.email} reset password for user {user.email}")
+        
+        return jsonify({
+            'success': True,
+            'temp_password': temp_password,
+            'message': f'Temporary password generated for {user.get_full_name()}',
+            'user_email': user.email
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Password reset error: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    """
+    Force password change page.
+    Shown when user.must_change_password is True.
+    """
+    if request.method == 'GET':
+        # If user doesn't need to change password, redirect to dashboard
+        if not current_user.must_change_password:
+            return redirect(url_for('index'))
+        return render_template('change_password.html')
+    
+    # POST - Handle password change
+    try:
+        current_password = request.form.get('current_password', '')
+        new_password = request.form.get('new_password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        
+        # Validate current password
+        if not current_user.check_password(current_password):
+            flash('Current password is incorrect.', 'danger')
+            return render_template('change_password.html')
+        
+        # Validate new password
+        is_valid, message = validate_password(new_password)
+        if not is_valid:
+            flash(message, 'danger')
+            return render_template('change_password.html')
+        
+        # Check passwords match
+        if new_password != confirm_password:
+            flash('New passwords do not match.', 'danger')
+            return render_template('change_password.html')
+        
+        # Don't allow same password as current
+        if current_user.check_password(new_password):
+            flash('New password must be different from your current password.', 'danger')
+            return render_template('change_password.html')
+        
+        # Update password
+        current_user.set_password(new_password)
+        current_user.must_change_password = False
+        current_user.temp_password_created_at = None
+        
+        db.session.commit()
+        
+        app.logger.info(f"✅ User {current_user.email} changed their password")
+        
+        flash('Password changed successfully! Welcome to J.A. Uniforms.', 'success')
+        return redirect(url_for('index'))
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Change password error: {e}")
+        flash('Error changing password. Please try again.', 'danger')
+        return render_template('change_password.html')
+    
+
 @app.template_filter('time_ago')
 def time_ago_filter(dt):
     """Calculate time ago using system time"""
@@ -719,6 +830,24 @@ def time_ago_filter(dt):
     else:
         return dt.strftime('%b %d, %Y')
 
+# ===== PASSWORD CHANGE INTERCEPTOR =====
+@app.before_request
+def check_password_change_required():
+    """
+    Intercept requests and redirect to change password if required.
+    """
+    # Skip for static files, login, logout, and change-password routes
+    allowed_endpoints = ['login', 'logout', 'change_password', 'static', None]
+    
+    if request.endpoint in allowed_endpoints:
+        return None
+    
+    # Check if user is logged in and must change password
+    if current_user.is_authenticated and getattr(current_user, 'must_change_password', False):
+        if request.endpoint != 'change_password':
+            flash('Please change your temporary password to continue.', 'warning')
+            return redirect(url_for('change_password'))
+    
 
 # ===== MAIN APPLICATION ROUTES =====
 

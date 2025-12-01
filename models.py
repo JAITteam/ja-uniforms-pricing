@@ -14,6 +14,7 @@ class VerificationCode(db.Model):
     last_name = db.Column(db.String(50))
     expires_at = db.Column(db.DateTime, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
+   
     
     def is_expired(self):
         return datetime.now() > self.expires_at
@@ -30,7 +31,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False, index=True)  
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)  
-    password_hash = db.Column(db.String(120), nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
     first_name = db.Column(db.String(50), nullable=True)
     last_name = db.Column(db.String(50), nullable=True)
     full_name = db.Column(db.String(100), nullable=True)
@@ -38,6 +39,9 @@ class User(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True, index=True)  
     last_login = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
+     # Password Reset Fields
+    must_change_password = db.Column(db.Boolean, default=False)
+    temp_password_created_at = db.Column(db.DateTime, nullable=True)
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -98,11 +102,11 @@ class Fabric(db.Model):
     __tablename__ = 'fabrics'
     
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False, index=True)  # ← ADDED
+    name = db.Column(db.String(100), nullable=False, index=True)
     fabric_code = db.Column(db.String(20))
     cost_per_yard = db.Column(db.Float, nullable=False)
     color = db.Column(db.String(50))
-    fabric_vendor_id = db.Column(db.Integer, db.ForeignKey('fabric_vendors.id'), index=True)  # ← ADDED
+    fabric_vendor_id = db.Column(db.Integer, db.ForeignKey('fabric_vendors.id'), index=True)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     
     fabric_vendor = db.relationship('FabricVendor', backref='fabrics')
@@ -160,7 +164,6 @@ class SizeRange(db.Model):
     extended_sizes = db.Column(db.String(100))
     extended_markup_percent = db.Column(db.Float, default=15.0)
     description = db.Column(db.String(200))
-    #created_at = db.Column(db.DateTime, default=datetime.now)
     created_at = db.Column(db.DateTime, default=datetime.now)
     
     def __repr__(self):
@@ -171,23 +174,23 @@ class Style(db.Model):
     __tablename__ = 'styles'
     
     id = db.Column(db.Integer, primary_key=True)
-    vendor_style = db.Column(db.String(50), unique=True, nullable=False, index=True)  # ← ADDED
+    vendor_style = db.Column(db.String(50), unique=True, nullable=False, index=True)
     base_item_number = db.Column(db.String(20))
     variant_code = db.Column(db.String(20))
-    style_name = db.Column(db.String(200), unique=True, nullable=False, index=True)  # ← ADDED
-    gender = db.Column(db.String(20), index=True)  # ← ADDED
-    garment_type = db.Column(db.String(50), index=True)  # ← ADDED
+    style_name = db.Column(db.String(200), unique=True, nullable=False, index=True)
+    gender = db.Column(db.String(20), index=True)
+    garment_type = db.Column(db.String(50), index=True)
     size_range = db.Column(db.String(50))
-    base_margin_percent = db.Column(db.Float, default=60.0, index=True)  # ← ADDED
+    base_margin_percent = db.Column(db.Float, default=60.0, index=True)
     avg_label_cost = db.Column(db.Float, default=0.20)
     shipping_cost = db.Column(db.Float, default=0.00)
     suggested_price = db.Column(db.Float)
     notes = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.now, index=True)  # ← ADDED
+    created_at = db.Column(db.DateTime, default=datetime.now, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now, index=True)
     last_modified_by = db.Column(db.String(100), default='Admin')
-    is_active = db.Column(db.Boolean, default=True, index=True)  # ← ADDED
-    is_favorite = db.Column(db.Boolean, default=False, index=True)  # ← ADDED
+    is_active = db.Column(db.Boolean, default=True, index=True)
+    is_favorite = db.Column(db.Boolean, default=False, index=True)
     colors = db.relationship('StyleColor', back_populates='style', cascade='all, delete-orphan')
     
     def get_total_fabric_cost(self):
@@ -242,13 +245,17 @@ class Style(db.Model):
         margin = self.base_margin_percent / 100.0
         return round(base_cost / (1 - margin), 2)
 
-# ===== JUNCTION TABLES =====
+
+# =============================================================================
+# JUNCTION TABLES - WITH INDEXES ON FOREIGN KEYS FOR BETTER QUERY PERFORMANCE
+# =============================================================================
+
 class StyleFabric(db.Model):
     __tablename__ = 'style_fabrics'
 
     id = db.Column(db.Integer, primary_key=True)
-    style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False)
-    fabric_id = db.Column(db.Integer, db.ForeignKey('fabrics.id', ondelete='CASCADE'), nullable=False)
+    style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False, index=True)  # ← ADDED INDEX
+    fabric_id = db.Column(db.Integer, db.ForeignKey('fabrics.id', ondelete='CASCADE'), nullable=False, index=True)  # ← ADDED INDEX
     yards_required = db.Column(db.Float, nullable=False)
     is_primary = db.Column(db.Boolean, default=False)
     is_sublimation = db.Column(db.Boolean, default=False)
@@ -257,34 +264,37 @@ class StyleFabric(db.Model):
     style = db.relationship('Style', backref=db.backref('style_fabrics', cascade='all, delete-orphan'))
     fabric = db.relationship('Fabric')
 
+
 class StyleNotion(db.Model):
     __tablename__ = 'style_notions'
     
     id = db.Column(db.Integer, primary_key=True)
-    style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False)
-    notion_id = db.Column(db.Integer, db.ForeignKey('notions.id', ondelete='CASCADE'), nullable=False)
+    style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False, index=True)  # ← ADDED INDEX
+    notion_id = db.Column(db.Integer, db.ForeignKey('notions.id', ondelete='CASCADE'), nullable=False, index=True)  # ← ADDED INDEX
     quantity_required = db.Column(db.Integer, nullable=False)
     notes = db.Column(db.String(200))
     
     style = db.relationship('Style', backref='style_notions')
     notion = db.relationship('Notion')
 
+
 class Color(db.Model):
     __tablename__ = 'colors'
     
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False, unique=True)
+    name = db.Column(db.String(100), nullable=False, unique=True, index=True)  # ← ADDED INDEX
     color_code = db.Column(db.String(50))  # Optional: for hex codes or reference codes
     created_at = db.Column(db.DateTime, default=datetime.now)
     
     def __repr__(self):
         return f'<Color {self.name}>'
 
+
 class Variable(db.Model):
     __tablename__ = 'variables'
     
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False, unique=True)
+    name = db.Column(db.String(100), nullable=False, unique=True, index=True)  # ← ADDED INDEX
     created_at = db.Column(db.DateTime, default=datetime.now)
     
     def __repr__(self):
@@ -295,40 +305,42 @@ class StyleVariable(db.Model):
     __tablename__ = 'style_variables'
 
     id = db.Column(db.Integer, primary_key=True)
-    style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False)
-    variable_id = db.Column(db.Integer, db.ForeignKey('variables.id', ondelete='CASCADE'), nullable=False)
+    style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False, index=True)  # ← ADDED INDEX
+    variable_id = db.Column(db.Integer, db.ForeignKey('variables.id', ondelete='CASCADE'), nullable=False, index=True)  # ← ADDED INDEX
 
     style = db.relationship('Style', backref=db.backref('style_variables', cascade='all, delete-orphan'))
     variable = db.relationship('Variable')
+
     
-# Create junction table for Style-Color relationship
 class StyleColor(db.Model):
     __tablename__ = 'style_colors'
 
     id = db.Column(db.Integer, primary_key=True)
-    style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False)
-    color_id = db.Column(db.Integer, db.ForeignKey('colors.id', ondelete='CASCADE'), nullable=False)
+    style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False, index=True)  # ← ADDED INDEX
+    color_id = db.Column(db.Integer, db.ForeignKey('colors.id', ondelete='CASCADE'), nullable=False, index=True)  # ← ADDED INDEX
 
     style = db.relationship('Style', back_populates='colors')
     color = db.relationship('Color')
+
 
 class StyleImage(db.Model):
     __tablename__ = 'style_images'
 
     id = db.Column(db.Integer, primary_key=True)
-    style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False)
+    style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False, index=True)  # ← ADDED INDEX
     filename = db.Column(db.String(255), nullable=False)
     is_primary = db.Column(db.Boolean, default=False)
     upload_date = db.Column(db.DateTime, default=datetime.now)
 
     style = db.relationship('Style', backref=db.backref('images', cascade='all, delete-orphan'))
 
+
 class StyleLabor(db.Model):
     __tablename__ = 'style_labor'
     
     id = db.Column(db.Integer, primary_key=True)
-    style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False)
-    labor_operation_id = db.Column(db.Integer, db.ForeignKey('labor_operations.id', ondelete='CASCADE'), nullable=False)
+    style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False, index=True)  # ← ADDED INDEX
+    labor_operation_id = db.Column(db.Integer, db.ForeignKey('labor_operations.id', ondelete='CASCADE'), nullable=False, index=True)  # ← ADDED INDEX
     time_hours = db.Column(db.Float)
     quantity = db.Column(db.Integer, default=1)
     notes = db.Column(db.String(200))
@@ -336,15 +348,15 @@ class StyleLabor(db.Model):
     style = db.relationship('Style', backref=db.backref('style_labor', cascade='all, delete-orphan'))
     labor_operation = db.relationship('LaborOperation')
 
+
 class GlobalSetting(db.Model):
     __tablename__ = 'global_settings'
     
     id = db.Column(db.Integer, primary_key=True)
-    setting_key = db.Column(db.String(50), unique=True, nullable=False)
+    setting_key = db.Column(db.String(50), unique=True, nullable=False, index=True)  # ← ADDED INDEX
     setting_value = db.Column(db.Float, nullable=False)
     description = db.Column(db.String(200))
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
     
     def __repr__(self):
         return f'<GlobalSetting {self.setting_key}={self.setting_value}>'
-

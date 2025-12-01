@@ -135,6 +135,13 @@ body {
     color: #991b1b;
 }
 
+.badge-temp-password {
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 10px;
+    margin-left: 8px;
+}
+
 .actions {
     display: flex;
     gap: 8px;
@@ -158,6 +165,11 @@ body {
 .btn-icon.delete:hover {
     background: #fee2e2;
     color: #dc2626;
+}
+
+.btn-icon.reset:hover {
+    background: #fef3c7;
+    color: #d97706;
 }
 
 .modal {
@@ -307,6 +319,15 @@ body {
     cursor: not-allowed;
 }
 
+.btn-warning {
+    background: #f59e0b;
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #d97706;
+}
+
 .empty-state {
     text-align: center;
     padding: 60px 20px;
@@ -320,12 +341,12 @@ body {
     opacity: 0.5;
 }
 
-.delete-modal-content {
+.delete-modal-content, .reset-modal-content {
     text-align: center;
     max-width: 450px;
 }
 
-.delete-modal-icon {
+.delete-modal-icon, .reset-modal-icon {
     margin: 20px auto 0;
     animation: shake 0.5s;
 }
@@ -342,17 +363,23 @@ body {
     margin: 15px 0 10px;
 }
 
-.delete-modal-body {
+.reset-modal-header h2 {
+    color: #d97706;
+    font-size: 24px;
+    margin: 15px 0 10px;
+}
+
+.delete-modal-body, .reset-modal-body {
     padding: 0 20px 20px;
 }
 
-.delete-modal-body p {
+.delete-modal-body p, .reset-modal-body p {
     margin: 10px 0;
     color: #374151;
     font-size: 15px;
 }
 
-.delete-modal-body strong {
+.delete-modal-body strong, .reset-modal-body strong {
     color: #111827;
     font-weight: 600;
 }
@@ -364,6 +391,59 @@ body {
     color: #991b1b !important;
     font-size: 13px !important;
     margin-top: 15px !important;
+}
+
+.reset-info {
+    background: #fef3c7;
+    padding: 12px;
+    border-radius: 8px;
+    color: #92400e !important;
+    font-size: 13px !important;
+    margin-top: 15px !important;
+}
+
+/* Password Display Box */
+.temp-password-display {
+    background: #f0fdf4;
+    border: 2px solid #22c55e;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: center;
+}
+
+.temp-password-display label {
+    display: block;
+    font-size: 12px;
+    color: #6b7280;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.temp-password-display .password {
+    font-family: 'Courier New', monospace;
+    font-size: 24px;
+    font-weight: bold;
+    color: #111827;
+    letter-spacing: 2px;
+    user-select: all;
+}
+
+.temp-password-display .copy-btn {
+    margin-top: 12px;
+    padding: 8px 16px;
+    background: #22c55e;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.temp-password-display .copy-btn:hover {
+    background: #16a34a;
 }
 
 .notification {
@@ -382,6 +462,10 @@ body {
     border-left: 4px solid #10b981;
 }
 
+.notification-error {
+    border-left: 4px solid #ef4444;
+}
+
 .notification-content {
     display: flex;
     align-items: center;
@@ -390,6 +474,10 @@ body {
 
 .notification-content svg {
     color: #10b981;
+}
+
+.notification-error .notification-content svg {
+    color: #ef4444;
 }
 
 @keyframes slideIn {
@@ -489,12 +577,12 @@ body {
 
 {% block content %}
 <div class="users-container">
-    
+
     <div class="page-header">
         <h1>👥 User Management</h1>
         <p>Manage user accounts, roles, and permissions</p>
     </div>
-    
+
     <div class="stats-row">
         <div class="stat-card">
             <div class="stat-value">{{ users|length }}</div>
@@ -509,7 +597,7 @@ body {
             <div class="stat-label">Active Users</div>
         </div>
     </div>
-    
+
     <div class="users-card">
         {% if users %}
         <table class="users-table">
@@ -528,6 +616,9 @@ body {
                 <tr data-user-id="{{ user.id }}">
                     <td>
                         <strong>{{ user.get_full_name() }}</strong>
+                        {% if user.must_change_password %}
+                        <span class="badge badge-temp-password">Temp Password</span>
+                        {% endif %}
                     </td>
                     <td>{{ user.email }}</td>
                     <td>
@@ -545,6 +636,9 @@ body {
                                 <i data-feather="edit-2"></i>
                             </button>
                             {% if user.id != current_user.id %}
+                            <button class="btn-icon reset btn-reset" data-user-id="{{ user.id }}" data-user-name="{{ user.get_full_name() }}" data-user-email="{{ user.email }}" title="Reset Password" type="button">
+                                <i data-feather="key"></i>
+                            </button>
                             <button class="btn-icon delete btn-delete" data-user-id="{{ user.id }}" data-user-name="{{ user.get_full_name() }}" title="Delete" type="button">
                                 <i data-feather="trash-2"></i>
                             </button>
@@ -575,22 +669,22 @@ body {
         <div class="modal-body">
             <form id="editForm">
                 <input type="hidden" id="userId">
-                
+
                 <div class="form-group">
                     <label>Email Address</label>
                     <input type="email" id="userEmail" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label>First Name</label>
                     <input type="text" id="firstName" required>
                 </div>
-                
+
                 <div class="form-group">
                     <label>Last Name</label>
                     <input type="text" id="lastName">
                 </div>
-                
+
                 <div class="form-group">
                     <label>Role</label>
                     <select id="userRole">
@@ -598,7 +692,7 @@ body {
                         <option value="admin">Admin</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label>Status</label>
                     <select id="userStatus">
@@ -639,6 +733,56 @@ body {
     </div>
 </div>
 
+<!-- Reset Password Modal -->
+<div id="resetPasswordModal" class="modal">
+    <div class="modal-content reset-modal-content">
+        <div class="reset-modal-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+            </svg>
+        </div>
+        <div class="reset-modal-header">
+            <h2>Reset Password?</h2>
+        </div>
+        <div class="reset-modal-body">
+            <p>Reset password for <strong id="resetUserName"></strong>?</p>
+            <p id="resetUserEmail" style="color: #6b7280; font-size: 13px;"></p>
+            <p class="reset-info">A temporary password will be generated. The user will be required to change it on their next login.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancelResetBtn" type="button">Cancel</button>
+            <button class="btn btn-warning" id="confirmResetBtn" type="button">Reset Password</button>
+        </div>
+    </div>
+</div>
+
+<!-- Password Generated Modal -->
+<div id="passwordGeneratedModal" class="modal">
+    <div class="modal-content" style="max-width: 480px;">
+        <div class="modal-header" style="background: #f0fdf4; border-bottom: none;">
+            <h2 style="color: #16a34a;">✅ Password Reset Successful</h2>
+            <button class="modal-close" id="closePasswordModalBtn" type="button">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="text-align: center; color: #374151;">Temporary password for <strong id="generatedForUser"></strong>:</p>
+            
+            <div class="temp-password-display">
+                <label>Temporary Password (click to select)</label>
+                <div class="password" id="generatedPassword" onclick="this.style.userSelect='all'; document.execCommand('selectAll',false,null);" style="cursor: pointer;"></div>
+            </div>
+            
+            <div style="background: #fef3c7; padding: 12px; border-radius: 8px; margin-top: 15px;">
+                <p style="margin: 0; font-size: 13px; color: #92400e;">
+                    <strong>⚠️ Important:</strong> Share this password securely with the user. They will be required to change it when they log in.
+                </p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" id="donePasswordBtn" type="button">Done</button>
+        </div>
+    </div>
+</div>
+
 <!-- Alert Modal -->
 <div id="alertModal" class="alert-modal">
     <div class="alert-modal-content">
@@ -665,24 +809,49 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let deleteUserId = null;
     let deleteUserName = null;
+    let resetUserId = null;
+    let resetUserName = null;
 
-    // Edit button clicks using event delegation
+    // Get CSRF token
+    function getCSRFToken() {
+        const metaTag = document.querySelector('meta[name="csrf-token"]');
+        if (metaTag) return metaTag.getAttribute('content');
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'csrf_token') return value;
+        }
+        const hiddenInput = document.querySelector('input[name="csrf_token"]');
+        if (hiddenInput) return hiddenInput.value;
+        return null;
+    }
+
+    // Edit button clicks
     document.addEventListener('click', function(e) {
         if (e.target.closest('.btn-edit')) {
             const userId = e.target.closest('.btn-edit').getAttribute('data-user-id');
-            console.log('✏️ Edit button clicked for user:', userId);
             editUser(userId);
         }
     });
 
-    // Delete button clicks using event delegation
+    // Delete button clicks
     document.addEventListener('click', function(e) {
         if (e.target.closest('.btn-delete')) {
             const button = e.target.closest('.btn-delete');
             const userId = button.getAttribute('data-user-id');
             const userName = button.getAttribute('data-user-name');
-            console.log('🗑️ Delete button clicked for user:', userId, userName);
             showDeleteModal(userId, userName);
+        }
+    });
+
+    // Reset Password button clicks
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.btn-reset')) {
+            const button = e.target.closest('.btn-reset');
+            const userId = button.getAttribute('data-user-id');
+            const userName = button.getAttribute('data-user-name');
+            const userEmail = button.getAttribute('data-user-email');
+            showResetPasswordModal(userId, userName, userEmail);
         }
     });
 
@@ -690,63 +859,123 @@ document.addEventListener('DOMContentLoaded', function() {
     const closeModalBtn = document.getElementById('closeModalBtn');
     const cancelBtn = document.getElementById('cancelBtn');
     const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+    const cancelResetBtn = document.getElementById('cancelResetBtn');
     const userSaveBtn = document.getElementById('userSaveBtn');
     const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    const confirmResetBtn = document.getElementById('confirmResetBtn');
     const alertOkBtn = document.getElementById('alertOkBtn');
+    const closePasswordModalBtn = document.getElementById('closePasswordModalBtn');
+    const donePasswordBtn = document.getElementById('donePasswordBtn');
 
     if (closeModalBtn) closeModalBtn.addEventListener('click', closeEditModal);
     if (cancelBtn) cancelBtn.addEventListener('click', closeEditModal);
     if (cancelDeleteBtn) cancelDeleteBtn.addEventListener('click', closeDeleteModal);
-    if (userSaveBtn) {
-        userSaveBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('💾 Save button clicked!');
-            saveUser();
-        });
-    }
+    if (cancelResetBtn) cancelResetBtn.addEventListener('click', closeResetPasswordModal);
+    if (userSaveBtn) userSaveBtn.addEventListener('click', function(e) { e.preventDefault(); saveUser(); });
     if (confirmDeleteBtn) confirmDeleteBtn.addEventListener('click', confirmUserDelete);
+    if (confirmResetBtn) confirmResetBtn.addEventListener('click', confirmPasswordReset);
     if (alertOkBtn) alertOkBtn.addEventListener('click', closeAlertModal);
+    if (closePasswordModalBtn) closePasswordModalBtn.addEventListener('click', closePasswordGeneratedModal);
+    if (donePasswordBtn) donePasswordBtn.addEventListener('click', closePasswordGeneratedModal);
 
-    // Custom Alert Function
+    // ==================== RESET PASSWORD FUNCTIONS ====================
+    
+    function showResetPasswordModal(userId, userName, userEmail) {
+        console.log('🔑 Opening reset password modal for:', userName);
+        resetUserId = userId;
+        resetUserName = userName;
+        document.getElementById('resetUserName').textContent = userName;
+        document.getElementById('resetUserEmail').textContent = userEmail;
+        document.getElementById('resetPasswordModal').classList.add('active');
+    }
+
+    function closeResetPasswordModal() {
+        document.getElementById('resetPasswordModal').classList.remove('active');
+        const confirmBtn = document.getElementById('confirmResetBtn');
+        if (confirmBtn) {
+            confirmBtn.textContent = 'Reset Password';
+            confirmBtn.disabled = false;
+        }
+        resetUserId = null;
+        resetUserName = null;
+    }
+
+    async function confirmPasswordReset() {
+        if (!resetUserId) return;
+
+        console.log('🔑 Resetting password for user:', resetUserId);
+
+        const confirmBtn = document.getElementById('confirmResetBtn');
+        confirmBtn.textContent = 'Resetting...';
+        confirmBtn.disabled = true;
+
+        try {
+            const headers = { 'Content-Type': 'application/json' };
+            const csrfToken = getCSRFToken();
+            if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+
+            const response = await fetch(`/api/users/${resetUserId}/reset-password`, {
+                method: 'POST',
+                headers: headers
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                closeResetPasswordModal();
+                showPasswordGeneratedModal(result.temp_password, resetUserName);
+                
+                // Update the row to show "Temp Password" badge
+                const row = document.querySelector(`tr[data-user-id="${resetUserId}"]`);
+                if (row) {
+                    const nameCell = row.querySelector('td:first-child');
+                    if (nameCell && !nameCell.querySelector('.badge-temp-password')) {
+                        nameCell.innerHTML += ' <span class="badge badge-temp-password">Temp Password</span>';
+                    }
+                }
+            } else {
+                closeResetPasswordModal();
+                showAlert(result.error || 'Failed to reset password', 'error');
+            }
+        } catch (error) {
+            console.error('Reset password error:', error);
+            closeResetPasswordModal();
+            showAlert('Error resetting password: ' + error.message, 'error');
+        }
+    }
+
+    function showPasswordGeneratedModal(password, userName) {
+        document.getElementById('generatedForUser').textContent = userName;
+        document.getElementById('generatedPassword').textContent = password;
+        document.getElementById('passwordGeneratedModal').classList.add('active');
+    }
+
+    function closePasswordGeneratedModal() {
+        document.getElementById('passwordGeneratedModal').classList.remove('active');
+    }
+
+    // ==================== EXISTING FUNCTIONS ====================
+
     function showAlert(message, type = 'error', title = null) {
         const alertModal = document.getElementById('alertModal');
         const alertIcon = document.getElementById('alertIcon');
         const alertTitle = document.getElementById('alertTitle');
         const alertMessage = document.getElementById('alertMessage');
-        
-        // Set icon based on type
+
         if (type === 'error') {
             alertIcon.className = 'alert-modal-icon error';
-            alertIcon.innerHTML = `
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="15" y1="9" x2="9" y2="15"/>
-                    <line x1="9" y1="9" x2="15" y2="15"/>
-                </svg>
-            `;
+            alertIcon.innerHTML = `<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
             alertTitle.textContent = title || '❌ Error';
         } else if (type === 'success') {
             alertIcon.className = 'alert-modal-icon success';
-            alertIcon.innerHTML = `
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                    <polyline points="22 4 12 14.01 9 11.01"/>
-                </svg>
-            `;
+            alertIcon.innerHTML = `<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
             alertTitle.textContent = title || '✅ Success';
         } else if (type === 'warning') {
             alertIcon.className = 'alert-modal-icon warning';
-            alertIcon.innerHTML = `
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                    <line x1="12" y1="9" x2="12" y2="13"/>
-                    <line x1="12" y1="17" x2="12.01" y2="17"/>
-                </svg>
-            `;
+            alertIcon.innerHTML = `<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
             alertTitle.textContent = title || '⚠️ Warning';
         }
-        
+
         alertMessage.textContent = message;
         alertModal.classList.add('active');
     }
@@ -756,7 +985,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showDeleteModal(userId, userName) {
-        console.log('📂 Opening delete modal for:', userName);
         deleteUserId = userId;
         deleteUserName = userName;
         document.getElementById('deleteUserName').textContent = userName;
@@ -764,138 +992,130 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function closeDeleteModal() {
-        console.log('📂 Closing delete modal');
         document.getElementById('deleteModal').classList.remove('active');
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        if (confirmBtn) {
+            confirmBtn.textContent = 'Delete User';
+            confirmBtn.disabled = false;
+        }
         deleteUserId = null;
         deleteUserName = null;
     }
 
     async function confirmUserDelete() {
         if (!deleteUserId) return;
-        
-        console.log('⚠️ Confirming delete for user:', deleteUserId);
-        
+
         const confirmBtn = document.getElementById('confirmDeleteBtn');
-        const originalText = confirmBtn.textContent;
         confirmBtn.textContent = 'Deleting...';
         confirmBtn.disabled = true;
-        
+
         try {
+            const headers = { 'Content-Type': 'application/json' };
+            const csrfToken = getCSRFToken();
+            if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+
             const response = await fetch(`/api/users/${deleteUserId}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: headers
             });
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
                 closeDeleteModal();
                 showNotification('User deleted successfully!', 'success');
-                
                 const row = document.querySelector(`tr[data-user-id="${deleteUserId}"]`);
                 if (row) {
-                    row.style.transition = 'all 0.3s';
+                    row.style.transition = 'all 0.3s ease-out';
                     row.style.opacity = '0';
                     row.style.transform = 'translateX(-20px)';
-                    setTimeout(() => location.reload(), 300);
+                    setTimeout(() => { row.remove(); updateStats(); }, 300);
                 }
             } else {
                 closeDeleteModal();
-                showAlert(result.error, 'error', 'Cannot Delete User');
-                confirmBtn.textContent = originalText;
-                confirmBtn.disabled = false;
+                showAlert(result.error || 'Failed to delete user', 'error', 'Cannot Delete User');
             }
         } catch (error) {
-            console.error('Delete error:', error);
             closeDeleteModal();
             showAlert('Error deleting user: ' + error.message, 'error');
-            confirmBtn.textContent = originalText;
-            confirmBtn.disabled = false;
         }
     }
 
+    function updateStats() {
+        const rows = document.querySelectorAll('.users-table tbody tr');
+        const totalUsers = rows.length;
+        let adminCount = 0, activeCount = 0;
+        rows.forEach(row => {
+            if (row.querySelector('.badge-admin')) adminCount++;
+            if (row.querySelector('.badge-active')) activeCount++;
+        });
+        const statValues = document.querySelectorAll('.stat-value');
+        if (statValues[0]) statValues[0].textContent = totalUsers;
+        if (statValues[1]) statValues[1].textContent = adminCount;
+        if (statValues[2]) statValues[2].textContent = activeCount;
+    }
+
     async function editUser(userId) {
-        console.log('📝 Loading user data for:', userId);
         try {
             const response = await fetch(`/api/users/${userId}`);
             const user = await response.json();
-            
-            console.log('👤 User data:', user);
-            
             document.getElementById('userId').value = user.id;
             document.getElementById('userEmail').value = user.email || '';
             document.getElementById('firstName').value = user.first_name || '';
             document.getElementById('lastName').value = user.last_name || '';
             document.getElementById('userRole').value = user.role;
             document.getElementById('userStatus').value = user.is_active.toString();
-            
             document.getElementById('editModal').classList.add('active');
-            console.log('📂 Modal opened');
         } catch (error) {
-            console.error('Load error:', error);
             showAlert('Error loading user: ' + error.message, 'error');
         }
     }
 
     async function saveUser() {
-        console.log('💾 SAVE USER FUNCTION CALLED!');
-        
         const userId = document.getElementById('userId').value;
         const email = document.getElementById('userEmail').value.trim();
         const firstName = document.getElementById('firstName').value.trim();
-        const lastName = document.getElementById('lastName').value.trim();
-        
+
         if (!email || !firstName) {
             showAlert('Email and First Name are required!', 'error', 'Missing Required Fields');
             return;
         }
-        
+
         const data = {
             email: email,
             first_name: firstName,
-            last_name: lastName,
+            last_name: document.getElementById('lastName').value.trim(),
             role: document.getElementById('userRole').value,
             is_active: document.getElementById('userStatus').value === 'true'
         };
-        
-        console.log('📦 Saving user ID:', userId);
-        console.log('📦 Data:', data);
-        
+
         const saveBtn = document.getElementById('userSaveBtn');
         saveBtn.disabled = true;
         saveBtn.textContent = 'Saving...';
-        
+
         try {
-            console.log('🚀 Sending PUT request to:', `/api/users/${userId}`);
-            
+            const headers = { 'Content-Type': 'application/json' };
+            const csrfToken = getCSRFToken();
+            if (csrfToken) headers['X-CSRFToken'] = csrfToken;
+
             const response = await fetch(`/api/users/${userId}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: headers,
                 body: JSON.stringify(data)
             });
-            
-            console.log('📥 Response status:', response.status);
-            
+
             const result = await response.json();
-            console.log('📋 Result:', result);
-            
+
             if (result.success) {
-                console.log('✅ SUCCESS!');
                 closeEditModal();
-                showAlert('User updated successfully!', 'success');
-                setTimeout(() => {
-                    console.log('🔄 Reloading...');
-                    location.reload();
-                }, 1500);
+                showNotification('User updated successfully!', 'success');
+                setTimeout(() => location.reload(), 1000);
             } else {
-                console.error('❌ Error:', result.error);
                 showAlert(result.error, 'error', 'Cannot Save Changes');
                 saveBtn.disabled = false;
                 saveBtn.textContent = 'Save Changes';
             }
         } catch (error) {
-            console.error('❌ Save error:', error);
             showAlert('Error saving user: ' + error.message, 'error');
             saveBtn.disabled = false;
             saveBtn.textContent = 'Save Changes';
@@ -903,24 +1123,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function closeEditModal() {
-        console.log('📂 Closing edit modal');
         document.getElementById('editModal').classList.remove('active');
+        const saveBtn = document.getElementById('userSaveBtn');
+        if (saveBtn) { saveBtn.textContent = 'Save Changes'; saveBtn.disabled = false; }
     }
 
     function showNotification(message, type = 'success') {
         const notification = document.createElement('div');
         notification.className = `notification notification-${type}`;
-        notification.innerHTML = `
-            <div class="notification-content">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                    <polyline points="22 4 12 14.01 9 11.01"/>
-                </svg>
-                <span>${message}</span>
-            </div>
-        `;
+        const iconPath = type === 'success' 
+            ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>'
+            : '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>';
+        notification.innerHTML = `<div class="notification-content"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${iconPath}</svg><span>${message}</span></div>`;
         document.body.appendChild(notification);
-        
         setTimeout(() => {
             notification.style.animation = 'slideOut 0.3s ease-in';
             setTimeout(() => notification.remove(), 300);
@@ -928,28 +1143,32 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Close modals on outside click
-    const editModal = document.getElementById('editModal');
-    const deleteModal = document.getElementById('deleteModal');
-    const alertModal = document.getElementById('alertModal');
-    
-    if (editModal) {
-        editModal.addEventListener('click', function(e) {
-            if (e.target === this) closeEditModal();
-        });
-    }
-    
-    if (deleteModal) {
-        deleteModal.addEventListener('click', function(e) {
-            if (e.target === this) closeDeleteModal();
-        });
-    }
-    
-    if (alertModal) {
-        alertModal.addEventListener('click', function(e) {
-            if (e.target === this) closeAlertModal();
-        });
-    }
-    
+    ['editModal', 'deleteModal', 'alertModal', 'resetPasswordModal', 'passwordGeneratedModal'].forEach(id => {
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    if (id === 'editModal') closeEditModal();
+                    else if (id === 'deleteModal') closeDeleteModal();
+                    else if (id === 'alertModal') closeAlertModal();
+                    else if (id === 'resetPasswordModal') closeResetPasswordModal();
+                    else if (id === 'passwordGeneratedModal') closePasswordGeneratedModal();
+                }
+            });
+        }
+    });
+
+    // ESC key to close modals
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeEditModal();
+            closeDeleteModal();
+            closeAlertModal();
+            closeResetPasswordModal();
+            closePasswordGeneratedModal();
+        }
+    });
+
     console.log('✅ All event listeners attached!');
 });
 </script>
