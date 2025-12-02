@@ -347,7 +347,7 @@ def ratelimit_handler(e):
         return jsonify({
             "ok": False,
             "error": "Too many requests. Please slow down."
-        }), 429@app.route('/register', methods=['GET', 'POST'])
+        }), 429
     
     flash("Too many requests. Please wait a moment and try again.", "warning")
     return redirect(request.referrer or url_for('index'))
@@ -357,8 +357,7 @@ def ratelimit_handler(e):
 
 
 @app.route('/api/send-verification-code', methods=['POST'])
-
-@limiter.limit("3 per minute")   # ← ADD THIS
+@limiter.limit("3 per minute") 
 @limiter.limit("10 per hour") 
 def send_verification_code():
     """API endpoint to send verification code"""
@@ -401,7 +400,6 @@ def send_verification_code():
         return jsonify({'success': False, 'error': 'Failed to send email'}), 500
     
 @app.route('/api/verify-code', methods=['POST'])
-
 @limiter.limit("5 per minute")
 def verify_code():
     """Verify the email verification code"""
@@ -461,7 +459,6 @@ def verify_code():
         return jsonify({'success': False, 'error': 'Verification failed'}), 200
 
 @app.route('/api/resend-verification-code', methods=['POST'])
-
 @limiter.limit("2 per minute")
 @limiter.limit("5 per hour")
 def resend_verification_code():
@@ -2733,6 +2730,7 @@ def api_cleaning_detail(cleaning_id):
 
 
 @app.get("/api/cleaning-cost")
+@login_required
 def get_cleaning_cost():
     """Get cleaning cost for a garment type"""
     garment_type = request.args.get('type', '').strip()
@@ -3105,7 +3103,7 @@ def api_style_by_vendor_style():
             "fabric_id": f.id,
             "cost_per_yard": float(f.cost_per_yard or 0),
             "yards": float(sf.yards_required or 0),
-            "sublimation": bool(sf.is_sublimation or False),  # ADD THIS LINE
+            "sublimation": bool(sf.is_sublimation or False),
         })
 
     # Get ALL notions
