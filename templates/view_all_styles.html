@@ -1421,7 +1421,7 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
         fetch("/api/style/delete/" + styleId, { method: "DELETE" })
             .then(function(response) { return response.json(); })
             .then(function(data) {
-                if (data.ok) {
+                if (data.success) {
                     window.location.reload();
                 } else {
                     alert("Error: " + data.error);

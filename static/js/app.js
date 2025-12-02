@@ -173,8 +173,7 @@ window.confirm = window.customConfirm;
         try {
             const response = await fetch(`/api/style/load-for-duplicate/${styleId}`);
             const data = await response.json();
-            
-            if (!data.ok) {
+            if (!data.success) {
                 alert('Error loading style for duplication: ' + (data.error || 'Unknown error'));
                 return;
             }
@@ -1284,8 +1283,8 @@ updateSizeRangeDisplay();
       }));
       
       const out = await res.json().catch(() => ({}));
-      
-      if (res.ok && out.ok) {
+  
+      if (res.ok && out.success) {
         alert(out.new ? '✅ New style created successfully!' : '✅ Style updated successfully!');
         // Set current style ID and load images
         if (out.style_id) {

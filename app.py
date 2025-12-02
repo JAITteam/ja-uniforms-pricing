@@ -305,7 +305,6 @@ def validate_choice(value, field_name, choices):
 
 def validate_email(email):
     """Validate email format"""
-    import re
     if not email:
         return None, "Email is required"
     
@@ -339,16 +338,44 @@ def validate_string_length(value, field_name, max_length):
         return False, f"{field_name} too long (max {max_length} characters)"
     return True, str(value)
 
+
+def sanitize_search_query(query, max_length=100):
+    """
+    Sanitize user input for safe use in SQL LIKE queries.
+    """
+    if not query:
+        return None, None
+    
+    # Strip and check minimum length
+    query = str(query).strip()
+    if len(query) < 2:
+        return None, None
+    
+    # Escape special SQL LIKE characters
+    sanitized = (
+        query
+        .replace('\\', '\\\\')  # Escape backslash first
+        .replace('%', '\\%')    # Escape percent
+        .replace('_', '\\_')    # Escape underscore
+    )
+    
+    # Limit length
+    sanitized = sanitized[:max_length]
+    
+    # Create search pattern
+    search_pattern = f'%{sanitized}%'
+    
+    return sanitized, search_pattern
+
 # ===== END OF VALIDATION HELPERS =====
 @app.errorhandler(429)
 def ratelimit_handler(e):
     """Handle rate limit exceeded"""
     if request.path.startswith('/api/'):
         return jsonify({
-            "ok": False,
+            "success": False,
             "error": "Too many requests. Please slow down."
-        }), 429
-    
+        }), 429   
     flash("Too many requests. Please wait a moment and try again.", "warning")
     return redirect(request.referrer or url_for('index'))
 
@@ -619,20 +646,16 @@ def get_user(user_id):
 @admin_required
 def update_user(user_id):
     """Update user details"""
-    app.logger.info(f"💾 PUT user {user_id}")
     try:
         user = User.query.get_or_404(user_id)
         data = request.json
-        app.logger.info(f"📦 Data: {data}")
         
         # CRITICAL: Prevent removing the last admin
         if 'role' in data and data['role'] == 'user' and user.role == 'admin':
-            # Count total admins
             admin_count = User.query.filter_by(role='admin').count()
-            app.logger.info(f"🔍 Current admin count: {admin_count}")
             
             if admin_count <= 1:
-                app.logger.error(f"❌ Cannot remove last admin!")
+                app.logger.warning("Attempted to remove last admin - blocked")
                 return jsonify({
                     'success': False, 
                     'error': 'Cannot change the last admin to user. The system must have at least one admin.'
@@ -660,21 +683,20 @@ def update_user(user_id):
             user.full_name = user.first_name
         
         db.session.commit()
-        app.logger.info(f"✅ User {user_id} updated!")
+        app.logger.info(f"User {user_id} updated successfully")
         
         return jsonify({'success': True, 'message': 'User updated successfully'})
     except Exception as e:
         db.session.rollback()
-        app.logger.error(f"❌ Error: {e}")
+        app.logger.error(f"Error updating user {user_id}: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
+    
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
 @limiter.limit("5 per minute")
 @login_required
 @admin_required
 def delete_user(user_id):
     """Delete user"""
-    app.logger.info(f"🗑️ DELETE user {user_id}")
     try:
         user = User.query.get_or_404(user_id)
         
@@ -685,10 +707,9 @@ def delete_user(user_id):
         # CRITICAL: Prevent deleting the last admin
         if user.role == 'admin':
             admin_count = User.query.filter_by(role='admin').count()
-            app.logger.info(f"🔍 Current admin count: {admin_count}")
             
             if admin_count <= 1:
-                app.logger.error(f"❌ Cannot delete last admin!")
+                app.logger.warning("Attempted to delete last admin - blocked")
                 return jsonify({
                     'success': False, 
                     'error': 'Cannot delete the last admin. The system must have at least one admin.'
@@ -696,12 +717,12 @@ def delete_user(user_id):
         
         db.session.delete(user)
         db.session.commit()
-        app.logger.info(f"✅ User {user_id} deleted!")
+        app.logger.info(f"User {user_id} deleted successfully")
         
         return jsonify({'success': True, 'message': 'User deleted successfully'})
     except Exception as e:
         db.session.rollback()
-        app.logger.error(f"❌ Error: {e}")
+        app.logger.error(f"Error deleting user {user_id}: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
     
 
@@ -736,7 +757,7 @@ def admin_reset_password(user_id):
         
         db.session.commit()
         
-        app.logger.info(f"🔑 Admin {current_user.email} reset password for user {user.email}")
+        app.logger.info(f"Admin {current_user.email} reset password for user {user.email}")
         
         return jsonify({
             'success': True,
@@ -749,7 +770,6 @@ def admin_reset_password(user_id):
         db.session.rollback()
         app.logger.error(f"Password reset error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
-
 
 @app.route('/change-password', methods=['GET', 'POST'])
 @login_required
@@ -798,7 +818,7 @@ def change_password():
         
         db.session.commit()
         
-        app.logger.info(f"✅ User {current_user.email} changed their password")
+        app.logger.info(f"User {current_user.email} changed password successfully")
         
         flash('Password changed successfully! Welcome to J.A. Uniforms.', 'success')
         return redirect(url_for('index'))
@@ -808,7 +828,6 @@ def change_password():
         app.logger.error(f"Change password error: {e}")
         flash('Error changing password. Please try again.', 'danger')
         return render_template('change_password.html')
-    
 
 @app.template_filter('time_ago')
 def time_ago_filter(dt):
@@ -977,37 +996,18 @@ def api_dashboard_stats():
 def upload_style_image(style_id):
     """Upload an image for a style"""
     
-    # ===== DEBUG: Print what we received =====
-    app.logger.info("="*60)
-    app.logger.info(f"📥 UPLOAD REQUEST for style {style_id}")
-    app.logger.info(f"📋 request.files keys: {list(request.files.keys())}")
-    app.logger.info(f"📋 request.form keys: {list(request.form.keys())}")
-    app.logger.info(f"📋 request.content_type: {request.content_type}")
-    
-    # Print details of all files in request
-    for key in request.files:
-        f = request.files[key]
-        app.logger.info(f"  File '{key}': filename={f.filename}, content_type={f.content_type}")
-    
-    app.logger.info("="*60)
-    # ===== END DEBUG =====
-    
     # Check if style exists
     style = Style.query.get_or_404(style_id)
     
     # Check if file is in request
     if 'image' not in request.files:
-        app.logger.error("❌ ERROR: 'image' key not found in request.files")
         return jsonify({'error': 'No file provided'}), 400
     
     file = request.files['image']
     
     # Check if filename is empty
     if file.filename == '':
-        app.logger.error("❌ ERROR: file.filename is empty")
         return jsonify({'error': 'No file selected'}), 400
-    
-    app.logger.info(f"✅ File received: {file.filename}")
     
     # Validate and save file
     if file and allowed_file(file.filename, ALLOWED_IMAGE_EXTENSIONS):
@@ -1016,16 +1016,12 @@ def upload_style_image(style_id):
         original_filename = secure_filename(file.filename)
         filename = f"style_{style_id}_{timestamp}_{original_filename}"
         
-        app.logger.info(f"💾 Saving as: {filename}")
-        
         # Ensure upload directory exists
         os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
         
         # Save file to disk
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
-        
-        app.logger.info(f"✅ File saved to: {filepath}")
         
         # Check if this should be the primary image (first image for this style)
         is_primary = StyleImage.query.filter_by(style_id=style_id).count() == 0
@@ -1041,8 +1037,6 @@ def upload_style_image(style_id):
         db.session.add(new_image)
         db.session.commit()
         
-        app.logger.info(f"✅ Image record created in database, ID: {new_image.id}")
-        
         return jsonify({
             'success': True,
             'id': new_image.id,
@@ -1051,7 +1045,6 @@ def upload_style_image(style_id):
             'is_primary': is_primary
         }), 200
     
-    app.logger.error(f"❌ ERROR: File validation failed for {file.filename}")
     return jsonify({'error': 'Invalid file type. Allowed: png, jpg, jpeg, gif'}), 400
 
 @app.route('/api/style/<int:style_id>/images', methods=['GET'])
@@ -1151,23 +1144,29 @@ def api_size_ranges():
             app.logger.error(f"Error adding size range: {e}")
             return jsonify({'success': False, 'error': 'Failed to add size range'}), 500
 
-@app.route('/api/size-ranges/<int:size_range_id>', methods=['GET', 'PUT', 'DELETE'])
+@app.route('/api/size-ranges/<int:size_range_id>', methods=['GET'])
 @login_required
+def api_size_range_get(size_range_id):
+    """Get size range details - any authenticated user"""
+    size_range = SizeRange.query.get_or_404(size_range_id)
+    return jsonify({
+        'id': size_range.id,
+        'name': size_range.name,
+        'regular_sizes': size_range.regular_sizes,
+        'extended_sizes': size_range.extended_sizes,
+        'extended_markup_percent': size_range.extended_markup_percent,
+        'description': size_range.description
+    })
 
-def api_size_range_detail(size_range_id):
+
+@app.route('/api/size-ranges/<int:size_range_id>', methods=['PUT', 'DELETE'])
+@login_required
+@role_required('admin')
+def api_size_range_modify(size_range_id):
+    """Update or delete size range - admin only"""
     size_range = SizeRange.query.get_or_404(size_range_id)
     
-    if request.method == 'GET':
-        return jsonify({
-            'id': size_range.id,
-            'name': size_range.name,
-            'regular_sizes': size_range.regular_sizes,
-            'extended_sizes': size_range.extended_sizes,
-            'extended_markup_percent': size_range.extended_markup_percent,
-            'description': size_range.description
-        })
-    
-    elif request.method == 'PUT':
+    if request.method == 'PUT':
         try:
             data = request.get_json()
             
@@ -1302,52 +1301,65 @@ def import_colors():
         return f"<h1>Error importing colors:</h1><p>{str(e)}</p>"
     
 # COLOR ENDPOINTS
-@app.route('/api/colors', methods=['GET', 'POST'])
+@app.route('/api/colors', methods=['GET'])
 @login_required
-def api_colors():
-    if request.method == 'GET':
-        colors = Color.query.order_by(Color.name).all()
-        return jsonify([{'id': c.id, 'name': c.name, 'color_code': c.color_code} for c in colors])
-    
-    elif request.method == 'POST':
-        try:
-            data = request.get_json()
-            
-            # Validation
-            name, error = validate_required_string(data.get('name'), 'Color name', max_length=100)
-            if error:
-                return jsonify({'success': False, 'error': error}), 400
-            
-            # Check for duplicate
-            existing = Color.query.filter(func.lower(Color.name) == name.lower()).first()
-            if existing:
-                return jsonify({'success': False, 'error': 'Color already exists'}), 400
-            
-            color = Color(
-                name=name,
-                color_code=data.get('color_code', '').strip() if data.get('color_code') else None
-            )
-            db.session.add(color)
-            db.session.commit()
-            
-            return jsonify({'success': True, 'id': color.id})
-        except Exception as e:
-            app.logger.error(f"Error adding color: {e}")
-            return jsonify({'success': False, 'error': 'Failed to add color'}), 500
+def api_colors_get():
+    """Get all colors - any authenticated user"""
+    colors = Color.query.order_by(Color.name).all()
+    return jsonify([{'id': c.id, 'name': c.name, 'color_code': c.color_code} for c in colors])
 
-@app.route('/api/colors/<int:color_id>', methods=['GET', 'PUT', 'DELETE'])
+
+@app.route('/api/colors', methods=['POST'])
 @login_required
-def api_color_detail(color_id):
+@role_required('admin')
+def api_colors_create():
+    """Create new color - admin only"""
+    try:
+        data = request.get_json()
+        
+        # Validation
+        name, error = validate_required_string(data.get('name'), 'Color name', max_length=100)
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
+        
+        # Check for duplicate
+        existing = Color.query.filter(func.lower(Color.name) == name.lower()).first()
+        if existing:
+            return jsonify({'success': False, 'error': 'Color already exists'}), 400
+        
+        color = Color(
+            name=name,
+            color_code=data.get('color_code', '').strip() if data.get('color_code') else None
+        )
+        db.session.add(color)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'id': color.id})
+    except Exception as e:
+        app.logger.error(f"Error adding color: {e}")
+        return jsonify({'success': False, 'error': 'Failed to add color'}), 500
+
+
+@app.route('/api/colors/<int:color_id>', methods=['GET'])
+@login_required
+def api_color_get(color_id):
+    """Get color details - any authenticated user"""
+    color = Color.query.get_or_404(color_id)
+    return jsonify({
+        'id': color.id,
+        'name': color.name,
+        'color_code': color.color_code
+    })
+
+
+@app.route('/api/colors/<int:color_id>', methods=['PUT', 'DELETE'])
+@login_required
+@role_required('admin')
+def api_color_modify(color_id):
+    """Update or delete color - admin only"""
     color = Color.query.get_or_404(color_id)
     
-    if request.method == 'GET':
-        return jsonify({
-            'id': color.id,
-            'name': color.name,
-            'color_code': color.color_code
-        })
-    
-    elif request.method == 'PUT':
+    if request.method == 'PUT':
         try:
             data = request.get_json()
             
@@ -1907,6 +1919,7 @@ def view_all_styles():
                          permissions=permissions,
                          current_user=current_user)
 
+    
 @app.route('/api/style/delete/<int:style_id>', methods=['DELETE'])
 @limiter.limit("10 per minute")
 @admin_required 
@@ -1929,14 +1942,14 @@ def delete_style(style_id):
         db.session.delete(style)
         db.session.commit()
         
-        return jsonify({"ok": True, "message": "Style deleted successfully"}), 200
+        return jsonify({"success": True, "message": "Style deleted successfully"}), 200
         
     except Exception as e:
         db.session.rollback()
         import traceback
         error_details = traceback.format_exc()
         app.logger.error(f"Delete error: {error_details}")
-        return jsonify({"ok": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/style/duplicate/<int:style_id>', methods=['POST'])
 @admin_required 
@@ -2025,7 +2038,7 @@ def duplicate_style(style_id):
         db.session.commit()
         
         return jsonify({
-            "ok": True, 
+            "success": True, 
             "new_style_id": new_style.id, 
             "new_vendor_style": new_vendor_style,
             "message": f"Style duplicated as '{new_vendor_style}'"
@@ -2036,7 +2049,7 @@ def duplicate_style(style_id):
         import traceback
         error_details = traceback.format_exc()
         app.logger.error(f"Duplicate error: {error_details}")
-        return jsonify({"ok": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/styles/bulk-delete', methods=['POST'])
 @limiter.limit("3 per minute")
@@ -2048,7 +2061,7 @@ def bulk_delete_styles():
         style_ids = data.get('style_ids', [])
         
         if not style_ids:
-            return jsonify({"ok": False, "error": "No styles selected"}), 400
+            return jsonify({"success": False, "error": "No styles selected"}), 400
         
         for style_id in style_ids:
             # Delete all relationships in the correct order
@@ -2071,14 +2084,14 @@ def bulk_delete_styles():
         
         db.session.commit()
         
-        return jsonify({"ok": True, "message": f"{len(style_ids)} style(s) deleted successfully"}), 200
+        return jsonify({"success": True, "message": f"{len(style_ids)} style(s) deleted successfully"}), 200
         
     except Exception as e:
         db.session.rollback()
         import traceback
         error_details = traceback.format_exc()
         app.logger.error(f"Bulk delete error: {error_details}")
-        return jsonify({"ok": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/style/load-for-duplicate/<int:style_id>')
 @login_required
@@ -2156,7 +2169,7 @@ def load_style_for_duplicate(style_id):
                 })
         
         return jsonify({
-            "ok": True,
+            "success": True,
             "style": {
                 "vendor_style": style.vendor_style + "-COPY",  # Suggest a new vendor style
                 "style_name": style.style_name + " (Copy)",     # Suggest a new style name
@@ -2179,7 +2192,7 @@ def load_style_for_duplicate(style_id):
         }), 200
         
     except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
     
 @app.route('/api/style/check-vendor-style')
 @login_required
@@ -2196,7 +2209,7 @@ def check_vendor_style():
 
 
 # ===== EDITABLE MASTER COSTS WITH VENDOR MANAGEMENT =====
-
+ 
 @app.route('/api/style/<int:style_id>/favorite', methods=['POST'])
 @admin_required
 def toggle_favorite(style_id):
@@ -2206,10 +2219,10 @@ def toggle_favorite(style_id):
         data = request.get_json()
         style.is_favorite = data.get('is_favorite', False)
         db.session.commit()
-        return jsonify({"ok": True}), 200
+        return jsonify({"success": True}), 200
     except Exception as e:
         db.session.rollback()
-        return jsonify({"ok": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/master-costs')
 @login_required
@@ -2987,48 +3000,61 @@ def api_style_by_name():
     }), 200
 
 # VARIABLE ENDPOINTS
-@app.route('/api/variables', methods=['GET', 'POST'])
+@app.route('/api/variables', methods=['GET'])
 @login_required
-def api_variables():
-    if request.method == 'GET':
-        variables = Variable.query.order_by(Variable.name).all()
-        return jsonify([{'id': v.id, 'name': v.name} for v in variables])
-    
-    elif request.method == 'POST':
-        try:
-            data = request.get_json()
-            
-            # Validation
-            name, error = validate_required_string(data.get('name'), 'Variable name', max_length=100)
-            if error:
-                return jsonify({'success': False, 'error': error}), 400
-            
-            # Check for duplicate
-            existing = Variable.query.filter(func.lower(Variable.name) == name.lower()).first()
-            if existing:
-                return jsonify({'success': False, 'error': 'Variable already exists'}), 400
-            
-            variable = Variable(name=name)
-            db.session.add(variable)
-            db.session.commit()
-            
-            return jsonify({'success': True, 'id': variable.id})
-        except Exception as e:
-            app.logger.error(f"Error adding variable: {e}")
-            return jsonify({'success': False, 'error': 'Failed to add variable'}), 500
+def api_variables_get():
+    """Get all variables - any authenticated user"""
+    variables = Variable.query.order_by(Variable.name).all()
+    return jsonify([{'id': v.id, 'name': v.name} for v in variables])
 
-@app.route('/api/variables/<int:variable_id>', methods=['GET', 'PUT', 'DELETE'])
+
+@app.route('/api/variables', methods=['POST'])
 @login_required
-def api_variable_detail(variable_id):
+@role_required('admin')
+def api_variables_create():
+    """Create new variable - admin only"""
+    try:
+        data = request.get_json()
+        
+        # Validation
+        name, error = validate_required_string(data.get('name'), 'Variable name', max_length=100)
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
+        
+        # Check for duplicate
+        existing = Variable.query.filter(func.lower(Variable.name) == name.lower()).first()
+        if existing:
+            return jsonify({'success': False, 'error': 'Variable already exists'}), 400
+        
+        variable = Variable(name=name)
+        db.session.add(variable)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'id': variable.id})
+    except Exception as e:
+        app.logger.error(f"Error adding variable: {e}")
+        return jsonify({'success': False, 'error': 'Failed to add variable'}), 500
+
+
+@app.route('/api/variables/<int:variable_id>', methods=['GET'])
+@login_required
+def api_variable_get(variable_id):
+    """Get variable details - any authenticated user"""
+    variable = Variable.query.get_or_404(variable_id)
+    return jsonify({
+        'id': variable.id,
+        'name': variable.name
+    })
+
+
+@app.route('/api/variables/<int:variable_id>', methods=['PUT', 'DELETE'])
+@login_required
+@role_required('admin')
+def api_variable_modify(variable_id):
+    """Update or delete variable - admin only"""
     variable = Variable.query.get_or_404(variable_id)
     
-    if request.method == 'GET':
-        return jsonify({
-            'id': variable.id,
-            'name': variable.name
-        })
-    
-    elif request.method == 'PUT':
+    if request.method == 'PUT':
         try:
             data = request.get_json()
             
@@ -3053,19 +3079,23 @@ def api_variable_detail(variable_id):
             app.logger.error(f"Error deleting variable: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete variable'}), 500
     
+
 @app.route('/api/styles/search', methods=['GET'])
 @login_required
 def search_styles():
     """Search styles by vendor_style or style_name"""
     query = request.args.get('q', '').strip()
-    if not query or len(query) < 2:
+    
+    # Sanitize input
+    sanitized, search_pattern = sanitize_search_query(query)
+    if not sanitized:
         return jsonify([])
     
     # Search in both vendor_style and style_name
     styles = Style.query.filter(
         db.or_(
-            Style.vendor_style.ilike(f'%{query}%'),
-            Style.style_name.ilike(f'%{query}%')
+            Style.vendor_style.ilike(search_pattern, escape='\\'),
+            Style.style_name.ilike(search_pattern, escape='\\')
         )
     ).order_by(Style.vendor_style).limit(20).all()
     
@@ -3073,6 +3103,8 @@ def search_styles():
         'vendor_style': s.vendor_style,
         'style_name': s.style_name
     } for s in styles])
+
+
 
 @app.get("/api/style/by-vendor-style")
 def api_style_by_vendor_style():
@@ -3498,9 +3530,9 @@ def api_style_save():
             message = "✅ New style created successfully!"
         else:
             message = "✅ Style updated successfully!"
-        
+    
         return jsonify({
-            "ok": True,
+            "success": True,
             "new": is_new,
             "style_id": style.id,
             "message": message
@@ -3508,26 +3540,30 @@ def api_style_save():
     
     except ValueError as e:
         db.session.rollback()
-        return jsonify({"error": f"Invalid data: {str(e)}"}), 400
+        return jsonify({"success": False, "error": f"Invalid data: {str(e)}"}), 400
     
     except Exception as e:
         db.session.rollback()
-        return jsonify({"error": f"Save failed: {str(e)}"}), 500
+        return jsonify({"success": False, "error": f"Save failed: {str(e)}"}), 500
 
 # ===== END OF ENHANCED api_style_save =====
     
 @app.get("/api/style/search")
+@login_required
 def api_style_search():
-    q = (request.args.get("q") or "").strip()
-    if not q:
+    """Search styles by name - with sanitized input"""
+    q = request.args.get("q", "").strip()
+    
+    # Sanitize input
+    sanitized, search_pattern = sanitize_search_query(q)
+    if not sanitized:
         return jsonify([])
+    
     rows = (Style.query
-            .filter(Style.style_name.ilike(f"%{q}%"))
+            .filter(Style.style_name.ilike(search_pattern, escape='\\'))
             .order_by(Style.style_name.asc())
             .limit(20).all())
     return jsonify([r.style_name for r in rows])
-
-
 
 
 @app.route('/import-excel', methods=['GET', 'POST'])
