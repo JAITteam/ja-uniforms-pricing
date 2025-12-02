@@ -5,22 +5,6 @@ function getCsrfToken() {
     return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 }
 
-function addCsrfToFetch(options = {}) {
-    const csrfToken = getCsrfToken();
-    
-    if (!options.headers) {
-        options.headers = {};
-    }
-    
-    if (options.headers instanceof Headers) {
-        options.headers.append('X-CSRFToken', csrfToken);
-    } else {
-        options.headers['X-CSRFToken'] = csrfToken;
-    }
-    
-    return options;
-}
-
 // ============================================
 // FRONTEND VALIDATION HELPERS
 // ============================================
@@ -1276,11 +1260,11 @@ updateSizeRangeDisplay();
     // SEND SAVE REQUEST
     // ========================================
     try {
-      const res = await fetch('/api/style/save', addCsrfToFetch({
+      const res = await fetch('/api/style/save', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(payload)
-      }));
+      });
       
       const out = await res.json().catch(() => ({}));
   
@@ -1549,11 +1533,11 @@ updateSizeRangeDisplay();
     }
     
     try {
-      const res = await fetch('/api/colors', addCsrfToFetch({
+      const res = await fetch('/api/colors', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({name: colorName})
-    }));
+    });
       
       const data = await res.json();
       
@@ -1655,11 +1639,11 @@ updateSizeRangeDisplay();
     }
     
     try {
-      const res = await fetch('/api/variables', addCsrfToFetch({
+      const res = await fetch('/api/variables', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({name: variableName})
-      }));
+      });
   
       const data = await res.json();
       
@@ -1872,9 +1856,9 @@ updateSizeRangeDisplay();
     if (!confirm('Delete this image?')) return;
     
     try {
-      const res = await fetch(`/api/style-image/${imageId}`, addCsrfToFetch({
+      const res = await fetch(`/api/style-image/${imageId}`, {
         method: 'DELETE'
-      }));
+      });
       
       if (!res.ok) throw new Error('Failed to delete image');
       

@@ -480,6 +480,11 @@
 body {
     padding-top: var(--navbar-height);
 }
+/* Ensure page content doesn't get cropped */
+.container-fluid:first-of-type,
+main > *:first-child {
+    margin-top: 0;
+}
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {

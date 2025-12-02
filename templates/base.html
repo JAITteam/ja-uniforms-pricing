@@ -222,11 +222,21 @@
                 
                 const icon = icons[msg.category] || icons.info;
                 
+                // FIX #1: XSS Prevention - Build structure first, then set text safely
                 toast.innerHTML = icon + 
-                    '<span class="toast-message">' + msg.message + '</span>' +
-                    '<button class="toast-close" onclick="this.parentElement.classList.add(\'toast-exit\'); setTimeout(() => this.parentElement.remove(), 300);">' +
+                    '<span class="toast-message"></span>' +
+                    '<button class="toast-close">' +
                     '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
                     '</button>';
+                
+                // Set message text safely (prevents XSS)
+                toast.querySelector('.toast-message').textContent = msg.message;
+                
+                // Add close button event listener
+                toast.querySelector('.toast-close').addEventListener('click', function() {
+                    toast.classList.add('toast-exit');
+                    setTimeout(function() { toast.remove(); }, 300);
+                });
                 
                 container.appendChild(toast);
                 
@@ -244,7 +254,9 @@
     });
     
     // Global function to show toast from JavaScript
-    window.showToast = function(message, type = 'success') {
+    window.showToast = function(message, type) {
+        type = type || 'success';
+        
         const container = document.getElementById('toastContainer');
         if (!container) return;
         
@@ -261,11 +273,21 @@
         
         const icon = icons[type] || icons.info;
         
+        // FIX #2: XSS Prevention - Build structure first, then set text safely
         toast.innerHTML = icon + 
-            '<span class="toast-message">' + message + '</span>' +
-            '<button class="toast-close" onclick="this.parentElement.classList.add(\'toast-exit\'); setTimeout(() => this.parentElement.remove(), 300);">' +
+            '<span class="toast-message"></span>' +
+            '<button class="toast-close">' +
             '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
             '</button>';
+        
+        // Set message text safely (prevents XSS)
+        toast.querySelector('.toast-message').textContent = message;
+        
+        // Add close button event listener
+        toast.querySelector('.toast-close').addEventListener('click', function() {
+            toast.classList.add('toast-exit');
+            setTimeout(function() { toast.remove(); }, 300);
+        });
         
         container.appendChild(toast);
         

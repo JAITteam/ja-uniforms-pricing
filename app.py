@@ -667,6 +667,7 @@ def update_user(user_id):
             if existing and existing.id != user_id:
                 return jsonify({'success': False, 'error': 'Email already exists'}), 400
             user.email = data['email']
+            user.username = data['email']
         
         if 'first_name' in data:
             user.first_name = data['first_name']
@@ -2403,7 +2404,6 @@ def api_fabric_detail(fabric_id):
         try:
             data = request.get_json()
             
-            # Validation
             if 'name' in data:
                 name, error = validate_required_string(data.get('name'), 'Fabric name', max_length=100)
                 if error:
@@ -2433,10 +2433,19 @@ def api_fabric_detail(fabric_id):
     
     elif request.method == 'DELETE':
         try:
+            # Check if fabric is used in any styles
+            usage_count = StyleFabric.query.filter_by(fabric_id=fabric_id).count()
+            if usage_count > 0:
+                return jsonify({
+                    'success': False, 
+                    'error': f'Cannot delete: This fabric is used in {usage_count} style(s). Remove it from all styles first.'
+                }), 400
+            
             db.session.delete(fabric)
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error deleting fabric: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete fabric'}), 500
 
@@ -2522,10 +2531,19 @@ def api_notion_detail(notion_id):
     
     elif request.method == 'DELETE':
         try:
+            # Check if notion is used in any styles
+            usage_count = StyleNotion.query.filter_by(notion_id=notion_id).count()
+            if usage_count > 0:
+                return jsonify({
+                    'success': False, 
+                    'error': f'Cannot delete: This notion is used in {usage_count} style(s). Remove it from all styles first.'
+                }), 400
+            
             db.session.delete(notion)
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error deleting notion: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete notion'}), 500
 
@@ -2627,15 +2645,21 @@ def api_labor_detail(labor_id):
     
     elif request.method == 'DELETE':
         try:
+            # Check if labor operation is used in any styles
+            usage_count = StyleLabor.query.filter_by(labor_operation_id=labor_id).count()
+            if usage_count > 0:
+                return jsonify({
+                    'success': False, 
+                    'error': f'Cannot delete: This labor operation is used in {usage_count} style(s). Remove it from all styles first.'
+                }), 400
+            
             db.session.delete(labor)
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error deleting labor: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete labor operation'}), 500
-        
-
-
 @app.route('/api/labors', methods=['POST'])
 @role_required('admin')
 def api_add_labor():
