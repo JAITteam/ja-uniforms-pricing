@@ -20,3 +20,46 @@ Traceback (most recent call last):
     joinedload(Style.style_labors).joinedload(StyleLabor.labor_operation)
                ^^^^^^^^^^^^^^^^^^
 AttributeError: type object 'Style' has no attribute 'style_labors'
+[2025-12-04 10:46:47,334] ERROR in C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py:825
+Exception on /view-all-styles [GET]
+Traceback (most recent call last):
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\auth.py", line 75, in decorated_function
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\app.py", line 2018, in view_all_styles
+    return render_template('view_all_styles.html',
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\templating.py", line 152, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\templating.py", line 133, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\jinja2\environment.py", line 1295, in render
+    self.environment.handle_exception()
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\jinja2\environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\it2\ja_uniforms_pricing\templates\view_all_styles.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "C:\Users\it2\ja_uniforms_pricing\templates\base.html", line 146, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\templates\view_all_styles.html", line 819, in block 'content'
+    <h3>${{ "%.2f"|format(total_value) }}</h3>
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\jinja2\filters.py", line 1043, in do_format
+    return soft_str(value) % (kwargs or args)
+           ~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~
+jinja2.exceptions.UndefinedError: 'total_value' is undefined

@@ -22,6 +22,7 @@ from flask_mail import Mail, Message
 from flask_migrate import Migrate
 from flask_login import login_user, logout_user, current_user, login_required
 from flask_wtf.csrf import CSRFProtect
+from sqlalchemy.exc import IntegrityError
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from sqlalchemy import func
@@ -56,6 +57,25 @@ def validate_password(password):
     if not re.search(r'\d', password):
         return False, "Password must contain at least one number"
     return True, "Valid"
+
+def validate_image_content(file_header):
+    """
+    Validate image file by checking magic bytes (file signature).
+    Returns detected type ('jpeg', 'png', 'gif') or None if invalid.
+    """
+    # Magic bytes for common image formats
+    # JPEG: starts with FF D8 FF
+    # PNG: starts with 89 50 4E 47 0D 0A 1A 0A
+    # GIF: starts with GIF87a or GIF89a
+    
+    if file_header[:3] == b'\xff\xd8\xff':
+        return 'jpeg'
+    elif file_header[:8] == b'\x89PNG\r\n\x1a\n':
+        return 'png'
+    elif file_header[:6] in (b'GIF87a', b'GIF89a'):
+        return 'gif'
+    else:
+        return None
 
 # Initialize Mail
 mail = Mail()
@@ -206,7 +226,7 @@ Your verification code for J.A. Uniforms Pricing Tool is:
 
 {code}
 
-This code will expire in 2 minutes.
+This code will expire in 10 minutes.
 
 If you didn't request this code, please ignore this email.
 
@@ -232,7 +252,7 @@ J.A. Uniforms Team
                 <h1 style="color: #3498db; font-size: 36px; letter-spacing: 8px; margin: 0;">{code}</h1>
             </div>
             
-            <p style="color: #666; font-size: 14px;">This code will expire in 2 minutes.</p>
+            <p style="color: #666; font-size: 14px;">This code will expire in 10 minutes.</p>
             <p style="color: #666; font-size: 14px;">If you didn't request this code, please ignore this email.</p>
         </div>
         
@@ -995,7 +1015,8 @@ def api_dashboard_stats():
 @app.route('/api/style/<int:style_id>/upload-image', methods=['POST'])
 @admin_required 
 def upload_style_image(style_id):
-    """Upload an image for a style"""
+    """Upload an image for a style - with size and MIME validation"""
+    import imghdr
     
     # Check if style exists
     style = Style.query.get_or_404(style_id)
@@ -1010,43 +1031,72 @@ def upload_style_image(style_id):
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
     
-    # Validate and save file
-    if file and allowed_file(file.filename, ALLOWED_IMAGE_EXTENSIONS):
-        # Create unique filename with timestamp
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        original_filename = secure_filename(file.filename)
-        filename = f"style_{style_id}_{timestamp}_{original_filename}"
-        
-        # Ensure upload directory exists
-        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-        
-        # Save file to disk
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-        
-        # Check if this should be the primary image (first image for this style)
-        is_primary = StyleImage.query.filter_by(style_id=style_id).count() == 0
-        
-        # Create database record
-        new_image = StyleImage(
-            style_id=style_id,
-            filename=filename,
-            is_primary=is_primary,
-            upload_date=datetime.now()
-        )
-        
-        db.session.add(new_image)
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'id': new_image.id,
-            'filename': filename,
-            'url': f'/static/img/{filename}',
-            'is_primary': is_primary
-        }), 200
+    # ✅ NEW: Check file size BEFORE processing
+    file.seek(0, 2)  # Seek to end of file
+    file_size = file.tell()  # Get current position (= file size)
+    file.seek(0)  # Reset to beginning
     
-    return jsonify({'error': 'Invalid file type. Allowed: png, jpg, jpeg, gif'}), 400
+    if file_size > MAX_FILE_SIZE:
+        max_mb = MAX_FILE_SIZE // (1024 * 1024)
+        return jsonify({'error': f'File too large. Maximum size is {max_mb}MB'}), 400
+    
+    if file_size == 0:
+        return jsonify({'error': 'File is empty'}), 400
+    
+    # Check extension first (quick check)
+    if not allowed_file(file.filename, ALLOWED_IMAGE_EXTENSIONS):
+        return jsonify({'error': 'Invalid file type. Allowed: png, jpg, jpeg, gif'}), 400
+    
+    
+    # ✅ Validate actual file content (magic byte check)
+    # Read first 16 bytes to determine real file type
+    header = file.read(16)
+    file.seek(0)  # Reset to beginning
+    
+    # Check magic bytes to verify it's a real image
+    detected_type = validate_image_content(header)
+    
+    if detected_type is None:
+        app.logger.warning(f"Upload rejected: File extension was valid but content is not a valid image")
+        return jsonify({'error': 'Invalid image file. File content does not match a valid image format.'}), 400
+    
+    # ✅ All validations passed - now save the file
+    
+    # Create unique filename with timestamp
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    original_filename = secure_filename(file.filename)
+    filename = f"style_{style_id}_{timestamp}_{original_filename}"
+    
+    # Ensure upload directory exists
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    
+    # Save file to disk
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+    
+    # Check if this should be the primary image (first image for this style)
+    is_primary = StyleImage.query.filter_by(style_id=style_id).count() == 0
+    
+    # Create database record
+    new_image = StyleImage(
+        style_id=style_id,
+        filename=filename,
+        is_primary=is_primary,
+        upload_date=datetime.now()
+    )
+    
+    db.session.add(new_image)
+    db.session.commit()
+    
+    app.logger.info(f"Image uploaded: {filename} for style {style_id} ({file_size} bytes)")
+    
+    return jsonify({
+        'success': True,
+        'id': new_image.id,
+        'filename': filename,
+        'url': f'/static/img/{filename}',
+        'is_primary': is_primary
+    }), 200
 
 @app.route('/api/style/<int:style_id>/images', methods=['GET'])
 @login_required
@@ -1142,6 +1192,7 @@ def api_size_ranges():
             
             return jsonify({'success': True, 'id': size_range.id})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error adding size range: {e}")
             return jsonify({'success': False, 'error': 'Failed to add size range'}), 500
 
@@ -1198,6 +1249,7 @@ def api_size_range_modify(size_range_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error updating size range: {e}")
             return jsonify({'success': False, 'error': 'Failed to update size range'}), 500
     
@@ -1207,6 +1259,7 @@ def api_size_range_modify(size_range_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error deleting size range: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete size range'}), 500
 
@@ -1253,6 +1306,7 @@ def api_global_setting_detail(setting_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error updating global setting: {e}")
             return jsonify({'success': False, 'error': 'Failed to update setting'}), 500
 
@@ -1337,6 +1391,7 @@ def api_colors_create():
         
         return jsonify({'success': True, 'id': color.id})
     except Exception as e:
+        db.session.rollback()
         app.logger.error(f"Error adding color: {e}")
         return jsonify({'success': False, 'error': 'Failed to add color'}), 500
 
@@ -1376,6 +1431,7 @@ def api_color_modify(color_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error updating color: {e}")
             return jsonify({'success': False, 'error': 'Failed to update color'}), 500
     
@@ -1385,6 +1441,7 @@ def api_color_modify(color_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error deleting color: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete color'}), 500
 
@@ -1890,7 +1947,7 @@ def export_sap_format():
 
 
 @app.route('/view-all-styles')
-@role_required('admin', 'user')  # Only admin and user roles allowed
+@role_required('admin', 'user')
 def view_all_styles():
     """View all styles with filters - RBAC enabled (Admin and User only)"""
     # Eager load to avoid N+1 queries
@@ -1925,23 +1982,35 @@ def view_all_styles():
 @limiter.limit("10 per minute")
 @admin_required 
 def delete_style(style_id):
-    """Delete a style and all its relationships"""
+    """Delete a style and all its relationships including physical image files"""
     try:
         style = Style.query.get_or_404(style_id)
         
-        # Delete style images first (foreign key constraint)
-        StyleImage.query.filter_by(style_id=style_id).delete()
+        # ✅ NEW: Delete physical image files FIRST (before DB records)
+        images = StyleImage.query.filter_by(style_id=style_id).all()
+        for img in images:
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
+            if os.path.exists(filepath):
+                try:
+                    os.remove(filepath)
+                    app.logger.info(f"Deleted image file: {filepath}")
+                except Exception as e:
+                    app.logger.warning(f"Could not delete image file {filepath}: {e}")
+                    # Continue anyway - don't fail the whole delete
         
-        # Delete all other relationships
+        # Now delete database records
+        StyleImage.query.filter_by(style_id=style_id).delete()
         StyleFabric.query.filter_by(style_id=style_id).delete()
         StyleNotion.query.filter_by(style_id=style_id).delete()
         StyleLabor.query.filter_by(style_id=style_id).delete()
         StyleColor.query.filter_by(style_id=style_id).delete()
         StyleVariable.query.filter_by(style_id=style_id).delete()
         
-        # Delete the style
+        # Delete the style itself
         db.session.delete(style)
         db.session.commit()
+        
+        app.logger.info(f"Style {style_id} deleted successfully with {len(images)} image(s)")
         
         return jsonify({"success": True, "message": "Style deleted successfully"}), 200
         
@@ -2056,7 +2125,7 @@ def duplicate_style(style_id):
 @limiter.limit("3 per minute")
 @admin_required 
 def bulk_delete_styles():
-    """Delete multiple styles"""
+    """Delete multiple styles including their physical image files"""
     try:
         data = request.get_json()
         style_ids = data.get('style_ids', [])
@@ -2064,28 +2133,41 @@ def bulk_delete_styles():
         if not style_ids:
             return jsonify({"success": False, "error": "No styles selected"}), 400
         
+        total_images_deleted = 0
+        
         for style_id in style_ids:
-            # Delete all relationships in the correct order
-            # (Images first, then other relationships, then the style itself)
+            # ✅ NEW: Delete physical image files FIRST
+            images = StyleImage.query.filter_by(style_id=style_id).all()
+            for img in images:
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
+                if os.path.exists(filepath):
+                    try:
+                        os.remove(filepath)
+                        total_images_deleted += 1
+                    except Exception as e:
+                        app.logger.warning(f"Could not delete image file {filepath}: {e}")
             
-            # Delete style images
+            # Delete database records
             StyleImage.query.filter_by(style_id=style_id).delete()
-
-            # Delete other relationships
             StyleFabric.query.filter_by(style_id=style_id).delete()
             StyleNotion.query.filter_by(style_id=style_id).delete()
             StyleLabor.query.filter_by(style_id=style_id).delete()
             StyleColor.query.filter_by(style_id=style_id).delete()
             StyleVariable.query.filter_by(style_id=style_id).delete()
             
-            # Finally, delete the style itself
+            # Delete the style itself
             style = Style.query.get(style_id)
             if style:
                 db.session.delete(style)
         
         db.session.commit()
         
-        return jsonify({"success": True, "message": f"{len(style_ids)} style(s) deleted successfully"}), 200
+        app.logger.info(f"Bulk delete: {len(style_ids)} style(s) and {total_images_deleted} image file(s) deleted")
+        
+        return jsonify({
+            "success": True, 
+            "message": f"{len(style_ids)} style(s) deleted successfully"
+        }), 200
         
     except Exception as e:
         db.session.rollback()
@@ -2283,6 +2365,7 @@ def api_fabric_vendor_detail(vendor_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error updating fabric vendor: {e}")
             return jsonify({'success': False, 'error': 'Failed to update fabric vendor'}), 500
     
@@ -2292,6 +2375,7 @@ def api_fabric_vendor_detail(vendor_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error deleting fabric vendor: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete fabric vendor'}), 500
 
@@ -2315,6 +2399,7 @@ def api_add_fabric_vendor():
         
         return jsonify({'success': True, 'id': vendor.id})
     except Exception as e:
+        db.session.rollback()
         app.logger.error(f"Error adding fabric vendor: {e}")
         return jsonify({'success': False, 'error': 'Failed to add fabric vendor'}), 500
 
@@ -2347,6 +2432,7 @@ def api_notion_vendor_detail(vendor_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error updating notion vendor: {e}")
             return jsonify({'success': False, 'error': 'Failed to update notion vendor'}), 500
     
@@ -2356,6 +2442,7 @@ def api_notion_vendor_detail(vendor_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error deleting notion vendor: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete notion vendor'}), 500
 
@@ -2381,6 +2468,7 @@ def api_add_notion_vendor():
         
         return jsonify({'success': True, 'id': vendor.id})
     except Exception as e:
+        db.session.rollback()
         app.logger.error(f"Error adding notion vendor: {e}")
         return jsonify({'success': False, 'error': 'Failed to add notion vendor'}), 500
 
@@ -2428,6 +2516,7 @@ def api_fabric_detail(fabric_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error updating fabric: {e}")
             return jsonify({'success': False, 'error': 'Failed to update fabric'}), 500
     
@@ -2482,6 +2571,7 @@ def api_add_fabric():
         
         return jsonify({'success': True, 'id': fabric.id})
     except Exception as e:
+        db.session.rollback()
         app.logger.error(f"Error adding fabric: {e}")
         return jsonify({'success': False, 'error': 'Failed to add fabric'}), 500
 
@@ -2526,6 +2616,7 @@ def api_notion_detail(notion_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error updating notion: {e}")
             return jsonify({'success': False, 'error': 'Failed to update notion'}), 500
     
@@ -2579,6 +2670,7 @@ def api_add_notion():
         
         return jsonify({'success': True, 'id': notion.id})
     except Exception as e:
+        db.session.rollback()
         app.logger.error(f"Error adding notion: {e}")
         return jsonify({'success': False, 'error': 'Failed to add notion'}), 500
 
@@ -2640,6 +2732,7 @@ def api_labor_detail(labor_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error updating labor: {e}")
             return jsonify({'success': False, 'error': 'Failed to update labor operation'}), 500
     
@@ -2709,6 +2802,7 @@ def api_add_labor():
         
         return jsonify({'success': True, 'id': labor.id})
     except Exception as e:
+        db.session.rollback()
         app.logger.error(f"Error adding labor: {e}")
         return jsonify({'success': False, 'error': 'Failed to add labor operation'}), 500
 
@@ -2752,6 +2846,7 @@ def api_cleaning_detail(cleaning_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error updating cleaning cost: {e}")
             return jsonify({'success': False, 'error': 'Failed to update cleaning cost'}), 500
     
@@ -2761,6 +2856,7 @@ def api_cleaning_detail(cleaning_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error deleting cleaning cost: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete cleaning cost'}), 500
 
@@ -2812,6 +2908,7 @@ def api_add_cleaning():
         
         return jsonify({'success': True, 'id': cleaning.id})
     except Exception as e:
+        db.session.rollback()
         app.logger.error(f"Error adding cleaning cost: {e}")
         return jsonify({'success': False, 'error': 'Failed to add cleaning cost'}), 500
 # ===== PLACEHOLDER ROUTES FOR FUTURE FEATURES =====
@@ -2912,6 +3009,7 @@ def style_view():
                           view_mode=not permissions['can_edit'])
 
 @app.get("/api/style/by-name")
+@login_required
 def api_style_by_name():
     """
     Read-only lookup by exact style_name (case-insensitive).
@@ -3056,6 +3154,7 @@ def api_variables_create():
         
         return jsonify({'success': True, 'id': variable.id})
     except Exception as e:
+        db.session.rollback()
         app.logger.error(f"Error adding variable: {e}")
         return jsonify({'success': False, 'error': 'Failed to add variable'}), 500
 
@@ -3091,6 +3190,7 @@ def api_variable_modify(variable_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error updating variable: {e}")
             return jsonify({'success': False, 'error': 'Failed to update variable'}), 500
     
@@ -3100,11 +3200,13 @@ def api_variable_modify(variable_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error deleting variable: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete variable'}), 500
     
 
 @app.route('/api/styles/search', methods=['GET'])
+@limiter.limit("60 per minute")
 @login_required
 def search_styles():
     """Search styles by vendor_style or style_name"""
@@ -3131,6 +3233,7 @@ def search_styles():
 
 
 @app.get("/api/style/by-vendor-style")
+@login_required
 def api_style_by_vendor_style():
     """Load style by vendor_style code"""
     vendor_style = (request.args.get("vendor_style") or "").strip()
@@ -3546,10 +3649,12 @@ def api_style_save():
                 
                 sv = StyleVariable(style_id=style.id, variable_id=variable.id)
                 db.session.add(sv)
-        
+    
+
         # ===== STEP 13: COMMIT ALL CHANGES =====
         db.session.commit()
-        #Return appropriate message
+        
+        # Return appropriate message
         if is_new:
             message = "✅ New style created successfully!"
         else:
@@ -3562,17 +3667,31 @@ def api_style_save():
             "message": message
         }), 200
     
+    except IntegrityError as e:
+        db.session.rollback()
+        app.logger.warning(f"IntegrityError in style save: {e}")
+        # Parse the error to give user-friendly message
+        error_msg = str(e.orig).lower() if e.orig else str(e).lower()
+        if 'vendor_style' in error_msg:
+            return jsonify({"success": False, "error": "A style with this Vendor Style already exists. Please use a different code."}), 400
+        elif 'style_name' in error_msg:
+            return jsonify({"success": False, "error": "A style with this name already exists. Please use a different name."}), 400
+        else:
+            return jsonify({"success": False, "error": "This record already exists. Please check for duplicates."}), 400
+    
     except ValueError as e:
         db.session.rollback()
         return jsonify({"success": False, "error": f"Invalid data: {str(e)}"}), 400
     
     except Exception as e:
         db.session.rollback()
+        app.logger.error(f"Style save error: {e}")
         return jsonify({"success": False, "error": f"Save failed: {str(e)}"}), 500
 
 # ===== END OF ENHANCED api_style_save =====
     
 @app.get("/api/style/search")
+@limiter.limit("60 per minute")
 @login_required
 def api_style_search():
     """Search styles by name - with sanitized input"""

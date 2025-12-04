@@ -252,6 +252,7 @@ class Style(db.Model):
 
 class StyleFabric(db.Model):
     __tablename__ = 'style_fabrics'
+    __table_args__ = (db.UniqueConstraint('style_id', 'fabric_id', name='uq_style_fabric'),)
 
     id = db.Column(db.Integer, primary_key=True)
     style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False, index=True)  # ← ADDED INDEX
@@ -267,6 +268,7 @@ class StyleFabric(db.Model):
 
 class StyleNotion(db.Model):
     __tablename__ = 'style_notions'
+    __table_args__ = (db.UniqueConstraint('style_id', 'notion_id', name='uq_style_notion'),)
     
     id = db.Column(db.Integer, primary_key=True)
     style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False, index=True)  # ← ADDED INDEX
@@ -303,6 +305,8 @@ class Variable(db.Model):
 
 class StyleVariable(db.Model):
     __tablename__ = 'style_variables'
+    __table_args__ = (db.UniqueConstraint('style_id', 'variable_id', name='uq_style_variable'),)
+
 
     id = db.Column(db.Integer, primary_key=True)
     style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False, index=True)  # ← ADDED INDEX
@@ -314,6 +318,7 @@ class StyleVariable(db.Model):
     
 class StyleColor(db.Model):
     __tablename__ = 'style_colors'
+    __table_args__ = (db.UniqueConstraint('style_id', 'color_id', name='uq_style_color'),)
 
     id = db.Column(db.Integer, primary_key=True)
     style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False, index=True)  # ← ADDED INDEX
@@ -337,6 +342,7 @@ class StyleImage(db.Model):
 
 class StyleLabor(db.Model):
     __tablename__ = 'style_labor'
+    __table_args__ = (db.UniqueConstraint('style_id', 'labor_operation_id', name='uq_style_labor'),)
     
     id = db.Column(db.Integer, primary_key=True)
     style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False, index=True)  # ← ADDED INDEX
