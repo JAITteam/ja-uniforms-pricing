@@ -18,7 +18,9 @@ def init_auth(app):
     
     @login_manager.user_loader
     def load_user(user_id):
-        return User.query.get(int(user_id))
+        # Use db.session.get() for SQLAlchemy 2.x compatibility
+        from database import db
+        return db.session.get(User, int(user_id))
     
     return login_manager
 

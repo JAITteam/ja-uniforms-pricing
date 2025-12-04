@@ -17,7 +17,11 @@ class Config:
         print("="*70 + "\n")
     
     # Database configuration
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///uniforms.db'
+    # Handle PostgreSQL URL format (Heroku/Railway use postgres:// but SQLAlchemy 2.x requires postgresql://)
+    _database_url = os.environ.get('DATABASE_URL') or 'sqlite:///uniforms.db'
+    if _database_url.startswith('postgres://'):
+        _database_url = _database_url.replace('postgres://', 'postgresql://', 1)
+    SQLALCHEMY_DATABASE_URI = _database_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Upload folder for Excel files and images
