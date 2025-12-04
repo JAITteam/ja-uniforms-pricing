@@ -3742,6 +3742,28 @@ def import_excel():
         return f"<h1>Import Error:</h1><p>{str(e)}</p><a href='/import-excel'>Try Again</a>"
     
 
+# ===== HEALTH CHECK ENDPOINT =====
+@app.route('/health')
+def health_check():
+    """Health check endpoint for monitoring"""
+    try:
+        # Check database connection
+        db.session.execute('SELECT 1')
+        db_status = 'healthy'
+    except Exception as e:
+        db_status = f'unhealthy: {str(e)}'
+    
+    health_data = {
+        'status': 'healthy' if db_status == 'healthy' else 'unhealthy',
+        'timestamp': datetime.now().isoformat(),
+        'database': db_status,
+        'version': '1.0.0'
+    }
+    
+    status_code = 200 if health_data['status'] == 'healthy' else 503
+    return jsonify(health_data), status_code
+
+
 # ===== APPLICATION STARTUP =====
 if __name__ == '__main__':
     with app.app_context():
