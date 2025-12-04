@@ -1142,6 +1142,7 @@ def api_size_ranges():
             
             return jsonify({'success': True, 'id': size_range.id})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error adding size range: {e}")
             return jsonify({'success': False, 'error': 'Failed to add size range'}), 500
 
@@ -1198,6 +1199,7 @@ def api_size_range_modify(size_range_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error updating size range: {e}")
             return jsonify({'success': False, 'error': 'Failed to update size range'}), 500
     
@@ -1207,6 +1209,7 @@ def api_size_range_modify(size_range_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error deleting size range: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete size range'}), 500
 
@@ -1253,6 +1256,7 @@ def api_global_setting_detail(setting_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error updating global setting: {e}")
             return jsonify({'success': False, 'error': 'Failed to update setting'}), 500
 
@@ -1337,6 +1341,7 @@ def api_colors_create():
         
         return jsonify({'success': True, 'id': color.id})
     except Exception as e:
+        db.session.rollback()
         app.logger.error(f"Error adding color: {e}")
         return jsonify({'success': False, 'error': 'Failed to add color'}), 500
 
@@ -1376,6 +1381,7 @@ def api_color_modify(color_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error updating color: {e}")
             return jsonify({'success': False, 'error': 'Failed to update color'}), 500
     
@@ -1385,6 +1391,7 @@ def api_color_modify(color_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error deleting color: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete color'}), 500
 
@@ -2283,6 +2290,7 @@ def api_fabric_vendor_detail(vendor_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error updating fabric vendor: {e}")
             return jsonify({'success': False, 'error': 'Failed to update fabric vendor'}), 500
     
@@ -2292,6 +2300,7 @@ def api_fabric_vendor_detail(vendor_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error deleting fabric vendor: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete fabric vendor'}), 500
 
@@ -2315,6 +2324,7 @@ def api_add_fabric_vendor():
         
         return jsonify({'success': True, 'id': vendor.id})
     except Exception as e:
+        db.session.rollback()
         app.logger.error(f"Error adding fabric vendor: {e}")
         return jsonify({'success': False, 'error': 'Failed to add fabric vendor'}), 500
 
@@ -2347,6 +2357,7 @@ def api_notion_vendor_detail(vendor_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error updating notion vendor: {e}")
             return jsonify({'success': False, 'error': 'Failed to update notion vendor'}), 500
     
@@ -2356,6 +2367,7 @@ def api_notion_vendor_detail(vendor_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error deleting notion vendor: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete notion vendor'}), 500
 
@@ -2381,6 +2393,7 @@ def api_add_notion_vendor():
         
         return jsonify({'success': True, 'id': vendor.id})
     except Exception as e:
+        db.session.rollback()
         app.logger.error(f"Error adding notion vendor: {e}")
         return jsonify({'success': False, 'error': 'Failed to add notion vendor'}), 500
 
@@ -2428,6 +2441,7 @@ def api_fabric_detail(fabric_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error updating fabric: {e}")
             return jsonify({'success': False, 'error': 'Failed to update fabric'}), 500
     
@@ -2482,6 +2496,7 @@ def api_add_fabric():
         
         return jsonify({'success': True, 'id': fabric.id})
     except Exception as e:
+        db.session.rollback()
         app.logger.error(f"Error adding fabric: {e}")
         return jsonify({'success': False, 'error': 'Failed to add fabric'}), 500
 
@@ -2526,6 +2541,7 @@ def api_notion_detail(notion_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error updating notion: {e}")
             return jsonify({'success': False, 'error': 'Failed to update notion'}), 500
     
@@ -2579,6 +2595,7 @@ def api_add_notion():
         
         return jsonify({'success': True, 'id': notion.id})
     except Exception as e:
+        db.session.rollback()
         app.logger.error(f"Error adding notion: {e}")
         return jsonify({'success': False, 'error': 'Failed to add notion'}), 500
 
@@ -2640,6 +2657,7 @@ def api_labor_detail(labor_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error updating labor: {e}")
             return jsonify({'success': False, 'error': 'Failed to update labor operation'}), 500
     
@@ -2709,6 +2727,7 @@ def api_add_labor():
         
         return jsonify({'success': True, 'id': labor.id})
     except Exception as e:
+        db.session.rollback()
         app.logger.error(f"Error adding labor: {e}")
         return jsonify({'success': False, 'error': 'Failed to add labor operation'}), 500
 
@@ -2752,6 +2771,7 @@ def api_cleaning_detail(cleaning_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error updating cleaning cost: {e}")
             return jsonify({'success': False, 'error': 'Failed to update cleaning cost'}), 500
     
@@ -2761,6 +2781,7 @@ def api_cleaning_detail(cleaning_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error deleting cleaning cost: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete cleaning cost'}), 500
 
@@ -2812,6 +2833,7 @@ def api_add_cleaning():
         
         return jsonify({'success': True, 'id': cleaning.id})
     except Exception as e:
+        db.session.rollback()
         app.logger.error(f"Error adding cleaning cost: {e}")
         return jsonify({'success': False, 'error': 'Failed to add cleaning cost'}), 500
 # ===== PLACEHOLDER ROUTES FOR FUTURE FEATURES =====
@@ -2912,6 +2934,7 @@ def style_view():
                           view_mode=not permissions['can_edit'])
 
 @app.get("/api/style/by-name")
+@login_required
 def api_style_by_name():
     """
     Read-only lookup by exact style_name (case-insensitive).
@@ -3056,6 +3079,7 @@ def api_variables_create():
         
         return jsonify({'success': True, 'id': variable.id})
     except Exception as e:
+        db.session.rollback()
         app.logger.error(f"Error adding variable: {e}")
         return jsonify({'success': False, 'error': 'Failed to add variable'}), 500
 
@@ -3091,6 +3115,7 @@ def api_variable_modify(variable_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error updating variable: {e}")
             return jsonify({'success': False, 'error': 'Failed to update variable'}), 500
     
@@ -3100,6 +3125,7 @@ def api_variable_modify(variable_id):
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
+            db.session.rollback()
             app.logger.error(f"Error deleting variable: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete variable'}), 500
     
@@ -3131,6 +3157,7 @@ def search_styles():
 
 
 @app.get("/api/style/by-vendor-style")
+@login_required
 def api_style_by_vendor_style():
     """Load style by vendor_style code"""
     vendor_style = (request.args.get("vendor_style") or "").strip()
