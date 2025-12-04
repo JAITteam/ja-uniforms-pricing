@@ -720,31 +720,47 @@ pytest -k "test_login"
 
 ## Security Hardening
 
-### Production Security Checklist
+### For Internal Network Deployment (Your Case)
 
-1. **Secret Key**
+Since this is an **internal-only application** on a private network with trusted employees, you have simpler security requirements:
+
+#### HTTPS: NOT Required
+- Your app runs only on internal LAN
+- All users are trusted employees  
+- Traffic never touches the internet
+- HTTP is perfectly fine for this use case
+
+#### What You SHOULD Do:
+
+1. **Generate a Strong Secret Key**
    ```bash
-   # Generate a secure secret key
    python -c "import secrets; print(secrets.token_hex(32))"
    ```
+   Add this to your `.env.production` file.
 
-2. **HTTPS (Recommended)**
-   - Use nginx as reverse proxy with SSL certificate
-   - Or use Cloudflare tunnel for free HTTPS
+2. **Secure Your Network**
+   - Use WPA2/WPA3 for WiFi (no open networks!)
+   - Don't expose port 5000 to the internet
+   - Use your router's firewall
 
-3. **Database Credentials**
-   - Use strong passwords
-   - Never commit credentials to git
+3. **Database Security**
+   - Use strong PostgreSQL password
+   - Never commit `.env` files to git
 
-4. **File Permissions (Linux)**
+4. **Keep Host Computer Secure**
+   - Windows Updates / Linux updates
+   - Antivirus software
+   - Strong login password
+
+5. **File Permissions (Linux)**
    ```bash
    chmod 600 .env.production
    chmod 700 scripts/
    ```
 
-5. **Rate Limiting**
-   - Already implemented in the app
-   - Consider Redis for persistent storage
+6. **Don't Expose to Internet**
+   - Keep router port forwarding OFF for port 5000
+   - App should only be accessible inside your office network
 
 ---
 
