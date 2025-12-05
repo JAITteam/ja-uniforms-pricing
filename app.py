@@ -970,7 +970,7 @@ def index():
 def view_style(vendor_style):
     style = Style.query.filter_by(vendor_style=vendor_style).first()
     if style:
-        return render_template('style_detail.html', style=style)
+        return redirect(url_for('style_view') + f'?vendor_style={vendor_style}')
     return f"<h1>Style '{vendor_style}' not found</h1><a href='/'>Back to Search</a>"
 
 # ===== ADMIN ROUTES (Future expansion) =====
@@ -983,6 +983,19 @@ def api_recent_styles():
         'vendor_style': s.vendor_style,
         'style_name': s.style_name,
         'updated_at': s.updated_at.isoformat() if s.updated_at else None
+    } for s in styles])
+
+@app.route('/api/all-styles-for-export')
+@login_required
+def api_all_styles_for_export():
+    """Get all styles for export modal"""
+    styles = Style.query.order_by(Style.vendor_style).all()
+    return jsonify([{
+        'id': s.id,
+        'vendor_style': s.vendor_style,
+        'style_name': s.style_name,
+        'gender': s.gender or 'N/A',
+        'cost': s.get_total_cost()
     } for s in styles])
 
 @app.route('/api/dashboard-stats')
@@ -1701,27 +1714,29 @@ def export_sap_single_style():
         # NO FALLBACK - validation ensures sizes exist
         colors = [sc.color.name.upper() for sc in style.colors]
         
-        variables = [sv.variable.name.upper() for sv in style.style_variables] if hasattr(style, 'style_variables') else []
+        # Get variables - DEFAULT exports as empty string, others export as-is
+        variables = []
+        if hasattr(style, 'style_variables') and style.style_variables:
+            for sv in style.style_variables:
+                var_name = sv.variable.name.upper()
+                if var_name == 'DEFAULT':
+                    variables.append('')  # DEFAULT = empty in export
+                else:
+                    variables.append(var_name)  # REGULAR, TALL, etc. = as-is
+
+        if not variables:
+            variables = ['']  # Fallback if no variables at all
+        
         vendor_code = 'V100'
-        if style.style_fabrics and style.style_fabrics[0].fabric.fabric_vendor:
-            vendor_code = style.style_fabrics[0].fabric.fabric_vendor.vendor_code
 
         u_style = style.vendor_style.replace('-', '')
         shipping_cost = style.shipping_cost if hasattr(style, 'shipping_cost') else 0.00
 
         for color in colors:
-            for size in all_sizes:
-                if is_extended_size_for_range(size, size_range_obj):
-                    price = round(base_cost * extended_mult, 2)
-                else:
-                    price = round(base_cost, 2)
-
-                if variables:
+                for size in all_sizes:
+                    price = round(base_cost * extended_mult, 2) if is_extended_size_for_range(size, size_range_obj) else round(base_cost, 2)
                     for variable in variables:
                         writer.writerow(['', '', color, size, variable, price, shipping_cost, u_style, vendor_code, style.style_name])
-                    writer.writerow(['', '', color, size, '', price, shipping_cost, u_style, vendor_code, style.style_name])
-                else:
-                    writer.writerow(['', '', color, size, '', price, shipping_cost, u_style, vendor_code, style.style_name])
 
         output.seek(0)
         filename = f"SAP_{style.vendor_style}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
@@ -1742,6 +1757,7 @@ def export_sap_format():
     try:
         import json
         style_ids = json.loads(request.form.get('style_ids', '[]'))
+        include_empty_vars = request.form.get('include_empty_vars', '0') == '1'
         if not style_ids:
             return "No styles selected", 400
 
@@ -1919,8 +1935,6 @@ def export_sap_format():
             
             variables = [sv.variable.name.upper() for sv in style.style_variables] if hasattr(style, 'style_variables') else []
             vendor_code = 'V100'
-            if style.style_fabrics and style.style_fabrics[0].fabric.fabric_vendor:
-                vendor_code = style.style_fabrics[0].fabric.fabric_vendor.vendor_code
 
             u_style = style.vendor_style.replace('-', '')
             shipping_cost = style.shipping_cost if hasattr(style, 'shipping_cost') else 0.00
@@ -1931,7 +1945,9 @@ def export_sap_format():
                     if variables:
                         for variable in variables:
                             writer.writerow(['', '', color, size, variable, price, shipping_cost, u_style, vendor_code, style.style_name])
-                        writer.writerow(['', '', color, size, '', price, shipping_cost, u_style, vendor_code, style.style_name])
+                        # Only add empty variable row if include_empty_vars is True
+                        if include_empty_vars:
+                            writer.writerow(['', '', color, size, '', price, shipping_cost, u_style, vendor_code, style.style_name])
                     else:
                         writer.writerow(['', '', color, size, '', price, shipping_cost, u_style, vendor_code, style.style_name])
 

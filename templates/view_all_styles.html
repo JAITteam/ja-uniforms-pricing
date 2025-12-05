@@ -107,61 +107,16 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
     border-color: #cbd5e1;
 }
 
-.stats-cards {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1.25rem;
-    margin-bottom: 1.5rem;
+.btn-danger {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    border: none;
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.35);
 }
 
-.stat-card {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-    border: 1px solid rgba(0,0,0,0.04);
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s;
-}
-
-.stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100%;
-    background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
-}
-
-.stat-card:nth-child(2)::before {
-    background: linear-gradient(180deg, #10b981 0%, #059669 100%);
-}
-
-.stat-card:nth-child(3)::before {
-    background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
-}
-
-.stat-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
-}
-
-.stat-card h3 {
-    font-size: 2rem;
-    margin: 0 0 0.25rem 0;
-    font-weight: 700;
-    color: #1e293b;
-}
-
-.stat-card p {
-    margin: 0;
-    color: #64748b;
-    font-size: 0.85rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+.btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(239, 68, 68, 0.45);
 }
 
 /* REVAMPED FILTER BOX */
@@ -501,9 +456,6 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
     height: 15px;
 }
 
-.action-btn.edit { color: #7c3aed; }
-.action-btn.edit:hover { background: #ede9fe; border-color: #a78bfa; }
-
 .action-btn.copy { color: #0891b2; }
 .action-btn.copy:hover { background: #cffafe; border-color: #22d3ee; }
 
@@ -580,8 +532,8 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
     cursor: pointer;
 }
 
-/* EXPORT MODAL */
-.export-modal {
+/* MODAL BASE STYLES */
+.modal-overlay {
     display: none;
     position: fixed;
     z-index: 9999;
@@ -593,7 +545,7 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
     backdrop-filter: blur(8px);
 }
 
-.export-modal.active {
+.modal-overlay.active {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -605,58 +557,64 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
     to { opacity: 1; }
 }
 
-.export-modal-content {
-    background: white;
-    border-radius: 20px;
-    width: 90%;
-    max-width: 650px;
-    max-height: 80vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 25px 60px rgba(0,0,0,0.3);
-    animation: slideUp 0.3s ease;
-}
-
 @keyframes slideUp {
     from { transform: translateY(30px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
 }
 
-.export-modal-header {
+.modal-box {
+    background: white;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+    animation: slideUp 0.3s ease;
+    overflow: hidden;
+}
+
+.modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 1.5rem 1.75rem;
     border-bottom: 1px solid #e2e8f0;
     background: linear-gradient(180deg, #f8fafc 0%, white 100%);
-    border-radius: 20px 20px 0 0;
+    position: relative;
 }
 
-.export-modal-header h3 {
+.modal-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+}
+
+.modal-header h3 {
     margin: 0;
     font-size: 1.25rem;
     color: #1e293b;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
 }
 
-.export-modal-header h3::before {
-    content: '';
-    display: inline-block;
-    width: 4px;
+.modal-header-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-header-icon svg {
+    width: 20px;
     height: 20px;
-    background: linear-gradient(180deg, #10b981 0%, #059669 100%);
-    border-radius: 2px;
 }
 
-.export-filter-info {
-    font-size: 0.8rem;
-    color: #64748b;
-    margin-top: 0.25rem;
-}
-
-.close-modal {
+.modal-close {
     background: #f1f5f9;
     border: none;
     font-size: 1.5rem;
@@ -671,13 +629,47 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
     transition: all 0.2s;
 }
 
-.close-modal:hover {
+.modal-close:hover {
     background: #fee2e2;
     color: #dc2626;
 }
 
-.export-modal-body {
+.modal-body {
     padding: 1.5rem 1.75rem;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1.25rem 1.75rem;
+    border-top: 1px solid #e2e8f0;
+    background: linear-gradient(180deg, white 0%, #f8fafc 100%);
+}
+
+.modal-footer .btn {
+    padding: 0.75rem 1.5rem;
+}
+
+/* EXPORT MODAL */
+.export-modal .modal-header::before {
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+}
+
+.export-modal .modal-box {
+    max-width: 650px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.export-filter-info {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-top: 0.25rem;
+}
+
+.export-modal .modal-body {
     overflow-y: auto;
     flex: 1;
 }
@@ -780,20 +772,6 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
     font-size: 0.8rem;
 }
 
-.export-modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.75rem;
-    padding: 1.25rem 1.75rem;
-    border-top: 1px solid #e2e8f0;
-    background: linear-gradient(180deg, white 0%, #f8fafc 100%);
-    border-radius: 0 0 20px 20px;
-}
-
-.export-modal-footer .btn {
-    padding: 0.75rem 1.5rem;
-}
-
 .no-results {
     text-align: center;
     padding: 2rem;
@@ -805,23 +783,8 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
     <div class="page-header">
         <h1>All Styles</h1>
     </div>
-
-    <div class="stats-cards">
-        <div class="stat-card">
-            <h3>{{ total_styles }}</h3>
-            <p>Total Styles</p>
-        </div>
-        <div class="stat-card">
-            <h3>${{ "%.2f"|format(avg_cost) }}</h3>
-            <p>Average Cost</p>
-        </div>
-        <div class="stat-card">
-            <h3>${{ "%.2f"|format(total_value) }}</h3>
-            <p>Total Value</p>
-        </div>
-    </div>
-
-    <!-- REVAMPED FILTER BOX -->
+    
+    <!-- FILTER BOX -->
     <div class="filters-section">
         <div class="filters-top-row">
             <div class="search-box">
@@ -949,11 +912,6 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
                     <td>
                         <div class="action-buttons">
                             {% if permissions.can_edit %}
-                            <button class="action-btn edit" title="Edit Style" data-vendor-style="{{ style.vendor_style }}">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                </svg>
-                            </button>
                             <button class="action-btn copy" title="Duplicate Style" data-style-id="{{ style.id }}">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
@@ -996,17 +954,52 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
     </div>
 </div>
 
-<!-- Export Modal -->
-<div id="exportModal" class="export-modal">
-    <div class="export-modal-content">
-        <div class="export-modal-header">
+<!-- DELETE CONFIRMATION MODAL -->
+<!-- DELETE MODAL - Uses delete_modal.css -->
+<div id="deleteModal" class="delete-modal">
+    <div class="delete-modal-overlay"></div>
+    <div class="delete-modal-content">
+        <div class="delete-modal-header">
+            <div class="delete-modal-header-left">
+                <div class="delete-modal-icon">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                </div>
+                <h3 class="delete-modal-title">Delete Style</h3>
+            </div>
+            <button class="delete-modal-close" id="closeDeleteModal">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="delete-modal-body">
+            <p>Are you sure you want to delete <strong id="deleteStyleName"></strong>? This action cannot be undone and will permanently remove all associated data.</p>
+        </div>
+        <div class="delete-modal-footer">
+            <button class="delete-modal-btn delete-modal-btn-cancel" id="cancelDeleteBtn">Cancel</button>
+            <button class="delete-modal-btn delete-modal-btn-delete" id="confirmDeleteBtn">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                Delete
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- EXPORT MODAL -->
+<div id="exportModal" class="modal-overlay export-modal">
+    <div class="modal-box">
+        <div class="modal-header">
             <div>
                 <h3>Export to SAP</h3>
                 <div class="export-filter-info" id="exportFilterInfo">Showing all styles</div>
             </div>
-            <button class="close-modal" id="closeExportBtn">&times;</button>
+            <button class="modal-close" id="closeExportBtn">&times;</button>
         </div>
-        <div class="export-modal-body">
+        <div class="modal-body">
             <div class="export-search">
                 <input type="text" id="exportSearch" placeholder="Search within current view...">
             </div>
@@ -1017,8 +1010,25 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
                 </label>
             </div>
             <div class="export-styles-list" id="exportStylesList"></div>
+            
+            <!-- Variable Export Option -->
+            <div class="export-variable-option" style="margin-top: 1rem; padding: 1rem; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 2px solid #7dd3fc; border-radius: 12px;">
+                <label style="font-weight: 600; color: #0369a1; font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">
+                    Variable Export Options:
+                </label>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: #334155;">
+                        <input type="radio" name="variableOption" value="variables_only" checked style="accent-color: #0ea5e9;">
+                        <span>Export with variables only (no empty rows)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: #334155;">
+                        <input type="radio" name="variableOption" value="include_empty" style="accent-color: #0ea5e9;">
+                        <span>Include empty variable rows (current + empty)</span>
+                    </label>
+                </div>
+            </div>
         </div>
-        <div class="export-modal-footer">
+        <div class="modal-footer">
             <button class="btn btn-secondary" id="cancelExportBtn">Cancel</button>
             <button class="btn btn-export" id="doExportBtn">
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1038,6 +1048,7 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
     var currentPage = 1;
     var itemsPerPage = 50;
     var filteredRows = [];
+    var pendingDeleteId = null;
     
     var activeFilters = {
         "high-margin": false,
@@ -1058,12 +1069,19 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
         document.getElementById("costFilter").addEventListener("change", applyFilters);
         document.getElementById("clearFiltersBtn").addEventListener("click", clearFilters);
         document.getElementById("itemsPerPage").addEventListener("change", changeItemsPerPage);
+        
+        // Export modal
         document.getElementById("openExportBtn").addEventListener("click", openExportModal);
         document.getElementById("closeExportBtn").addEventListener("click", closeExportModal);
         document.getElementById("cancelExportBtn").addEventListener("click", closeExportModal);
         document.getElementById("exportSearch").addEventListener("keyup", filterExportList);
         document.getElementById("exportSelectAll").addEventListener("change", toggleExportSelectAll);
         document.getElementById("doExportBtn").addEventListener("click", exportSelectedFromModal);
+        
+        // Delete modal
+        document.getElementById("closeDeleteModal").addEventListener("click", closeDeleteModal);
+        document.getElementById("cancelDeleteBtn").addEventListener("click", closeDeleteModal);
+        document.getElementById("confirmDeleteBtn").addEventListener("click", executeDelete);
         
         document.querySelectorAll(".filter-chip").forEach(function(chip) {
             chip.addEventListener("click", function() {
@@ -1083,32 +1101,77 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
             });
         });
         
-        document.querySelectorAll(".action-btn.edit").forEach(function(btn) {
-            btn.addEventListener("click", function() {
-                editStyle(this.getAttribute("data-vendor-style"));
-            });
-        });
-        
         document.querySelectorAll(".action-btn.copy").forEach(function(btn) {
-            btn.addEventListener("click", function() {
+            btn.addEventListener("click", function(e) {
+                e.preventDefault();
+                e.stopPropagation();
                 duplicateStyle(this.getAttribute("data-style-id"));
             });
         });
         
         document.querySelectorAll(".action-btn.export").forEach(function(btn) {
-            btn.addEventListener("click", function() {
+            btn.addEventListener("click", function(e) {
+                e.preventDefault();
+                e.stopPropagation();
                 quickExport(this.getAttribute("data-style-id"));
             });
         });
         
         document.querySelectorAll(".action-btn.delete").forEach(function(btn) {
-            btn.addEventListener("click", function() {
-                deleteStyle(this.getAttribute("data-style-id"), this.getAttribute("data-vendor-style"));
+            btn.addEventListener("click", function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                showDeleteModal(this.getAttribute("data-style-id"), this.getAttribute("data-vendor-style"));
             });
         });
         
+        // Close modals on overlay click
         document.getElementById("exportModal").addEventListener("click", function(e) {
             if (e.target === this) closeExportModal();
+        });
+        
+        // Delete modal - click on overlay to close
+        var deleteOverlay = document.querySelector("#deleteModal .delete-modal-overlay");
+        if (deleteOverlay) {
+            deleteOverlay.addEventListener("click", closeDeleteModal);
+        }
+    }
+
+    // DELETE MODAL FUNCTIONS
+    function showDeleteModal(styleId, vendorStyle) {
+        pendingDeleteId = styleId;
+        document.getElementById("deleteStyleName").textContent = vendorStyle;
+        document.getElementById("deleteModal").classList.add("active");
+    }
+    
+    function closeDeleteModal() {
+        pendingDeleteId = null;
+        document.getElementById("deleteModal").classList.remove("active");
+    }
+    
+    function executeDelete() {
+        if (!pendingDeleteId) return;
+        
+        var styleId = pendingDeleteId;
+        closeDeleteModal();
+        
+        var csrfMeta = document.querySelector("meta[name='csrf-token']");
+        var csrfToken = csrfMeta ? csrfMeta.getAttribute("content") : "";
+        
+        fetch("/api/style/delete/" + styleId, { 
+            method: "DELETE",
+            headers: { "X-CSRFToken": csrfToken }
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert("Error: " + (data.error || "Could not delete style"));
+            }
+        })
+        .catch(function(error) {
+            alert("Error: " + error);
         });
     }
 
@@ -1321,19 +1384,13 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
         var totalFiltered = filteredRows.length;
         var totalPages = Math.ceil(totalFiltered / itemsPerPage);
         
-        if (currentPage > totalPages && totalPages > 0) {
-            currentPage = totalPages;
-        }
-        if (currentPage < 1) {
-            currentPage = 1;
-        }
+        if (currentPage > totalPages && totalPages > 0) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
         
         var startIndex = (currentPage - 1) * itemsPerPage;
         var endIndex = startIndex + itemsPerPage;
         
-        allRows.forEach(function(row) {
-            row.style.display = "none";
-        });
+        allRows.forEach(function(row) { row.style.display = "none"; });
         
         filteredRows.forEach(function(row, index) {
             if (index >= startIndex && index < endIndex) {
@@ -1360,19 +1417,13 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
         prevBtn.innerHTML = "&laquo;";
         prevBtn.disabled = currentPage === 1;
         prevBtn.addEventListener("click", function() {
-            if (currentPage > 1) {
-                currentPage--;
-                updatePagination();
-            }
+            if (currentPage > 1) { currentPage--; updatePagination(); }
         });
         controls.appendChild(prevBtn);
         
         var startPage = Math.max(1, currentPage - 2);
         var endPage = Math.min(totalPages, startPage + 4);
-        
-        if (endPage - startPage < 4) {
-            startPage = Math.max(1, endPage - 4);
-        }
+        if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
         
         for (var i = startPage; i <= endPage; i++) {
             var btn = document.createElement("button");
@@ -1392,10 +1443,7 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
         nextBtn.innerHTML = "&raquo;";
         nextBtn.disabled = currentPage === totalPages || totalPages === 0;
         nextBtn.addEventListener("click", function() {
-            if (currentPage < totalPages) {
-                currentPage++;
-                updatePagination();
-            }
+            if (currentPage < totalPages) { currentPage++; updatePagination(); }
         });
         controls.appendChild(nextBtn);
     }
@@ -1406,30 +1454,10 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
         updatePagination();
     }
 
-    function editStyle(vendorStyle) {
-        window.location.href = "/style/new?vendor_style=" + encodeURIComponent(vendorStyle);
-    }
-
     function duplicateStyle(styleId) {
-        if (!confirm("Duplicate this style?")) return;
-        window.location.href = "/style/new?duplicate_from_id=" + styleId;
-    }
-
-    function deleteStyle(styleId, vendorStyle) {
-        if (!confirm("Delete \"" + vendorStyle + "\"? This cannot be undone.")) return;
-        
-        fetch("/api/style/delete/" + styleId, { method: "DELETE" })
-            .then(function(response) { return response.json(); })
-            .then(function(data) {
-                if (data.success) {
-                    window.location.reload();
-                } else {
-                    alert("Error: " + data.error);
-                }
-            })
-            .catch(function(error) {
-                alert("Error: " + error);
-            });
+        if (confirm("Duplicate this style?")) {
+            window.location.href = "/style/new?duplicate_from_id=" + styleId;
+        }
     }
 
     function toggleFavorite(styleId, element) {
@@ -1445,14 +1473,11 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
                 element.classList.toggle("active");
                 element.closest("tr").setAttribute("data-favorite", (!isFavorite).toString());
             }
-        })
-        .catch(function(error) {
-            console.error("Error:", error);
         });
     }
 
     function quickExport(styleId) {
-        submitExportForm([parseInt(styleId)]);
+        submitExportForm([parseInt(styleId)], false);  // Default: no empty variable rows
     }
 
     function openExportModal() {
@@ -1541,11 +1566,15 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
             return;
         }
         
+        // Get variable option
+        var variableOption = document.querySelector('input[name="variableOption"]:checked');
+        var includeEmptyVars = variableOption ? variableOption.value === "include_empty" : false;
+        
         closeExportModal();
-        submitExportForm(checked);
+        submitExportForm(checked, includeEmptyVars);
     }
 
-    function submitExportForm(styleIds) {
+    function submitExportForm(styleIds, includeEmptyVars) {
         var csrfMeta = document.querySelector("meta[name='csrf-token']");
         var csrfToken = csrfMeta ? csrfMeta.getAttribute("content") : "";
         
@@ -1564,6 +1593,13 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
         input.name = "style_ids";
         input.value = JSON.stringify(styleIds);
         form.appendChild(input);
+        
+        // Add variable option
+        var varInput = document.createElement("input");
+        varInput.type = "hidden";
+        varInput.name = "include_empty_vars";
+        varInput.value = includeEmptyVars ? "1" : "0";
+        form.appendChild(varInput);
         
         document.body.appendChild(form);
         form.submit();

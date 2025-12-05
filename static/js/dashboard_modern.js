@@ -114,7 +114,6 @@ document.addEventListener('DOMContentLoaded', function() {
     async function refreshRecentStyles() {
         try {
             // Make API call to get recent styles
-            // This is a placeholder - implement your actual API endpoint
             const response = await fetch('/api/recent-styles');
             if (!response.ok) return;
             
@@ -124,7 +123,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const container = document.getElementById('recent-styles-list');
             if (!container) return;
             
-            // Re-render recent styles (you'll implement this based on your data structure)
             console.log('✅ Recent styles refreshed');
             
             // Update relative times
@@ -140,7 +138,6 @@ document.addEventListener('DOMContentLoaded', function() {
     async function refreshStats() {
         try {
             // Make API call to get updated stats
-            // This is a placeholder - implement your actual API endpoint
             const response = await fetch('/api/dashboard-stats');
             if (!response.ok) return;
             
@@ -191,71 +188,8 @@ document.addEventListener('DOMContentLoaded', function() {
         update();
     }
     
-    // ===== EXPORT ALL FUNCTIONALITY =====
-    function setupExportButton() {
-        const exportBtn = document.getElementById('export-all-btn');
-        if (!exportBtn) return;
-        
-        exportBtn.addEventListener('click', async function() {
-            // Show confirmation
-            if (!confirm('Export all styles to SAP B1 format?\n\nThis will download a CSV file with all size/color combinations.')) {
-                return;
-            }
-            
-            // Show loading state
-            const originalText = exportBtn.innerHTML;
-            exportBtn.innerHTML = '⏳ Exporting...';
-            exportBtn.disabled = true;
-            
-            try {
-                // Get all style IDs (you'll need to implement this based on your data)
-                const styleIds = getAllStyleIds();
-                
-                // Create form and submit
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '/export-sap-format';
-                
-                // Add CSRF token
-                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                if (csrfToken) {
-                    const csrfInput = document.createElement('input');
-                    csrfInput.type = 'hidden';
-                    csrfInput.name = 'csrf_token';
-                    csrfInput.value = csrfToken;
-                    form.appendChild(csrfInput);
-                }
-                
-                // Add style IDs
-                const idsInput = document.createElement('input');
-                idsInput.type = 'hidden';
-                idsInput.name = 'style_ids';
-                idsInput.value = JSON.stringify(styleIds);
-                form.appendChild(idsInput);
-                
-                document.body.appendChild(form);
-                form.submit();
-                document.body.removeChild(form);
-                
-                // Reset button after 2 seconds
-                setTimeout(() => {
-                    exportBtn.innerHTML = originalText;
-                    exportBtn.disabled = false;
-                }, 2000);
-                
-            } catch (error) {
-                console.error('Export error:', error);
-                alert('Export failed. Please try again.');
-                exportBtn.innerHTML = originalText;
-                exportBtn.disabled = false;
-            }
-        });
-    }
-    
     // ===== GET ALL STYLE IDS (Helper) =====
     function getAllStyleIds() {
-        // This should get all style IDs from your page
-        // Placeholder implementation
         const styleElements = document.querySelectorAll('[data-style-id]');
         return Array.from(styleElements).map(el => el.getAttribute('data-style-id'));
     }
@@ -280,13 +214,168 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // ===== EXPORT MODAL FUNCTIONS =====
+    var allStylesData = [];
+
+    window.openExportModal = function() {
+        var modal = document.getElementById('exportModal');
+        if (modal) {
+            modal.classList.add('active');
+            loadAllStyles();
+        }
+    };
+
+    function closeExportModal() {
+        var modal = document.getElementById('exportModal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
+    }
+
+    function loadAllStyles() {
+        var exportList = document.getElementById('exportStylesList');
+        if (!exportList) return;
+        
+        exportList.innerHTML = '<div class="export-loading">Loading styles...</div>';
+        
+        fetch('/api/all-styles-for-export')
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                allStylesData = data;
+                renderExportList(data);
+            })
+            .catch(function(error) {
+                console.error('Error loading styles:', error);
+                exportList.innerHTML = '<div class="no-results">Error loading styles. Please try again.</div>';
+            });
+    }
+
+    function renderExportList(styles) {
+        var exportList = document.getElementById('exportStylesList');
+        exportList.innerHTML = '';
+        
+        if (styles.length === 0) {
+            exportList.innerHTML = '<div class="no-results">No styles found</div>';
+            return;
+        }
+        
+        styles.forEach(function(style) {
+            var item = document.createElement('div');
+            item.className = 'export-style-item';
+            item.setAttribute('data-search', (style.vendor_style + ' ' + style.style_name).toLowerCase());
+            item.innerHTML = 
+                '<label>' +
+                    '<input type="checkbox" class="export-style-checkbox" value="' + style.id + '">' +
+                    '<div class="export-style-info">' +
+                        '<strong>' + style.vendor_style + '</strong>' +
+                        '<span>' + style.style_name + '</span>' +
+                        '<small>' + style.gender + ' &bull; $' + style.cost.toFixed(2) + '</small>' +
+                    '</div>' +
+                '</label>';
+            exportList.appendChild(item);
+        });
+        
+        document.querySelectorAll('.export-style-checkbox').forEach(function(cb) {
+            cb.addEventListener('change', updateExportCount);
+        });
+        
+        var totalCountEl = document.getElementById('exportTotalCount');
+        if (totalCountEl) totalCountEl.textContent = styles.length;
+        updateExportCount();
+    }
+
+    function filterExportList() {
+        var searchInput = document.getElementById('exportSearch');
+        if (!searchInput) return;
+        
+        var searchValue = searchInput.value.toLowerCase();
+        document.querySelectorAll('.export-style-item').forEach(function(item) {
+            var searchData = item.getAttribute('data-search') || '';
+            item.style.display = searchData.indexOf(searchValue) !== -1 ? '' : 'none';
+        });
+    }
+
+    function toggleExportSelectAll() {
+        var selectAll = document.getElementById('exportSelectAll');
+        if (!selectAll) return;
+        
+        document.querySelectorAll('.export-style-checkbox').forEach(function(cb) {
+            if (cb.closest('.export-style-item').style.display !== 'none') {
+                cb.checked = selectAll.checked;
+            }
+        });
+        updateExportCount();
+    }
+
+    function updateExportCount() {
+        var checked = document.querySelectorAll('.export-style-checkbox:checked').length;
+        var countEl = document.getElementById('exportSelectedCount');
+        if (countEl) countEl.textContent = checked;
+    }
+
+    function exportSelectedFromModal() {
+        var checkboxes = document.querySelectorAll('.export-style-checkbox:checked');
+        var checked = [];
+        checkboxes.forEach(function(cb) { checked.push(parseInt(cb.value)); });
+        
+        if (checked.length === 0) {
+            alert('Please select at least one style to export');
+            return;
+        }
+        
+        closeExportModal();
+        
+        var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+        
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/export-sap-format';
+        
+        var csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+        
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'style_ids';
+        input.value = JSON.stringify(checked);
+        form.appendChild(input);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    // Bind export modal events
+    function setupExportModal() {
+        var closeBtn = document.getElementById('closeExportBtn');
+        var cancelBtn = document.getElementById('cancelExportBtn');
+        var searchInput = document.getElementById('exportSearch');
+        var selectAllCb = document.getElementById('exportSelectAll');
+        var doExportBtn = document.getElementById('doExportBtn');
+        var exportModal = document.getElementById('exportModal');
+
+        if (closeBtn) closeBtn.addEventListener('click', closeExportModal);
+        if (cancelBtn) cancelBtn.addEventListener('click', closeExportModal);
+        if (searchInput) searchInput.addEventListener('keyup', filterExportList);
+        if (selectAllCb) selectAllCb.addEventListener('change', toggleExportSelectAll);
+        if (doExportBtn) doExportBtn.addEventListener('click', exportSelectedFromModal);
+        if (exportModal) {
+            exportModal.addEventListener('click', function(e) {
+                if (e.target === this) closeExportModal();
+            });
+        }
+    }
+    
     // ===== INITIALIZE =====
     updateGreeting();
     updateDateTime();
     updateLastUpdated();
     updateRelativeTimes();
-    setupExportButton();
     setupMoreActionsMenu();
+    setupExportModal();
     
     // ===== AUTO-REFRESH INTERVALS =====
     
@@ -329,67 +418,3 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Modern Dashboard initialized');
     console.log('🔄 Auto-refresh: Recent styles (30s) | Stats (5min)');
 });
-
-// ===== CHART.JS INITIALIZATION (if using charts) =====
-// Uncomment and customize when implementing charts
-
-/*
-function initCharts() {
-    // Cost Distribution Chart
-    const costDistCtx = document.getElementById('costDistributionChart');
-    if (costDistCtx) {
-        new Chart(costDistCtx, {
-            type: 'bar',
-            data: {
-                labels: ['$0-$20', '$20-$40', '$40-$60', '$60-$80', '$80+'],
-                datasets: [{
-                    label: 'Styles',
-                    data: [5, 12, 8, 5, 2],
-                    backgroundColor: 'rgba(102, 126, 234, 0.5)',
-                    borderColor: 'rgba(102, 126, 234, 1)',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        });
-    }
-    
-    // Top Fabrics Chart
-    const topFabricsCtx = document.getElementById('topFabricsChart');
-    if (topFabricsCtx) {
-        new Chart(topFabricsCtx, {
-            type: 'horizontalBar',
-            data: {
-                labels: ['XANADU', 'Cotton', 'Polyester', 'Denim', 'Silk'],
-                datasets: [{
-                    label: 'Usage',
-                    data: [15, 12, 10, 8, 5],
-                    backgroundColor: 'rgba(17, 153, 142, 0.5)',
-                    borderColor: 'rgba(17, 153, 142, 1)',
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        });
-    }
-}
-
-// Call this after DOM is loaded
-// initCharts();
-*/

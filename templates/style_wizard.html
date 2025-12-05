@@ -47,22 +47,21 @@
           <div class="col-lg-6">
             <div class="kv">
               <label>Vendor</label>
-              <input id="vendor" class="form-control md" value="JA uniforms">
+              <input id="vendor" class="form-control md" value="JA UNIFORMS" readonly>
               <label>Vendor Code</label>
-              <input id="vendor_code" class="form-control xs" value="V100">
+              <input id="vendor_code" class="form-control xs" value="V100" readonly>
             </div>
             <div class="kv">
               <label>Base Item #</label>
-              <input id="base_item_number" class="form-control xs" placeholder="21324">
+              <input id="base_item_number" class="form-control xs">
               <label>Variant Code #</label>
-              <input id="variant_code" class="form-control xs" placeholder="3202">
+              <input id="variant_code" class="form-control xs">
               <label>Fabric Code #</label>
-              <input id="fabric_code" class="form-control xs" placeholder="Auto" readonly>
+              <input id="fabric_code" class="form-control xs" readonly>
             </div>
             <div class="kv">
               <label>Vendor Style</label>
-              <input id="vendor_style" class="form-control lg" placeholder="Auto or enter to load existing" readonly>
-              <span class="chip">Auto or enter to load existing</span>
+              <input id="vendor_style" class="form-control lg" readonly>
             </div>
             <div class="kv">
               <label>Style name</label>
@@ -71,9 +70,10 @@
             <div class="kv">
               <label>Gender</label>
               <select id="gender" class="form-select sm">
-                <option>MENS</option>
-                <option>LADIES</option>
-                <option>UNISEX</option>
+                <option value="">Select Gender</option>
+                <option value="MENS">MENS</option>
+                <option value="LADIES">LADIES</option>
+                <option value="UNISEX">UNISEX</option>
               </select>
             </div>
           </div>
@@ -497,4 +497,3 @@ document.addEventListener('DOMContentLoaded', function() {
 {% endif %}
 
 {% endblock %}
-

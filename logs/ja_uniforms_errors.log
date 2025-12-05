@@ -63,3 +63,311 @@ Traceback (most recent call last):
     return soft_str(value) % (kwargs or args)
            ~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~
 jinja2.exceptions.UndefinedError: 'total_value' is undefined
+[2025-12-04 16:01:56,421] ERROR in C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py:825
+Exception on /style/54 [GET]
+Traceback (most recent call last):
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\app.py", line 979, in style_detail
+    for sf in style.fabrics:
+              ^^^^^^^^^^^^^
+AttributeError: 'Style' object has no attribute 'fabrics'
+[2025-12-04 16:02:00,393] ERROR in C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py:825
+Exception on /style/53 [GET]
+Traceback (most recent call last):
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\app.py", line 979, in style_detail
+    for sf in style.fabrics:
+              ^^^^^^^^^^^^^
+AttributeError: 'Style' object has no attribute 'fabrics'
+[2025-12-04 16:02:05,697] ERROR in C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py:825
+Exception on /style/54 [GET]
+Traceback (most recent call last):
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\app.py", line 979, in style_detail
+    for sf in style.fabrics:
+              ^^^^^^^^^^^^^
+AttributeError: 'Style' object has no attribute 'fabrics'
+[2025-12-04 16:10:21,043] ERROR in C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py:825
+Exception on /style/54 [GET]
+Traceback (most recent call last):
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\app.py", line 980, in style_detail
+    yards = sf.yards_used or 0
+            ^^^^^^^^^^^^^
+AttributeError: 'StyleFabric' object has no attribute 'yards_used'
+[2025-12-04 16:12:54,093] ERROR in C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py:825
+Exception on /style/54 [GET]
+Traceback (most recent call last):
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\app.py", line 980, in style_detail
+    yards = sf.yards_used or 0
+            ^^^^^^^^^^^^^
+AttributeError: 'StyleFabric' object has no attribute 'yards_used'
+[2025-12-04 16:12:56,148] ERROR in C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py:825
+Exception on /style/53 [GET]
+Traceback (most recent call last):
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\app.py", line 980, in style_detail
+    yards = sf.yards_used or 0
+            ^^^^^^^^^^^^^
+AttributeError: 'StyleFabric' object has no attribute 'yards_used'
+[2025-12-04 16:13:02,283] ERROR in C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py:825
+Exception on /style/54 [GET]
+Traceback (most recent call last):
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\app.py", line 980, in style_detail
+    yards = sf.yards_used or 0
+            ^^^^^^^^^^^^^
+AttributeError: 'StyleFabric' object has no attribute 'yards_used'
+[2025-12-04 16:13:24,628] ERROR in C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py:825
+Exception on /style/53 [GET]
+Traceback (most recent call last):
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\app.py", line 980, in style_detail
+    yards = sf.yards_used or 0
+            ^^^^^^^^^^^^^
+AttributeError: 'StyleFabric' object has no attribute 'yards_used'
+[2025-12-04 16:14:11,610] ERROR in C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py:825
+Exception on /style/54 [GET]
+Traceback (most recent call last):
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\app.py", line 989, in style_detail
+    qty = sn.quantity or 0
+          ^^^^^^^^^^^
+AttributeError: 'StyleNotion' object has no attribute 'quantity'
+[2025-12-04 16:18:09,570] ERROR in C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py:825
+Exception on /api/style/by-vendor-style [GET]
+Traceback (most recent call last):
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\app.py", line 3344, in api_style_by_vendor_style
+    "qty": float(sn.quantity_required_required or 0),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'StyleNotion' object has no attribute 'quantity_required_required'
+[2025-12-04 16:18:15,341] ERROR in C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py:825
+Exception on /api/style/by-vendor-style [GET]
+Traceback (most recent call last):
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\app.py", line 3344, in api_style_by_vendor_style
+    "qty": float(sn.quantity_required_required or 0),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'StyleNotion' object has no attribute 'quantity_required_required'
+[2025-12-04 16:20:08,974] ERROR in C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py:825
+Exception on /api/style/by-vendor-style [GET]
+Traceback (most recent call last):
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\app.py", line 3344, in api_style_by_vendor_style
+    "qty": float(sn.quantity_required_required or 0),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'StyleNotion' object has no attribute 'quantity_required_required'
+[2025-12-04 16:20:17,812] ERROR in C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py:825
+Exception on /api/style/by-vendor-style [GET]
+Traceback (most recent call last):
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\app.py", line 3344, in api_style_by_vendor_style
+    "qty": float(sn.quantity_required_required or 0),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'StyleNotion' object has no attribute 'quantity_required_required'
+[2025-12-04 16:22:35,794] ERROR in C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py:825
+Exception on /api/style/by-vendor-style [GET]
+Traceback (most recent call last):
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\app.py", line 3344, in api_style_by_vendor_style
+    "qty": float(sn.quantity_required_required or 0),
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'StyleNotion' object has no attribute 'quantity_required_required'

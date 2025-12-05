@@ -36,10 +36,9 @@ function openModal(type, id = null) {
     const modal = document.getElementById('modal');
     const modalTitle = document.getElementById('modalTitle');
     const modalBody = document.getElementById('modalBody');
-    modal.classList.add('active'); // Add this line!
+    modal.classList.add('active');
     modal.setAttribute('data-type', type);
     modal.style.display = 'flex';
-
     
     modalTitle.textContent = id ? 'Edit ' + capitalize(type.replace('_', ' ')) : 'Add ' + capitalize(type.replace('_', ' '));
     
@@ -53,7 +52,7 @@ function openModal(type, id = null) {
             </div>
             <div class="form-group">
                 <label>Vendor Code *</label>
-                <input type="text" id="vendor_code" required placeholder="e.g., V100">
+                <input type="text" id="vendor_code" required placeholder="e.g., F101">
             </div>
         `;
     } else if (type === 'notion_vendor') {
@@ -64,7 +63,7 @@ function openModal(type, id = null) {
             </div>
             <div class="form-group">
                 <label>Vendor Code *</label>
-                <input type="text" id="vendor_code" required placeholder="e.g., N100">
+                <input type="text" id="vendor_code" required placeholder="e.g., N101">
             </div>
         `;
     } else if (type === 'fabric') {
@@ -75,7 +74,7 @@ function openModal(type, id = null) {
             </div>
             <div class="form-group">
                 <label>Fabric Code</label>
-                <input type="text" id="fabric_code" placeholder="e.g., 3202">
+                <input type="text" id="fabric_code" placeholder="e.g., F1">
             </div>
             <div class="form-group">
                 <label>Cost per Yard *</label>
@@ -204,11 +203,71 @@ function openModal(type, id = null) {
     
     if (id) {
         loadItemData(type, id);
+    } else {
+        // AUTO-POPULATE SEQUENTIAL CODES FOR NEW ITEMS
+        autoPopulateNextCode(type);
     }
     
     if (typeof feather !== 'undefined') {
         feather.replace();
     }
+}
+// AUTO-POPULATE SEQUENTIAL CODES
+// ============================================
+
+function autoPopulateNextCode(type) {
+    if (type === 'fabric_vendor') {
+        const codes = [];
+        document.querySelectorAll('button[data-type="fabric_vendor"].icon-edit').forEach(btn => {
+            const row = btn.closest('tr');
+            if (row) {
+                const codeCell = row.querySelector('td:nth-child(2)');
+                if (codeCell) codes.push(codeCell.textContent.trim());
+            }
+        });
+        const nextCode = getNextSequentialCode(codes, 'F', 101);
+        const input = document.getElementById('vendor_code');
+        if (input) input.value = nextCode;
+        
+    } else if (type === 'notion_vendor') {
+        const codes = [];
+        document.querySelectorAll('button[data-type="notion_vendor"].icon-edit').forEach(btn => {
+            const row = btn.closest('tr');
+            if (row) {
+                const codeCell = row.querySelector('td:nth-child(2)');
+                if (codeCell) codes.push(codeCell.textContent.trim());
+            }
+        });
+        const nextCode = getNextSequentialCode(codes, 'N', 101);
+        const input = document.getElementById('vendor_code');
+        if (input) input.value = nextCode;
+        
+    } else if (type === 'fabric') {
+        const codes = [];
+        document.querySelectorAll('#fabricTable tr').forEach(row => {
+            const codeCell = row.querySelector('td:nth-child(2)');
+            if (codeCell) codes.push(codeCell.textContent.trim());
+        });
+        const nextCode = getNextSequentialCode(codes, 'F', 1);
+        const input = document.getElementById('fabric_code');
+        if (input) input.value = nextCode;
+    }
+}
+
+function getNextSequentialCode(codes, prefix, startNum) {
+    let maxNum = startNum - 1;
+    
+    codes.forEach(code => {
+        if (code && code.toUpperCase().startsWith(prefix.toUpperCase())) {
+            const numPart = code.substring(prefix.length);
+            const num = parseInt(numPart, 10);
+            if (!isNaN(num) && num > maxNum) {
+                maxNum = num;
+            }
+        }
+    });
+    
+    return prefix + (maxNum + 1);
 }
 
 function closeModal() {

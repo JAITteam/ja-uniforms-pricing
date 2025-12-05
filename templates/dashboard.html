@@ -44,22 +44,11 @@
             <div id="recent-styles-list">
                 {% if recent_styles %}
                     {% for style in recent_styles %}
-                    <div class="recent-style-item" data-style-id="{{ style.id }}">
+                    <div class="recent-style-item" data-style-id="{{ style.id }}" onclick="window.location.href='/style/view?vendor_style={{ style.vendor_style }}'" style="cursor: pointer;">
                         <div class="style-info">
                             <div class="style-name">📋 {{ style.vendor_style }} - {{ style.style_name }}</div>
                             <div class="style-time">{{ style.updated_at|time_ago }}</div>
                         </div>
-                        {% if current_user.is_admin() %}
-                        <div class="style-actions">
-                            <button class="btn-edit-quick" onclick="window.location.href='/style/new?vendor_style={{ style.vendor_style }}'">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                </svg>
-                                Edit
-                            </button>
-                        </div>
-                        {% endif %}
                     </div>
                     {% endfor %}
                 {% else %}
@@ -186,8 +175,8 @@
             </button>
         </div>
         {% endif %}
-        
-        <div class="action-card-modern orange" id="export-all-btn">
+
+        <div class="action-card-modern orange" onclick="openExportModal()">
             <div class="action-icon-modern">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -367,6 +356,42 @@
         </div>
     </div>
     
+</div>
+
+<!-- Export Modal -->
+<div id="exportModal" class="export-modal">
+    <div class="export-modal-content">
+        <div class="export-modal-header">
+            <div>
+                <h3>Export to SAP</h3>
+                <div class="export-filter-info" id="exportFilterInfo">Showing all {{ total_styles }} styles</div>
+            </div>
+            <button class="close-modal" id="closeExportBtn">&times;</button>
+        </div>
+        <div class="export-modal-body">
+            <div class="export-search">
+                <input type="text" id="exportSearch" placeholder="Search within current view...">
+            </div>
+            <div class="export-select-all">
+                <label>
+                    <input type="checkbox" id="exportSelectAll">
+                    <span>Select All (<span id="exportSelectedCount">0</span> of <span id="exportTotalCount">{{ total_styles }}</span>)</span>
+                </label>
+            </div>
+            <div class="export-styles-list" id="exportStylesList">
+                <div class="export-loading">Loading styles...</div>
+            </div>
+        </div>
+        <div class="export-modal-footer">
+            <button class="btn btn-secondary" id="cancelExportBtn">Cancel</button>
+            <button class="btn btn-success" id="doExportBtn">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                Export Selected
+            </button>
+        </div>
+    </div>
 </div>
 
 <script>
