@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Logs - JA Uniforms{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div>
+                <h1 class="h3 mb-1">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                    </svg>
+                    Audit Logs
+                </h1>
+                <p class="text-muted mb-0">Track all changes to fabrics, notions, and vendors</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body py-3">
+                    <form method="GET" id="filterForm" class="row g-3 align-items-end">
+                        <!-- Search Box -->
+                        <div class="col-md-3">
+                            <label class="form-label small text-muted">Search Item</label>
+                            <input type="text" name="search" class="form-control" placeholder="Search by name..." 
+                                   value="{{ current_search or '' }}" onchange="this.form.submit()">
+                        </div>
+                        
+                        <!-- Item Type -->
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted">Item Type</label>
+                            <select name="item_type" class="form-select" onchange="this.form.submit()">
+                                <option value="">All Types</option>
+                                <option value="fabric" {% if current_item_type == 'fabric' %}selected{% endif %}>Fabrics</option>
+                                <option value="notion" {% if current_item_type == 'notion' %}selected{% endif %}>Notions</option>
+                                <option value="fabric_vendor" {% if current_item_type == 'fabric_vendor' %}selected{% endif %}>Fabric Vendors</option>
+                                <option value="notion_vendor" {% if current_item_type == 'notion_vendor' %}selected{% endif %}>Notion Vendors</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Action -->
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted">Action</label>
+                            <select name="action" class="form-select" onchange="this.form.submit()">
+                                <option value="">All Actions</option>
+                                <option value="CREATE" {% if current_action == 'CREATE' %}selected{% endif %}>Created</option>
+                                <option value="UPDATE" {% if current_action == 'UPDATE' %}selected{% endif %}>Updated</option>
+                                <option value="DELETE" {% if current_action == 'DELETE' %}selected{% endif %}>Deleted</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Date From -->
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted">From Date</label>
+                            <input type="date" name="date_from" class="form-control" 
+                                   value="{{ current_date_from or '' }}" onchange="this.form.submit()">
+                        </div>
+                        
+                        <!-- Date To -->
+                        <div class="col-md-2">
+                            <label class="form-label small text-muted">To Date</label>
+                            <input type="date" name="date_to" class="form-control" 
+                                   value="{{ current_date_to or '' }}" onchange="this.form.submit()">
+                        </div>
+                        
+                        <!-- Clear Button -->
+                        <div class="col-md-1">
+                            {% if current_item_type or current_action or current_search or current_date_from or current_date_to %}
+                            <a href="{{ url_for('audit_logs') }}" class="btn btn-outline-secondary w-100" title="Clear Filters">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Count -->
+    <div class="row mb-2">
+        <div class="col-12">
+            <small class="text-muted">
+                Showing {{ logs.total }} result{% if logs.total != 1 %}s{% endif %}
+                {% if current_item_type or current_action or current_search or current_date_from or current_date_to %}
+                (filtered)
+                {% endif %}
+            </small>
+        </div>
+    </div>
+
+    <!-- Logs Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-0">
+                    {% if logs.items %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 140px;">Time</th>
+                                    <th style="width: 160px;">User</th>
+                                    <th style="width: 90px;">Action</th>
+                                    <th style="width: 110px;">Type</th>
+                                    <th style="width: 150px;">Item</th>
+                                    <th>Changes</th>
+                                    <th style="width: 70px;" class="text-center">Styles</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in logs.items %}
+                                <tr>
+                                    <td class="text-muted small">
+                                        {{ log.timestamp.strftime('%b %d, %Y') }}<br>
+                                        <span class="text-secondary">{{ log.timestamp.strftime('%I:%M %p') }}</span>
+                                    </td>
+                                    <td>
+                                        <strong class="small">{{ log.user_name }}</strong>
+                                    </td>
+                                    <td>
+                                        {% if log.action == 'CREATE' %}
+                                        <span class="badge bg-success">Created</span>
+                                        {% elif log.action == 'UPDATE' %}
+                                        <span class="badge bg-warning text-dark">Updated</span>
+                                        {% elif log.action == 'DELETE' %}
+                                        <span class="badge bg-danger">Deleted</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ log.action }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if log.item_type == 'fabric' %}
+                                        <span class="badge bg-info text-dark">Fabric</span>
+                                        {% elif log.item_type == 'notion' %}
+                                        <span class="badge" style="background-color: #9333ea; color: white;">Notion</span>
+                                        {% elif log.item_type == 'fabric_vendor' %}
+                                        <span class="badge bg-secondary">Fabric Vendor</span>
+                                        {% elif log.item_type == 'notion_vendor' %}
+                                        <span class="badge bg-dark">Notion Vendor</span>
+                                        {% else %}
+                                        <span class="badge bg-light text-dark">{{ log.item_type }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <strong>{{ log.item_name or 'N/A' }}</strong>
+                                        {% if log.details %}
+                                        <br><small class="text-muted">{{ log.details }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td class="small">
+                                        {% if log.old_values or log.new_values %}
+                                            {% if log.action == 'CREATE' and log.new_values %}
+                                                <span class="text-success">+ {{ log.new_values }}</span>
+                                            {% elif log.action == 'DELETE' and log.old_values %}
+                                                <span class="text-danger">- {{ log.old_values }}</span>
+                                            {% elif log.action == 'UPDATE' %}
+                                                {% if log.old_values %}
+                                                <span class="text-muted">Old: {{ log.old_values }}</span><br>
+                                                {% endif %}
+                                                {% if log.new_values %}
+                                                <span class="text-success">New: {{ log.new_values }}</span>
+                                                {% endif %}
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        {% if log.affected_styles_count > 0 %}
+                                        <span class="badge bg-light text-dark border">{{ log.affected_styles_count }}</span>
+                                        {% else %}
+                                        <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if logs.pages > 1 %}
+                    <div class="card-footer bg-white border-top">
+                        <nav aria-label="Audit log pagination">
+                            <ul class="pagination pagination-sm justify-content-center mb-0">
+                                {% if logs.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('audit_logs', page=logs.prev_num, item_type=current_item_type, action=current_action, search=current_search, date_from=current_date_from, date_to=current_date_to) }}">
+                                        &laquo;
+                                    </a>
+                                </li>
+                                {% endif %}
+                                
+                                {% for page_num in logs.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                                    {% if page_num %}
+                                        {% if page_num == logs.page %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ page_num }}</span>
+                                        </li>
+                                        {% else %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="{{ url_for('audit_logs', page=page_num, item_type=current_item_type, action=current_action, search=current_search, date_from=current_date_from, date_to=current_date_to) }}">{{ page_num }}</a>
+                                        </li>
+                                        {% endif %}
+                                    {% else %}
+                                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if logs.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('audit_logs', page=logs.next_num, item_type=current_item_type, action=current_action, search=current_search, date_from=current_date_from, date_to=current_date_to) }}">
+                                        &raquo;
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    </div>
+                    {% endif %}
+                    
+                    {% else %}
+                    <div class="text-center py-5">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1" class="mb-3">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg>
+                        <h5 class="text-muted">No audit logs found</h5>
+                        <p class="text-secondary">
+                            {% if current_item_type or current_action or current_search or current_date_from or current_date_to %}
+                            Try adjusting your filters.
+                            {% else %}
+                            Changes to fabrics, notions, and vendors will appear here.
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.table th {
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6b7280;
+    border-bottom: 2px solid #e5e7eb;
+}
+.table td {
+    vertical-align: middle;
+    padding: 0.75rem;
+}
+.badge {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+    font-size: 0.75rem;
+}
+.form-control, .form-select {
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}

@@ -13,7 +13,6 @@
     --hover-bg: #F3F4F6;
 }
 
-/* ===== MAIN NAVBAR ===== */
 .modern-navbar {
     position: fixed;
     top: 0;
@@ -36,14 +35,12 @@
     justify-content: space-between;
 }
 
-/* ===== LOGO ===== */
-
 .navbar-logo {
     display: flex;
     align-items: center;
-    gap: 4px;  /* ← Reduce gap */
+    gap: 4px;
     text-decoration: none;
-    padding: 8px 12px;  /* ← Reduce padding */
+    padding: 8px 12px;
     border-radius: 10px;
     transition: all 0.3s;
 }
@@ -77,29 +74,13 @@
     transform: scale(1.05);
 }
 
-/* Hide text on smaller screens to show more logo */
-@media (max-width: 768px) {
-    .logo-image {
-        height: 40px;
-    }
-}
-
-@media (max-width: 480px) {
-    .logo-image {
-        height: 36px;
-    }
-    
-    .logo-text {
-        display: none;
-    }
-}
 .logo-text {
-    font-size: 16px;  /* ← Slightly smaller */
+    font-size: 16px;
     font-weight: 700;
-    color: #333;  /* ← Use solid color instead of gradient */
+    color: #333;
     letter-spacing: 0.3px;
 }
-/* ===== NAVIGATION MENU ===== */
+
 .navbar-menu {
     display: flex;
     align-items: center;
@@ -165,14 +146,12 @@
     border-radius: 2px 2px 0 0;
 }
 
-/* ===== NAVBAR ACTIONS ===== */
 .navbar-actions {
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
-/* ===== NEW STYLE BUTTON ===== */
 .btn-new-style {
     display: inline-flex;
     align-items: center;
@@ -198,7 +177,6 @@
     height: 18px;
 }
 
-/* ===== USER MENU ===== */
 .user-menu {
     position: relative;
 }
@@ -239,7 +217,6 @@
     transform: rotate(180deg);
 }
 
-/* ===== USER DROPDOWN ===== */
 .user-dropdown {
     position: absolute;
     top: calc(100% + 8px);
@@ -338,7 +315,6 @@
     background: #FEF2F2;
 }
 
-/* ===== MOBILE MENU BUTTON ===== */
 .mobile-menu-button {
     display: none;
     align-items: center;
@@ -360,7 +336,6 @@
     color: var(--text-primary);
 }
 
-/* ===== MOBILE MENU OVERLAY ===== */
 .mobile-menu-overlay {
     position: fixed;
     top: 0;
@@ -476,17 +451,15 @@
     margin: 12px 0;
 }
 
-/* ===== SPACING FOR FIXED NAVBAR ===== */
 body {
     padding-top: var(--navbar-height);
 }
-/* Ensure page content doesn't get cropped */
+
 .container-fluid:first-of-type,
 main > *:first-child {
     margin-top: 0;
 }
 
-/* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
     .navbar-menu {
         display: none;
@@ -511,6 +484,10 @@ main > *:first-child {
     .logo-text {
         font-size: 16px;
     }
+    
+    .logo-image {
+        height: 40px;
+    }
 }
 
 @media (max-width: 480px) {
@@ -525,5 +502,9 @@ main > *:first-child {
     
     .logo-text {
         display: none;
+    }
+    
+    .logo-image {
+        height: 36px;
     }
 }

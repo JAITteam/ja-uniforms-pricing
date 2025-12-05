@@ -504,3 +504,83 @@ AttributeError: 'StyleNotion' object has no attribute 'quantity_required_require
 [2025-12-05 14:35:30,712] INFO in app: === J.A. Uniforms Application Started ===
 [2025-12-05 14:59:13,240] INFO in app: === J.A. Uniforms Application Started ===
 [2025-12-05 15:01:28,897] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 15:18:01,062] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 15:20:37,193] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 15:27:35,785] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 15:31:28,449] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 15:32:05,748] ERROR in app: Exception on /audit-logs [GET]
+Traceback (most recent call last):
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\auth.py", line 51, in decorated_function
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\app.py", line 457, in audit_logs
+    return render_template('audit_logs.html', logs=logs,
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\templating.py", line 152, in render_template
+    return _render(app, template, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\templating.py", line 133, in _render
+    rv = template.render(context)
+         ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\jinja2\environment.py", line 1295, in render
+    self.environment.handle_exception()
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\jinja2\environment.py", line 942, in handle_exception
+    raise rewrite_traceback_stack(source=source)
+  File "C:\Users\it2\ja_uniforms_pricing\templates\audit_logs.html", line 1, in top-level template code
+    {% extends "base.html" %}
+  File "C:\Users\it2\ja_uniforms_pricing\templates\base.html", line 146, in top-level template code
+    {% block content %}{% endblock %}
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\templates\audit_logs.html", line 23, in block 'content'
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+    ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 1071, in url_for
+    return self.handle_url_build_error(error, endpoint, values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\flask\app.py", line 1060, in url_for
+    rv = url_adapter.build(  # type: ignore[union-attr]
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\it2\ja_uniforms_pricing\.venv\Lib\site-packages\werkzeug\routing\map.py", line 919, in build
+    raise BuildError(endpoint, values, method, self)
+werkzeug.routing.exceptions.BuildError: Could not build url for endpoint 'dashboard'. Did you mean 'api_dashboard_stats' instead?
+[2025-12-05 15:35:53,417] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 15:42:34,222] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 15:47:42,633] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 15:50:39,794] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 15:52:58,594] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 15:53:33,304] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 15:54:30,833] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 15:56:08,524] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 15:58:44,348] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 15:59:20,134] ERROR in app: Error updating fabric vendor: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "fabric_vendors_vendor_code_key"
+DETAIL:  Key (vendor_code)=(F103) already exists.
+
+[SQL: UPDATE fabric_vendors SET vendor_code=%(vendor_code)s WHERE fabric_vendors.id = %(fabric_vendors_id)s]
+[parameters: {'vendor_code': 'F103', 'fabric_vendors_id': 1}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+[2025-12-05 16:12:22,893] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 16:14:09,718] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 16:16:55,917] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 16:19:33,661] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 16:21:18,256] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 16:27:04,618] INFO in app: Admin it@jauniforms.com reset password for user operations@jauniforms.com
+[2025-12-05 16:27:33,244] INFO in app: User operations@jauniforms.com changed password successfully
+[2025-12-05 16:28:48,388] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 16:35:17,099] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 16:43:06,706] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-05 16:56:03,882] INFO in app: Verification code sent to webadmin@jauniforms.com

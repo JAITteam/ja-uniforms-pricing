@@ -6,6 +6,7 @@ load_dotenv()
 import os
 import re
 import csv
+import json
 import random
 import string
 import secrets
@@ -38,7 +39,7 @@ from models import (
     Style, Fabric, User, FabricVendor, Notion, NotionVendor,
     LaborOperation, CleaningCost, StyleFabric, StyleNotion,
     StyleLabor, Color, StyleColor, Variable, StyleVariable,
-    SizeRange, GlobalSetting, StyleImage, VerificationCode
+    SizeRange, GlobalSetting, StyleImage, VerificationCode, AuditLog
 )
 
 
@@ -400,8 +401,88 @@ def ratelimit_handler(e):
     return redirect(request.referrer or url_for('index'))
 
 # ===== YOUR ROUTES START HERE =====
-# ===== DELETING USERS ======
 
+def log_audit(action, item_type, item_id=None, item_name=None, 
+              old_values=None, new_values=None, affected_styles_count=0, details=None):
+    """Log an audit entry for tracking changes"""
+    print(f">>> LOG_AUDIT CALLED: {action} {item_type} {item_name}")
+    try:
+        user_name = 'System'
+        user_email = None
+        user_id = None
+        
+        if current_user.is_authenticated:
+            user_name = current_user.email
+            user_email = current_user.email
+            user_id = current_user.id
+        
+        log_entry = AuditLog(
+            user_id=user_id,
+            user_name=user_name,
+            user_email=user_email,
+            action=action,
+            item_type=item_type,
+            item_id=item_id,
+            item_name=item_name,
+            old_values=json.dumps(old_values) if old_values else None,
+            new_values=json.dumps(new_values) if new_values else None,
+            affected_styles_count=affected_styles_count,
+            details=details
+        )
+        db.session.add(log_entry)
+        db.session.commit()
+    except Exception as e:
+        print(f"Audit log error: {e}")
+
+@app.route('/audit-logs')
+@login_required
+@admin_required
+def audit_logs():
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+    
+    # Get filter parameters
+    item_type = request.args.get('item_type', '')
+    action = request.args.get('action', '')
+    search = request.args.get('search', '')
+    date_from = request.args.get('date_from', '')
+    date_to = request.args.get('date_to', '')
+    
+    query = AuditLog.query
+    
+    # Apply filters
+    if item_type:
+        query = query.filter(AuditLog.item_type == item_type)
+    if action:
+        query = query.filter(AuditLog.action == action)
+    if search:
+        query = query.filter(AuditLog.item_name.ilike(f'%{search}%'))
+    if date_from:
+        from datetime import datetime
+        try:
+            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
+            query = query.filter(AuditLog.timestamp >= date_from_obj)
+        except ValueError:
+            pass
+    if date_to:
+        from datetime import datetime, timedelta
+        try:
+            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
+            query = query.filter(AuditLog.timestamp < date_to_obj)
+        except ValueError:
+            pass
+    
+    logs = query.order_by(AuditLog.timestamp.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    
+    return render_template('audit_logs.html', 
+                          logs=logs, 
+                          current_item_type=item_type, 
+                          current_action=action,
+                          current_search=search,
+                          current_date_from=date_from,
+                          current_date_to=date_to)
 
 @app.route('/api/send-verification-code', methods=['POST'])
 @limiter.limit("3 per minute") 
@@ -2352,10 +2433,16 @@ def master_costs():
 
 # ===== API ENDPOINTS FOR MASTER COSTS =====
 
+# =====================================================
+# UPDATED CRUD ROUTES WITH AUDIT LOGGING
+# Replace your existing routes in app.py with these
+# =====================================================
+
 # FABRIC VENDOR ENDPOINTS
 @app.route('/api/fabric-vendors/<int:vendor_id>', methods=['GET', 'PUT', 'DELETE'])
 @role_required('admin')
 def api_fabric_vendor_detail(vendor_id):
+    print(f">>> ROUTE HIT! Method: {request.method}, ID: {vendor_id}")
     vendor = FabricVendor.query.get_or_404(vendor_id)
     
     if request.method == 'GET':
@@ -2367,7 +2454,11 @@ def api_fabric_vendor_detail(vendor_id):
     
     elif request.method == 'PUT':
         try:
+            print(">>> FABRIC VENDOR PUT ROUTE HIT") 
             data = request.get_json()
+            
+            # Capture old values BEFORE update
+            old_values = {'name': vendor.name, 'code': vendor.vendor_code}
             
             if 'name' in data:
                 name, error = validate_required_string(data.get('name'), 'Vendor name', max_length=100)
@@ -2379,6 +2470,17 @@ def api_fabric_vendor_detail(vendor_id):
                 vendor.vendor_code = data.get('vendor_code', '').strip() if data.get('vendor_code') else None
             
             db.session.commit()
+            
+            # Log the update
+            log_audit(
+                action='UPDATE',
+                item_type='fabric_vendor',
+                item_id=vendor.id,
+                item_name=vendor.name,
+                old_values=old_values,
+                new_values={'name': vendor.name, 'code': vendor.vendor_code}
+            )
+            
             return jsonify({'success': True})
         except Exception as e:
             db.session.rollback()
@@ -2387,8 +2489,23 @@ def api_fabric_vendor_detail(vendor_id):
     
     elif request.method == 'DELETE':
         try:
+            # Capture info BEFORE delete
+            vendor_name = vendor.name
+            vendor_id_val = vendor.id
+            old_values = {'name': vendor.name, 'code': vendor.vendor_code}
+            
             db.session.delete(vendor)
             db.session.commit()
+            
+            # Log the delete
+            log_audit(
+                action='DELETE',
+                item_type='fabric_vendor',
+                item_id=vendor_id_val,
+                item_name=vendor_name,
+                old_values=old_values
+            )
+            
             return jsonify({'success': True})
         except Exception as e:
             db.session.rollback()
@@ -2413,11 +2530,21 @@ def api_add_fabric_vendor():
         db.session.add(vendor)
         db.session.commit()
         
+        # Log the create
+        log_audit(
+            action='CREATE',
+            item_type='fabric_vendor',
+            item_id=vendor.id,
+            item_name=vendor.name,
+            new_values={'name': vendor.name, 'code': vendor.vendor_code}
+        )
+        
         return jsonify({'success': True, 'id': vendor.id})
     except Exception as e:
         db.session.rollback()
         app.logger.error(f"Error adding fabric vendor: {e}")
         return jsonify({'success': False, 'error': 'Failed to add fabric vendor'}), 500
+
 
 # NOTION VENDOR ENDPOINTS
 @app.route('/api/notion-vendors/<int:vendor_id>', methods=['GET', 'PUT', 'DELETE'])
@@ -2436,6 +2563,9 @@ def api_notion_vendor_detail(vendor_id):
         try:
             data = request.get_json()
             
+            # Capture old values BEFORE update
+            old_values = {'name': vendor.name, 'code': vendor.vendor_code}
+            
             if 'name' in data:
                 name, error = validate_required_string(data.get('name'), 'Vendor name', max_length=100)
                 if error:
@@ -2446,6 +2576,17 @@ def api_notion_vendor_detail(vendor_id):
                 vendor.vendor_code = data.get('vendor_code', '').strip() if data.get('vendor_code') else None
             
             db.session.commit()
+            
+            # Log the update
+            log_audit(
+                action='UPDATE',
+                item_type='notion_vendor',
+                item_id=vendor.id,
+                item_name=vendor.name,
+                old_values=old_values,
+                new_values={'name': vendor.name, 'code': vendor.vendor_code}
+            )
+            
             return jsonify({'success': True})
         except Exception as e:
             db.session.rollback()
@@ -2454,14 +2595,28 @@ def api_notion_vendor_detail(vendor_id):
     
     elif request.method == 'DELETE':
         try:
+            # Capture info BEFORE delete
+            vendor_name = vendor.name
+            vendor_id_val = vendor.id
+            old_values = {'name': vendor.name, 'code': vendor.vendor_code}
+            
             db.session.delete(vendor)
             db.session.commit()
+            
+            # Log the delete
+            log_audit(
+                action='DELETE',
+                item_type='notion_vendor',
+                item_id=vendor_id_val,
+                item_name=vendor_name,
+                old_values=old_values
+            )
+            
             return jsonify({'success': True})
         except Exception as e:
             db.session.rollback()
             app.logger.error(f"Error deleting notion vendor: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete notion vendor'}), 500
-
 
 
 @app.route('/api/notion-vendors', methods=['POST'])
@@ -2482,11 +2637,21 @@ def api_add_notion_vendor():
         db.session.add(vendor)
         db.session.commit()
         
+        # Log the create
+        log_audit(
+            action='CREATE',
+            item_type='notion_vendor',
+            item_id=vendor.id,
+            item_name=vendor.name,
+            new_values={'name': vendor.name, 'code': vendor.vendor_code}
+        )
+        
         return jsonify({'success': True, 'id': vendor.id})
     except Exception as e:
         db.session.rollback()
         app.logger.error(f"Error adding notion vendor: {e}")
         return jsonify({'success': False, 'error': 'Failed to add notion vendor'}), 500
+
 
 # FABRIC ENDPOINTS   
 @app.route('/api/fabrics/<int:fabric_id>', methods=['GET', 'PUT', 'DELETE'])
@@ -2507,6 +2672,14 @@ def api_fabric_detail(fabric_id):
     elif request.method == 'PUT':
         try:
             data = request.get_json()
+            
+            # Capture old values BEFORE update
+            old_values = {
+                'name': fabric.name,
+                'code': fabric.fabric_code,
+                'cost_per_yard': float(fabric.cost_per_yard) if fabric.cost_per_yard else None,
+                'vendor': fabric.fabric_vendor.name if fabric.fabric_vendor else None
+            }
             
             if 'name' in data:
                 name, error = validate_required_string(data.get('name'), 'Fabric name', max_length=100)
@@ -2530,6 +2703,26 @@ def api_fabric_detail(fabric_id):
                 fabric.color = data.get('color', '').strip() if data.get('color') else None
             
             db.session.commit()
+            
+            # Count affected styles
+            affected_count = StyleFabric.query.filter_by(fabric_id=fabric.id).count()
+            
+            # Log the update
+            log_audit(
+                action='UPDATE',
+                item_type='fabric',
+                item_id=fabric.id,
+                item_name=fabric.name,
+                old_values=old_values,
+                new_values={
+                    'name': fabric.name,
+                    'code': fabric.fabric_code,
+                    'cost_per_yard': float(fabric.cost_per_yard) if fabric.cost_per_yard else None,
+                    'vendor': fabric.fabric_vendor.name if fabric.fabric_vendor else None
+                },
+                affected_styles_count=affected_count
+            )
+            
             return jsonify({'success': True})
         except Exception as e:
             db.session.rollback()
@@ -2546,8 +2739,27 @@ def api_fabric_detail(fabric_id):
                     'error': f'Cannot delete: This fabric is used in {usage_count} style(s). Remove it from all styles first.'
                 }), 400
             
+            # Capture info BEFORE delete
+            fabric_name = fabric.name
+            fabric_id_val = fabric.id
+            old_values = {
+                'name': fabric.name,
+                'code': fabric.fabric_code,
+                'cost_per_yard': float(fabric.cost_per_yard) if fabric.cost_per_yard else None
+            }
+            
             db.session.delete(fabric)
             db.session.commit()
+            
+            # Log the delete
+            log_audit(
+                action='DELETE',
+                item_type='fabric',
+                item_id=fabric_id_val,
+                item_name=fabric_name,
+                old_values=old_values
+            )
+            
             return jsonify({'success': True})
         except Exception as e:
             db.session.rollback()
@@ -2585,6 +2797,26 @@ def api_add_fabric():
         db.session.add(fabric)
         db.session.commit()
         
+        # Get vendor name for logging
+        vendor_name = None
+        if vendor_id:
+            vendor = FabricVendor.query.get(vendor_id)
+            vendor_name = vendor.name if vendor else None
+        
+        # Log the create
+        log_audit(
+            action='CREATE',
+            item_type='fabric',
+            item_id=fabric.id,
+            item_name=fabric.name,
+            new_values={
+                'name': fabric.name,
+                'code': fabric.fabric_code,
+                'cost_per_yard': float(cost),
+                'vendor': vendor_name
+            }
+        )
+        
         return jsonify({'success': True, 'id': fabric.id})
     except Exception as e:
         db.session.rollback()
@@ -2611,6 +2843,14 @@ def api_notion_detail(notion_id):
         try:
             data = request.get_json()
             
+            # Capture old values BEFORE update
+            old_values = {
+                'name': notion.name,
+                'cost': float(notion.cost_per_unit) if notion.cost_per_unit else None,
+                'vendor': notion.notion_vendor.name if notion.notion_vendor else None,
+                'unit_type': notion.unit_type
+            }
+            
             if 'name' in data:
                 name, error = validate_required_string(data.get('name'), 'Notion name', max_length=100)
                 if error:
@@ -2630,6 +2870,26 @@ def api_notion_detail(notion_id):
                 notion.unit_type = data.get('unit_type', 'each')
             
             db.session.commit()
+            
+            # Count affected styles
+            affected_count = StyleNotion.query.filter_by(notion_id=notion.id).count()
+            
+            # Log the update
+            log_audit(
+                action='UPDATE',
+                item_type='notion',
+                item_id=notion.id,
+                item_name=notion.name,
+                old_values=old_values,
+                new_values={
+                    'name': notion.name,
+                    'cost': float(notion.cost_per_unit) if notion.cost_per_unit else None,
+                    'vendor': notion.notion_vendor.name if notion.notion_vendor else None,
+                    'unit_type': notion.unit_type
+                },
+                affected_styles_count=affected_count
+            )
+            
             return jsonify({'success': True})
         except Exception as e:
             db.session.rollback()
@@ -2646,8 +2906,26 @@ def api_notion_detail(notion_id):
                     'error': f'Cannot delete: This notion is used in {usage_count} style(s). Remove it from all styles first.'
                 }), 400
             
+            # Capture info BEFORE delete
+            notion_name = notion.name
+            notion_id_val = notion.id
+            old_values = {
+                'name': notion.name,
+                'cost': float(notion.cost_per_unit) if notion.cost_per_unit else None
+            }
+            
             db.session.delete(notion)
             db.session.commit()
+            
+            # Log the delete
+            log_audit(
+                action='DELETE',
+                item_type='notion',
+                item_id=notion_id_val,
+                item_name=notion_name,
+                old_values=old_values
+            )
+            
             return jsonify({'success': True})
         except Exception as e:
             db.session.rollback()
@@ -2684,12 +2962,31 @@ def api_add_notion():
         db.session.add(notion)
         db.session.commit()
         
+        # Get vendor name for logging
+        vendor_name = None
+        if vendor_id:
+            vendor = NotionVendor.query.get(vendor_id)
+            vendor_name = vendor.name if vendor else None
+        
+        # Log the create
+        log_audit(
+            action='CREATE',
+            item_type='notion',
+            item_id=notion.id,
+            item_name=notion.name,
+            new_values={
+                'name': notion.name,
+                'cost': float(cost),
+                'vendor': vendor_name,
+                'unit_type': notion.unit_type
+            }
+        )
+        
         return jsonify({'success': True, 'id': notion.id})
     except Exception as e:
         db.session.rollback()
         app.logger.error(f"Error adding notion: {e}")
         return jsonify({'success': False, 'error': 'Failed to add notion'}), 500
-
 
 # LABOR OPERATION ENDPOINTS
 @app.route('/api/labors/<int:labor_id>', methods=['GET', 'PUT', 'DELETE'])
