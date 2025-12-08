@@ -616,12 +616,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const aValue = aCell.textContent.trim();
                 const bValue = bCell.textContent.trim();
-                
+
+                // Extract numbers from codes like F1, F10, N101, etc.
+                const aMatch = aValue.match(/([A-Za-z]*)(\d+)/);
+                const bMatch = bValue.match(/([A-Za-z]*)(\d+)/);
+
+                if (aMatch && bMatch && aMatch[1] === bMatch[1]) {
+                    // Same prefix (e.g., both start with F) - sort by number
+                    const aNum = parseInt(aMatch[2], 10);
+                    const bNum = parseInt(bMatch[2], 10);
+                    return isAscending ? aNum - bNum : bNum - aNum;
+                }
+
+                // Numeric comparison for prices
                 const aNum = parseFloat(aValue.replace(/[$,%]/g, ''));
                 const bNum = parseFloat(bValue.replace(/[$,%]/g, ''));
-                
+
                 if (!isNaN(aNum) && !isNaN(bNum)) {
-                    return isAscending ? bNum - aNum : aNum - bNum;
+                    return isAscending ? aNum - bNum : bNum - aNum;
                 }
                 
                 return isAscending ? 
