@@ -699,13 +699,6 @@ tbody tr:hover .row-actions {
     letter-spacing: 0.5px;
 }
 
-.form-group label::after {
-    content: '*';
-    color: var(--color-danger);
-    margin-left: 4px;
-    font-size: 14px;
-}
-
 .form-group label.optional::after {
     content: ' (optional)';
     color: var(--color-text-muted);
@@ -892,8 +885,18 @@ tbody tr:hover .row-actions {
     width: 20px;
     height: 20px;
     color: var(--color-success);
+    flex-shrink: 0;
 }
 
+.notification-content span {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1F2937;
+}
+
+.notification.error .notification-content span {
+    color: #991B1B;
+}
 .notification.error .notification-content svg {
     color: var(--color-danger);
 }

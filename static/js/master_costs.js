@@ -78,7 +78,7 @@ function openModal(type, id = null) {
             </div>
             <div class="form-group">
                 <label>Cost per Yard *</label>
-                <input type="number" id="cost_per_yard" step="0.01" required placeholder="e.g., 6.00">
+                <input type="number" id="cost_per_yard" step="0.01" min="0" required placeholder="e.g., 6.00">
             </div>
             <div class="form-group">
                 <label>Vendor *</label>
@@ -96,7 +96,8 @@ function openModal(type, id = null) {
             </div>
             <div class="form-group">
                 <label>Cost per Unit *</label>
-                <input type="number" id="cost_per_unit" step="0.0001" required placeholder="e.g., 0.04">
+                <input type="number" id="cost_per_unit" step="0.0001" min="0" required placeholder="e.g., 0.04">
+
             </div>
             <div class="form-group">
                 <label>Unit Type *</label>
@@ -298,6 +299,20 @@ function saveModal() {
         showNotification('Please fill in all required fields', 'error');
         return;
     }
+    // Validate numeric fields are positive
+    const numericFields = modalBody.querySelectorAll('input[type="number"]');
+    numericFields.forEach(input => {
+        if (input.value && parseFloat(input.value) < 0) {
+            input.style.borderColor = '#EF4444';
+            valid = false;
+        }
+    });
+
+    if (!valid) {
+        showNotification('Cost values cannot be negative', 'error');
+        return;
+    }
+
     
     const endpoint = currentEditType.replace(/_/g, '-');
     const method = currentEditId ? 'PUT' : 'POST';
@@ -317,7 +332,7 @@ function saveModal() {
         if (data.success) {
             showNotification('Saved successfully!', 'success');
             closeModal();
-            setTimeout(() => location.reload(), 500);
+            setTimeout(() => location.reload(), 1500);
         } else {
             showNotification('Save failed: ' + (data.error || 'Unknown error'), 'error');
         }
@@ -363,7 +378,7 @@ function deleteItem(endpoint, id) {
     .then(data => {
         if (data.success) {
             showNotification('Deleted successfully!', 'success');
-            setTimeout(() => location.reload(), 500);
+            setTimeout(() => location.reload(), 1500);
         } else {
             showNotification('Delete failed: ' + (data.error || 'Unknown error'), 'error');
         }
