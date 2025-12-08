@@ -3,7 +3,6 @@ from datetime import timedelta
 
 class Config:
     # Secret key for forms, sessions, and CSRF protection
-    # ===== FIXED: Now properly loads from environment =====
     SECRET_KEY = os.environ.get('SECRET_KEY')
     
     # If SECRET_KEY not set, generate one for development (with warning)
@@ -16,9 +15,17 @@ class Config:
         print("⚠️  For production, set SECRET_KEY in your .env file!")
         print("="*70 + "\n")
     
-    # Database configuration
+    # Database configuration - PostgreSQL for production, SQLite for development
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///uniforms.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    # Connection pool settings for PostgreSQL (important for multiple users)
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,  # Verify connections before use
+        'pool_recycle': 300,    # Recycle connections after 5 minutes
+        'pool_size': 10,        # Number of connections to keep open
+        'max_overflow': 20,     # Additional connections when pool is full
+    }
     
     # Upload folder for Excel files and images
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or 'uploads'
@@ -27,15 +34,19 @@ class Config:
     # CSRF Protection
     WTF_CSRF_ENABLED = True
     WTF_CSRF_TIME_LIMIT = None  # No time limit for CSRF tokens
-    WTF_CSRF_SSL_STRICT = False  # Set to True if using HTTPS in production
+    WTF_CSRF_SSL_STRICT = False  # Set to True if using HTTPS
     
     # Session configuration
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     PERMANENT_SESSION_LIFETIME = timedelta(hours=24)
-    REMEMBER_COOKIE_DURATION = timedelta(days=30)  # ← ADD THIS LINE (Remember Me lasts 30 days)
+    REMEMBER_COOKIE_DURATION = timedelta(days=30)
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SAMESITE = 'Lax'
+    
+    # For HTTPS deployments (uncomment if using SSL)
+    # SESSION_COOKIE_SECURE = True
+    # REMEMBER_COOKIE_SECURE = True
 
     # Email Configuration
     MAIL_SERVER = os.getenv('MAIL_SERVER', 'smtp.gmail.com')

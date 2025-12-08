@@ -8,6 +8,7 @@ venv/
 # Environment variables
 .env
 !.env.example
+!.env.production
 
 # Database
 *.db
