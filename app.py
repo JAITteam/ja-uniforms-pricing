@@ -1354,13 +1354,28 @@ def api_size_range_modify(size_range_id):
     
     elif request.method == 'DELETE':
         try:
+            # Check if size range is used in any styles
+            styles_using_range = Style.query.filter_by(size_range=size_range.name).all()
+            if styles_using_range:
+                styles_using = [{
+                    'id': s.id,
+                    'vendor_style': s.vendor_style,
+                    'style_name': s.style_name
+                } for s in styles_using_range]
+                
+                style_list = ', '.join([s['vendor_style'] or s['style_name'] for s in styles_using])
+                return jsonify({
+                    'success': False,
+                    'error': f'Cannot delete: This size range is used in {len(styles_using)} style(s): {style_list}',
+                    'styles_using': styles_using
+                }), 400
+            
             db.session.delete(size_range)
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
             db.session.rollback()
             app.logger.error(f"Error deleting size range: {e}")
-            return jsonify({'success': False, 'error': 'Failed to delete size range'}), 500
 
 # GLOBAL SETTINGS ENDPOINTS
 @app.route('/api/global-settings', methods=['GET'])
@@ -1536,6 +1551,26 @@ def api_color_modify(color_id):
     
     elif request.method == 'DELETE':
         try:
+            # Check if color is used in any styles
+            style_colors = StyleColor.query.filter_by(color_id=color_id).all()
+            if style_colors:
+                styles_using = []
+                for sc in style_colors:
+                    style = Style.query.get(sc.style_id)
+                    if style:
+                        styles_using.append({
+                            'id': style.id,
+                            'vendor_style': style.vendor_style,
+                            'style_name': style.style_name
+                        })
+                
+                style_list = ', '.join([s['vendor_style'] or s['style_name'] for s in styles_using])
+                return jsonify({
+                    'success': False,
+                    'error': f'Cannot delete: This color is used in {len(styles_using)} style(s): {style_list}',
+                    'styles_using': styles_using
+                }), 400
+            
             db.session.delete(color)
             db.session.commit()
             return jsonify({'success': True})
@@ -2935,14 +2970,27 @@ def api_notion_detail(notion_id):
     
     elif request.method == 'DELETE':
         try:
-            # Check if notion is used in any styles
-            usage_count = StyleNotion.query.filter_by(notion_id=notion_id).count()
-            if usage_count > 0:
-                return jsonify({
-                    'success': False, 
-                    'error': f'Cannot delete: This notion is used in {usage_count} style(s). Remove it from all styles first.'
-                }), 400
             
+            # Check if notion is used in any styles
+            style_notions = StyleNotion.query.filter_by(notion_id=notion_id).all()
+            if style_notions:
+                # Get the list of styles using this notion
+                styles_using = []
+                for sn in style_notions:
+                    style = Style.query.get(sn.style_id)
+                    if style:
+                        styles_using.append({
+                            'id': style.id,
+                            'vendor_style': style.vendor_style,
+                            'style_name': style.style_name
+                        })
+                
+                style_list = ', '.join([s['vendor_style'] or s['style_name'] for s in styles_using])
+                return jsonify({
+                    'success': False,
+                    'error': f'Cannot delete: This notion is used in {len(styles_using)} style(s): {style_list}',
+                    'styles_using': styles_using
+                }), 400
             # Capture info BEFORE delete
             notion_name = notion.name
             notion_id_val = notion.id
@@ -3089,12 +3137,26 @@ def api_labor_detail(labor_id):
     elif request.method == 'DELETE':
         try:
             # Check if labor operation is used in any styles
-            usage_count = StyleLabor.query.filter_by(labor_operation_id=labor_id).count()
-            if usage_count > 0:
+            style_labors = StyleLabor.query.filter_by(labor_operation_id=labor_id).all()
+            if style_labors:
+                # Get the list of styles using this labor operation
+                styles_using = []
+                for sl in style_labors:
+                    style = Style.query.get(sl.style_id)
+                    if style:
+                        styles_using.append({
+                            'id': style.id,
+                            'vendor_style': style.vendor_style,
+                            'style_name': style.style_name
+                        })
+                
+                style_list = ', '.join([s['vendor_style'] or s['style_name'] for s in styles_using])
                 return jsonify({
-                    'success': False, 
-                    'error': f'Cannot delete: This labor operation is used in {usage_count} style(s). Remove it from all styles first.'
+                    'success': False,
+                    'error': f'Cannot delete: This labor operation is used in {len(styles_using)} style(s): {style_list}',
+                    'styles_using': styles_using
                 }), 400
+        
             
             db.session.delete(labor)
             db.session.commit()
@@ -3546,6 +3608,26 @@ def api_variable_modify(variable_id):
     
     elif request.method == 'DELETE':
         try:
+            # Check if variable is used in any styles
+            style_variables = StyleVariable.query.filter_by(variable_id=variable_id).all()
+            if style_variables:
+                styles_using = []
+                for sv in style_variables:
+                    style = Style.query.get(sv.style_id)
+                    if style:
+                        styles_using.append({
+                            'id': style.id,
+                            'vendor_style': style.vendor_style,
+                            'style_name': style.style_name
+                        })
+                
+                style_list = ', '.join([s['vendor_style'] or s['style_name'] for s in styles_using])
+                return jsonify({
+                    'success': False,
+                    'error': f'Cannot delete: This variable is used in {len(styles_using)} style(s): {style_list}',
+                    'styles_using': styles_using
+                }), 400
+            
             db.session.delete(variable)
             db.session.commit()
             return jsonify({'success': True})
