@@ -122,7 +122,7 @@ class Fabric(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, index=True)
-    fabric_code = db.Column(db.String(20))
+    fabric_code = db.Column(db.String(20), unique=True, nullable=False)
     cost_per_yard = db.Column(db.Float, nullable=False)
     color = db.Column(db.String(50))
     fabric_vendor_id = db.Column(db.Integer, db.ForeignKey('fabric_vendors.id'), index=True)

@@ -993,6 +993,10 @@ def index():
     total_fabric_vendors = FabricVendor.query.count()
     total_notion_vendors = NotionVendor.query.count()
     
+    # New styles this week
+    from datetime import datetime, timedelta
+    one_week_ago = datetime.utcnow() - timedelta(days=7)
+    new_this_week = Style.query.filter(Style.created_at >= one_week_ago).count()
     
     recent_styles = Style.query.order_by(Style.updated_at.desc()).limit(4).all()
 
@@ -1043,7 +1047,8 @@ def index():
                          recent_styles=recent_styles,
                          avg_cost=avg_cost,
                          price_range=price_range,
-                         top_fabric=top_fabric)
+                         top_fabric=top_fabric,
+                         new_this_week=new_this_week)
 
 
 @app.route('/style/<vendor_style>')
@@ -2695,9 +2700,17 @@ def api_fabric_detail(fabric_id):
             
             if 'fabric_vendor_id' in data:
                 fabric.fabric_vendor_id = data.get('fabric_vendor_id')
+        
             
             if 'fabric_code' in data:
-                fabric.fabric_code = data.get('fabric_code', '').strip() if data.get('fabric_code') else None
+                new_code = data.get('fabric_code', '').strip() if data.get('fabric_code') else None
+                if not new_code:
+                    return jsonify({'success': False, 'error': 'Fabric code is required'}), 400
+                # Check if new code already exists (but not for this fabric)
+                existing = Fabric.query.filter(Fabric.fabric_code == new_code, Fabric.id != fabric_id).first()
+                if existing:
+                    return jsonify({'success': False, 'error': f'Fabric code "{new_code}" already exists'}), 400
+                fabric.fabric_code = new_code
             
             if 'color' in data:
                 fabric.color = data.get('color', '').strip() if data.get('color') else None
@@ -2732,11 +2745,24 @@ def api_fabric_detail(fabric_id):
     elif request.method == 'DELETE':
         try:
             # Check if fabric is used in any styles
-            usage_count = StyleFabric.query.filter_by(fabric_id=fabric_id).count()
-            if usage_count > 0:
+            style_fabrics = StyleFabric.query.filter_by(fabric_id=fabric_id).all()
+            if style_fabrics:
+                # Get the list of styles using this fabric
+                styles_using = []
+                for sf in style_fabrics:
+                    style = Style.query.get(sf.style_id)
+                    if style:
+                        styles_using.append({
+                            'id': style.id,
+                            'vendor_style': style.vendor_style,
+                            'style_name': style.style_name
+                        })
+                
+                style_list = ', '.join([s['vendor_style'] or s['style_name'] for s in styles_using])
                 return jsonify({
-                    'success': False, 
-                    'error': f'Cannot delete: This fabric is used in {usage_count} style(s). Remove it from all styles first.'
+                    'success': False,
+                    'error': f'Cannot delete: This fabric is used in {len(styles_using)} style(s): {style_list}',
+                    'styles_using': styles_using
                 }), 400
             
             # Capture info BEFORE delete
@@ -2780,18 +2806,29 @@ def api_add_fabric():
         cost, error = validate_positive_number(data.get('cost_per_yard'), 'Cost per yard')
         if error:
             return jsonify({'success': False, 'error': error}), 400
-        
+            
         vendor_id = data.get('fabric_vendor_id')
         if vendor_id:
             vendor_id, error = validate_positive_integer(vendor_id, 'Vendor ID')
             if error:
                 return jsonify({'success': False, 'error': error}), 400
         
+        # Validate fabric_code - REQUIRED and UNIQUE
+        fabric_code = data.get('fabric_code', '').strip() if data.get('fabric_code') else None
+        if not fabric_code:
+            return jsonify({'success': False, 'error': 'Fabric code is required'}), 400
+        
+        # Check if fabric_code already exists
+        existing_fabric = Fabric.query.filter_by(fabric_code=fabric_code).first()
+        if existing_fabric:
+            return jsonify({'success': False, 'error': f'Fabric code "{fabric_code}" already exists'}), 400
+        
+        
         fabric = Fabric(
             name=name,
             cost_per_yard=cost,
             fabric_vendor_id=vendor_id,
-            fabric_code=data.get('fabric_code', '').strip() if data.get('fabric_code') else None,
+            fabric_code=fabric_code,
             color=data.get('color', '').strip() if data.get('color') else None
         )
         db.session.add(fabric)
@@ -3762,14 +3799,14 @@ def api_style_save():
         if not valid:
             return jsonify({"error": margin}), 400
         
-        # Validate suggested price
+        # Validate suggested price - REQUIRED
         suggested_price = s.get("suggested_price")
-        if suggested_price:
-            valid, suggested_price = validate_positive_number(suggested_price, "Suggested Price", allow_zero=True)
-            if not valid:
-                return jsonify({"error": suggested_price}), 400
-        else:
-            suggested_price = None
+        if not suggested_price:
+            return jsonify({"error": "Suggested Price is required"}), 400
+        
+        suggested_price, error = validate_positive_number(suggested_price, "Suggested Price", allow_zero=False)
+        if error:
+            return jsonify({"error": error}), 400
         
         # ===== STEP 4: VALIDATE FABRIC DATA =====
         fabrics_data = data.get("fabrics") or []
@@ -3777,9 +3814,9 @@ def api_style_save():
             if f.get("name"):
                 yards = f.get("yards", 0)
                 if yards:
-                    valid, yards_val = validate_positive_number(yards, f"Fabric #{idx+1} yards", allow_zero=False)
-                    if not valid:
-                        return jsonify({"error": yards_val}), 400
+                    yards_val, error = validate_positive_number(yards, f"Fabric #{idx+1} yards", allow_zero=False)
+                    if error:
+                        return jsonify({"error": error}), 400
                     f["yards"] = yards_val  # Update with validated value
         
         # ===== STEP 5: VALIDATE NOTION DATA =====
@@ -3788,9 +3825,9 @@ def api_style_save():
             if n.get("name"):
                 qty = n.get("qty", 0)
                 if qty:
-                    valid, qty_val = validate_positive_number(qty, f"Notion #{idx+1} quantity", allow_zero=False)
-                    if not valid:
-                        return jsonify({"error": qty_val}), 400
+                    qty_val, error = validate_positive_number(qty, f"Notion #{idx+1} quantity", allow_zero=False)
+                    if error:
+                        return jsonify({"error": error}), 400
                     n["qty"] = qty_val  # Update with validated value
         
         # ===== STEP 6: UPDATE STYLE FIELDS =====
@@ -3802,8 +3839,15 @@ def api_style_save():
         style.garment_type = (s.get("garment_type") or None)
         style.size_range = (s.get("size_range") or None)
         style.notes = (s.get("notes") or None)
-        style.base_margin_percent = margin
         style.suggested_price = suggested_price
+        
+        # Calculate actual margin from suggested_price for View All Styles
+        total_cost = style.get_total_cost()
+        if suggested_price and suggested_price > 0 and total_cost > 0:
+            calculated_margin = ((suggested_price - total_cost) / suggested_price) * 100
+            style.base_margin_percent = round(calculated_margin, 2)
+        else:
+            style.base_margin_percent = margin  # fallback to default
         
         db.session.add(style)
         db.session.flush()
@@ -4022,157 +4066,627 @@ def api_style_search():
     return jsonify([r.style_name for r in rows])
 
 
+
+@app.route('/download-import-template')
+@admin_required
+def download_import_template():
+    """Download Excel template for importing styles"""
+    import io
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    
+    output = io.BytesIO()
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "SAMPLE-001 Style Name"
+    
+    # Define styles
+    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+    header_font = Font(bold=True, color="FFFFFF")
+    section_fill = PatternFill(start_color="D9E2F3", end_color="D9E2F3", fill_type="solid")
+    section_font = Font(bold=True)
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Row 1: Title
+    ws['A1'] = "J.A. Uniforms Standard Cost Analysis"
+    ws['A1'].font = Font(bold=True, size=14)
+    ws.merge_cells('A1:E1')
+    
+    # Row 2: Headers
+    headers = ['Item#', 'Name', 'Variant', 'Fabric', 'Minimum Qty']
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=2, column=col, value=header)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.border = thin_border
+    
+    # Row 3: Sample Style Data
+    sample_data = ['44217', 'Ladies Ls "Server" Jacket', 'Base', 'F6', 24]
+    for col, value in enumerate(sample_data, 1):
+        cell = ws.cell(row=3, column=col, value=value)
+        cell.border = thin_border
+    
+    # Row 4: MATERIALS Header
+    ws['A4'] = "MATERIALS"
+    ws['B4'] = "DESCRIPTION"
+    ws['C4'] = "COST"
+    ws['D4'] = "QTY"
+    ws['E4'] = "TOTAL"
+    for col in range(1, 6):
+        cell = ws.cell(row=4, column=col)
+        cell.fill = section_fill
+        cell.font = section_font
+        cell.border = thin_border
+    
+    # Row 5: Fabric
+    ws['A5'] = "Fabric"
+    ws['B5'] = "F4 Perfectly Poplin"
+    ws['C5'] = 4
+    ws['D5'] = 1.89
+    ws['E5'] = "=C5*D5"
+    
+    # Row 6: Fabric#2
+    ws['A6'] = "Fabric#2"
+    
+    # Row 7: Lining
+    ws['A7'] = "Lining"
+    
+    # Row 9: Buttons/Notions
+    ws['A9'] = "Buttons"
+    ws['B9'] = "30L"
+    ws['C9'] = 0.05
+    ws['D9'] = 5
+    ws['E9'] = "=C9*D9"
+    
+    # Row 11: Shoulder Pads
+    ws['A11'] = "Shoulder Pads"
+    ws['B11'] = "BG Lieberman"
+    ws['C11'] = 1.04
+    ws['D11'] = 2
+    ws['E11'] = "=C11*D11"
+    
+    # Row 12: Labels
+    ws['A12'] = "Labels"
+    ws['B12'] = "Average Cost for Size/Care/JAU"
+    ws['C12'] = 0.2
+    ws['D12'] = 1
+    ws['E12'] = "=C12*D12"
+    
+    # Row 13: Total Materials
+    ws['C13'] = "Total Materials Cost"
+    ws['E13'] = "=SUM(E5:E12)"
+    ws['C13'].font = Font(bold=True)
+    
+    # Row 14: LABOR Header
+    ws['A14'] = "LABOR"
+    ws['B14'] = "DESCRIPTION"
+    ws['C14'] = "COST"
+    ws['D14'] = "QTY"
+    ws['E14'] = "TOTAL"
+    for col in range(1, 6):
+        cell = ws.cell(row=14, column=col)
+        cell.fill = section_fill
+        cell.font = section_font
+        cell.border = thin_border
+    
+    # Row 15-17: Marker/Cut options
+    ws['A15'] = "Simple Marker/Cut"
+    ws['C15'] = 1.5
+    
+    ws['A16'] = "Marker/Cut/Fusing"
+    ws['B16'] = "Average M/C/F Cost"
+    ws['C16'] = 3
+    ws['D16'] = 1
+    ws['E16'] = "=C16*D16"
+    
+    ws['A17'] = "Additional Cut"
+    ws['C17'] = 1.5
+    
+    # Row 19: Sewing
+    ws['A19'] = "Sewing"
+    ws['B19'] = "Seamstress Average Hourly Cost"
+    ws['C19'] = 19.32
+    ws['D19'] = 0.96
+    ws['E19'] = "=C19*D19"
+    
+    # Row 21-23: Finishing options
+    ws['A21'] = "Finishing"
+    ws['B21'] = "Apron/Simple"
+    ws['C21'] = 0.75
+    
+    ws['A22'] = "Finishing"
+    ws['B22'] = "Shirts/Pants"
+    ws['C22'] = 1.25
+    
+    ws['A23'] = "Finishing"
+    ws['B23'] = "Jackets/Dress"
+    ws['C23'] = 2
+    ws['D23'] = 1
+    ws['E23'] = "=C23*D23"
+    
+    # Row 24: Total Labor
+    ws['C24'] = "Total Labor Cost"
+    ws['E24'] = "=SUM(E15:E23)"
+    ws['C24'].font = Font(bold=True)
+    
+    # Row 26: Total Cost
+    ws['A26'] = "IMAGE"
+    ws['C26'] = "TOTAL COST"
+    ws['E26'] = "=E13+E24"
+    ws['C26'].font = Font(bold=True)
+    ws['E26'].font = Font(bold=True, size=12)
+    
+    # Row 28-29: Margins
+    ws['C28'] = "Price @ 50% Margin"
+    ws['E28'] = "=E26/0.5"
+    ws['C29'] = "Price @ 60% Margin"
+    ws['E29'] = "=E26/0.4"
+    
+    # Row 30-31: Sales Price
+    ws['D30'] = "Sales Price"
+    ws['E30'] = "Margin"
+    ws['D31'] = 115.95
+    ws['E31'] = "=(D31-E26)/D31"
+    
+    # Row 32-33: Date
+    ws['C32'] = "Date:"
+    ws['C33'] = "2024-07-02"
+    
+    # Row 35-36: Size Range
+    ws['C35'] = "Size Range:"
+    ws['C36'] = "XXS-4XL (Alpha)"
+    
+    # Row 38-39: Clients
+    ws['C38'] = "Clients:"
+    ws['C39'] = "The Setai"
+    
+    # Row 43-44: ALVA/Photographed
+    ws['C43'] = "ALVA"
+    ws['D43'] = "Photographed"
+    ws['E43'] = "Old#"
+    ws['C44'] = "YES"
+    ws['D44'] = "NO"
+    
+    # Row 45: Notes
+    ws['A45'] = "NOTES"
+    
+    # Set column widths
+    ws.column_dimensions['A'].width = 18
+    ws.column_dimensions['B'].width = 35
+    ws.column_dimensions['C'].width = 20
+    ws.column_dimensions['D'].width = 12
+    ws.column_dimensions['E'].width = 15
+    
+    wb.save(output)
+    output.seek(0)
+    
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name='ja_uniforms_import_template.xlsx'
+    )
+
+
 @app.route('/import-excel', methods=['GET', 'POST'])
 @admin_required
 def import_excel():
-    if request.method == 'GET':
-        return """
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
-            <h1>Import Excel Data</h1>
-            <form method="POST" enctype="multipart/form-data">
-                <div style="margin: 20px 0;">
-                    <label>Select Excel File:</label><br>
-                    <input type="file" name="excel_file" accept=".xlsx,.xls" required style="margin: 10px 0;">
-                </div>
-                <button type="submit" style="background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px;">Import Uniforms</button>
-                <a href="/admin-panel" style="margin-left: 10px; background-color: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Cancel</a>
-            </form>
-        </div>
-        """
+    """Import styles from Excel file - One sheet per style format"""
     
+    if request.method == 'GET':
+        return render_template('import_excel.html')
+    
+    # POST - Process the import
     if 'excel_file' not in request.files:
-        return "No file selected"
+        flash('No file selected', 'error')
+        return redirect(url_for('import_excel'))
     
     file = request.files['excel_file']
     if file.filename == '':
-        return "No file selected"
+        flash('No file selected', 'error')
+        return redirect(url_for('import_excel'))
+    
+    # Get uploaded images
+    uploaded_images = request.files.getlist('images')
+    image_dict = {}
+    for img in uploaded_images:
+        if img.filename:
+            # Store by filename (lowercase for matching)
+            image_dict[img.filename.lower()] = img
     
     try:
-        # Read Excel file
-        df = pd.read_excel(file)
+        # Read Excel file with all sheets
+        xl = pd.ExcelFile(file)
+        sheet_names = xl.sheet_names
         
         imported_count = 0
+        updated_count = 0
+        skipped_count = 0
         errors = []
-        current_style = None
         
-        # Process each row
-        for index, row in df.iterrows():
+        # Ensure upload folder exists
+        upload_folder = os.path.join(app.root_path, 'static', 'uploads', 'styles')
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        # Process each sheet (each sheet = one style)
+        for sheet_name in sheet_names:
             try:
-                # Check if this is a style header (row with Item#)
-                if pd.notna(row.iloc[0]) and str(row.iloc[0]).replace('.', '').isdigit():
-                    # This is a new uniform style
-                    item_number = str(int(float(row.iloc[0])))  # Convert to clean integer string
-                    style_name = str(row.iloc[1]) if pd.notna(row.iloc[1]) else f"Style {item_number}"
-                    variant = str(row.iloc[2]) if pd.notna(row.iloc[2]) else ""
-                    
-                    # Create vendor_style (your lookup key)
-                    if variant and variant != "nan":
-                        vendor_style = f"{item_number}-{variant}"
-                    else:
-                        vendor_style = item_number
-                    
-                    # Check if style already exists
-                    existing_style = Style.query.filter_by(vendor_style=vendor_style).first()
-                    if existing_style:
-                        current_style = existing_style
-                        continue
-                    
-                    # Determine gender from style name
-                    gender = "UNISEX"
-                    if "Mens" in style_name or "MENS" in style_name:
-                        gender = "MENS"
-                    elif "Ladies" in style_name or "LADIES" in style_name:
-                        gender = "LADIES"
-                    
+                # Read sheet without headers
+                df = pd.read_excel(xl, sheet_name=sheet_name, header=None)
+                
+                # Extract style info from Row 3 (index 2)
+                # Format: [Item#, Name, Variant, Fabric Code, Min Qty]
+                if len(df) < 3:
+                    errors.append(f"Sheet '{sheet_name}': Not enough rows")
+                    continue
+                
+                item_number = str(df.iloc[2, 0]).strip() if pd.notna(df.iloc[2, 0]) else ""
+                style_name = str(df.iloc[2, 1]).strip() if pd.notna(df.iloc[2, 1]) else ""
+                variant = str(df.iloc[2, 2]).strip() if pd.notna(df.iloc[2, 2]) else "Base"
+                fabric_code = str(df.iloc[2, 3]).strip() if pd.notna(df.iloc[2, 3]) else ""
+                
+                # Skip if no item number
+                if not item_number or item_number == 'nan':
+                    errors.append(f"Sheet '{sheet_name}': Missing Item#")
+                    continue
+                
+                # Create vendor_style
+                if variant and variant != 'nan' and variant != 'Base':
+                    vendor_style = f"{item_number}-{variant}"
+                else:
+                    vendor_style = item_number
+                
+                # Determine gender from style name
+                gender = "UNISEX"
+                style_name_upper = style_name.upper()
+                if "LADIES" in style_name_upper or "WOMEN" in style_name_upper:
+                    gender = "LADIES"
+                elif "MENS" in style_name_upper or "MEN'S" in style_name_upper:
+                    gender = "MENS"
+                
+                # Determine garment type from style name
+                garment_type = "SS TOP/ SS DRESS"  # Default
+                if "JACKET" in style_name_upper:
+                    garment_type = "SS JACKET/LINED SS DRESS" if "LS" not in style_name_upper else "LS JACKET/LINED LS DRESS"
+                elif "DRESS" in style_name_upper:
+                    garment_type = "SS TOP/ SS DRESS" if "LS" not in style_name_upper else "LS TOP/ LS DRESS"
+                elif "PANTS" in style_name_upper or "TROUSER" in style_name_upper:
+                    garment_type = "PANTS"
+                elif "SHIRT" in style_name_upper or "TOP" in style_name_upper or "BLOUSE" in style_name_upper:
+                    garment_type = "SS TOP/ SS DRESS" if "LS" not in style_name_upper else "LS TOP/ LS DRESS"
+                elif "VEST" in style_name_upper:
+                    garment_type = "VEST"
+                elif "APRON" in style_name_upper:
+                    garment_type = "APRON"
+                elif "SKIRT" in style_name_upper or "SHORT" in style_name_upper:
+                    garment_type = "SHORTS/SKIRTS"
+                
+                # Extract size range from Row 36 (index 35)
+                size_range = "XS-4XL"  # Default
+                if len(df) > 35 and pd.notna(df.iloc[35, 2]):
+                    size_range = str(df.iloc[35, 2]).strip()
+                    if size_range == 'nan':
+                        size_range = "XS-4XL"
+                
+                # Check if style already exists
+                existing_style = Style.query.filter_by(vendor_style=vendor_style).first()
+                
+                if existing_style:
+                    # Update existing style
+                    existing_style.style_name = style_name
+                    existing_style.gender = gender
+                    existing_style.garment_type = garment_type
+                    existing_style.size_range = size_range
+                    existing_style.updated_at = datetime.now()
+                    current_style = existing_style
+                    updated_count += 1
+                else:
                     # Create new style
                     current_style = Style(
                         vendor_style=vendor_style,
                         base_item_number=item_number,
-                        variant_code=variant if variant != "nan" else None,
+                        variant_code=variant if variant and variant != 'nan' and variant != 'Base' else None,
                         style_name=style_name,
                         gender=gender,
-                        garment_type="IMPORTED",  # Default
-                        size_range="XS-4XL"      # Default
+                        garment_type=garment_type,
+                        size_range=size_range
                     )
                     db.session.add(current_style)
-                    db.session.flush()  # Get the ID
+                    db.session.flush()
                     imported_count += 1
+                
+                # ===== PROCESS MATERIALS =====
+                
+                # Fabric (Row 5, index 4)
+                if len(df) > 4 and pd.notna(df.iloc[4, 0]) and str(df.iloc[4, 0]).strip().upper() == 'FABRIC':
+                    fabric_name = str(df.iloc[4, 1]).strip() if pd.notna(df.iloc[4, 1]) else None
+                    fabric_cost = float(df.iloc[4, 2]) if pd.notna(df.iloc[4, 2]) else 6.00
+                    fabric_yards = float(df.iloc[4, 3]) if pd.notna(df.iloc[4, 3]) else 1.5
                     
-                # Check if this is a fabric row (under MATERIALS section)
-                elif pd.notna(row.iloc[0]) and "Fabric" in str(row.iloc[0]) and current_style:
-                    fabric_name = str(row.iloc[1]) if pd.notna(row.iloc[1]) else "Unknown Fabric"
-                    cost_per_yard = float(row.iloc[2]) if pd.notna(row.iloc[2]) else 0.0
-                    yards_required = float(row.iloc[3]) if pd.notna(row.iloc[3]) else 0.0
-                    
-                    # Find or create fabric
-                    fabric = Fabric.query.filter_by(name=fabric_name).first()
-                    if not fabric:
-                        # Create imported vendor if needed
-                        vendor = FabricVendor.query.filter_by(name="IMPORTED").first()
-                        if not vendor:
-                            vendor = FabricVendor(name="IMPORTED", vendor_code="IMP")
-                            db.session.add(vendor)
+                    if fabric_name and fabric_name != 'nan':
+                        # Find or create fabric
+                        fabric = Fabric.query.filter_by(name=fabric_name).first()
+                        if not fabric:
+                            # Get or create IMPORTED vendor
+                            vendor = FabricVendor.query.filter_by(name="IMPORTED").first()
+                            if not vendor:
+                                vendor = FabricVendor(name="IMPORTED", vendor_code="IMP")
+                                db.session.add(vendor)
+                                db.session.flush()
+                            
+                            fabric = Fabric(
+                                name=fabric_name,
+                                cost_per_yard=fabric_cost,
+                                fabric_vendor_id=vendor.id
+                            )
+                            db.session.add(fabric)
                             db.session.flush()
                         
-                        fabric = Fabric(
-                            name=fabric_name,
-                            cost_per_yard=cost_per_yard,
-                            fabric_vendor_id=vendor.id
-                        )
-                        db.session.add(fabric)
-                        db.session.flush()
+                        # Check if relationship exists
+                        existing_sf = StyleFabric.query.filter_by(
+                            style_id=current_style.id,
+                            fabric_id=fabric.id
+                        ).first()
+                        
+                        if existing_sf:
+                            # Update existing
+                            existing_sf.yards_required = fabric_yards
+                            existing_sf.is_primary = True
+                        else:
+                            style_fabric = StyleFabric(
+                                style_id=current_style.id,
+                                fabric_id=fabric.id,
+                                yards_required=fabric_yards,
+                                is_primary=True
+                            )
+                            db.session.add(style_fabric)
+
                     
-                    # Create style-fabric relationship
-                    style_fabric = StyleFabric(
-                        style_id=current_style.id,
-                        fabric_id=fabric.id,
-                        yards_required=yards_required
-                    )
-                    db.session.add(style_fabric)
+                
+                # Fabric#2 (Row 6, index 5)
+                if len(df) > 5 and pd.notna(df.iloc[5, 1]):
+                    fabric2_name = str(df.iloc[5, 1]).strip()
+                    fabric2_cost = float(df.iloc[5, 2]) if pd.notna(df.iloc[5, 2]) else 6.00
+                    fabric2_yards = float(df.iloc[5, 3]) if pd.notna(df.iloc[5, 3]) else 1.0
                     
+                    if fabric2_name and fabric2_name != 'nan':
+                        fabric2 = Fabric.query.filter_by(name=fabric2_name).first()
+                        if not fabric2:
+                            vendor = FabricVendor.query.filter_by(name="IMPORTED").first()
+                            fabric2 = Fabric(
+                                name=fabric2_name,
+                                cost_per_yard=fabric2_cost,
+                                fabric_vendor_id=vendor.id
+                            )
+                            db.session.add(fabric2)
+                            db.session.flush()
+                        
+                        existing_sf2 = StyleFabric.query.filter_by(
+                            style_id=current_style.id,
+                            fabric_id=fabric2.id
+                        ).first()
+                        
+                        if existing_sf2:
+                            existing_sf2.yards_required = fabric2_yards
+                            existing_sf2.is_primary = False
+                        else:
+                            style_fabric2 = StyleFabric(
+                                style_id=current_style.id,
+                                fabric_id=fabric2.id,
+                                yards_required=fabric2_yards,
+                                is_primary=False
+                            )
+                            db.session.add(style_fabric2)
+                
+                # Lining (Row 7, index 6)
+                if len(df) > 6 and pd.notna(df.iloc[6, 1]):
+                    lining_name = str(df.iloc[6, 1]).strip()
+                    lining_cost = float(df.iloc[6, 2]) if pd.notna(df.iloc[6, 2]) else 4.00
+                    lining_yards = float(df.iloc[6, 3]) if pd.notna(df.iloc[6, 3]) else 1.0
+                    
+                    if lining_name and lining_name != 'nan':
+                        lining = Fabric.query.filter_by(name=lining_name).first()
+                        if not lining:
+                            vendor = FabricVendor.query.filter_by(name="IMPORTED").first()
+                            lining = Fabric(
+                                name=lining_name,
+                                cost_per_yard=lining_cost,
+                                fabric_vendor_id=vendor.id
+                            )
+                            db.session.add(lining)
+                            db.session.flush()
+                        
+                        existing_lining = StyleFabric.query.filter_by(
+                            style_id=current_style.id,
+                            fabric_id=lining.id
+                        ).first()
+                        
+                        if not existing_lining:
+                            style_lining = StyleFabric(
+                                style_id=current_style.id,
+                                fabric_id=lining.id,
+                                yards_required=lining_yards,
+                                is_primary=False
+                            )
+                            db.session.add(style_lining)
+                
+                # Buttons (Row 9, index 8)
+                if len(df) > 8 and pd.notna(df.iloc[8, 0]):
+                    notion_type = str(df.iloc[8, 0]).strip()
+                    if notion_type and notion_type != 'nan':
+                        notion_name = str(df.iloc[8, 1]).strip() if pd.notna(df.iloc[8, 1]) else notion_type
+                        notion_cost = float(df.iloc[8, 2]) if pd.notna(df.iloc[8, 2]) else 0.05
+                        notion_qty = int(float(df.iloc[8, 3])) if pd.notna(df.iloc[8, 3]) else 1
+                        
+                        if notion_name and notion_name != 'nan' and notion_qty > 0:
+                            notion = Notion.query.filter_by(name=notion_name).first()
+                            if not notion:
+                                n_vendor = NotionVendor.query.filter_by(name="IMPORTED").first()
+                                if not n_vendor:
+                                    n_vendor = NotionVendor(name="IMPORTED", vendor_code="IMP")
+                                    db.session.add(n_vendor)
+                                    db.session.flush()
+                                
+                                notion = Notion(
+                                    name=notion_name,
+                                    cost_per_unit=notion_cost,
+                                    notion_vendor_id=n_vendor.id
+                                )
+                                db.session.add(notion)
+                                db.session.flush()
+                            
+                            existing_sn = StyleNotion.query.filter_by(
+                                style_id=current_style.id,
+                                notion_id=notion.id
+                            ).first()
+                            
+                            if existing_sn:
+                                existing_sn.quantity_required = notion_qty
+                            else:
+                                style_notion = StyleNotion(
+                                    style_id=current_style.id,
+                                    notion_id=notion.id,
+                                    quantity_required=notion_qty
+                                )
+                                db.session.add(style_notion)
+                    
+                # Shoulder Pads (Row 11, index 10)
+                if len(df) > 10 and pd.notna(df.iloc[10, 0]):
+                    sp_type = str(df.iloc[10, 0]).strip()
+                    if sp_type and sp_type != 'nan' and 'SHOULDER' in sp_type.upper():
+                        sp_name = str(df.iloc[10, 1]).strip() if pd.notna(df.iloc[10, 1]) else "Shoulder Pads"
+                        sp_cost = float(df.iloc[10, 2]) if pd.notna(df.iloc[10, 2]) else 1.00
+                        sp_qty = int(float(df.iloc[10, 3])) if pd.notna(df.iloc[10, 3]) else 2
+                        
+                        if sp_name and sp_name != 'nan' and sp_qty > 0:
+                            sp_notion = Notion.query.filter_by(name=sp_name).first()
+                            if not sp_notion:
+                                n_vendor = NotionVendor.query.filter_by(name="IMPORTED").first()
+                                sp_notion = Notion(
+                                    name=sp_name,
+                                    cost_per_unit=sp_cost,
+                                    notion_vendor_id=n_vendor.id
+                                )
+                                db.session.add(sp_notion)
+                                db.session.flush()
+                            
+                            existing_sp = StyleNotion.query.filter_by(
+                                style_id=current_style.id,
+                                notion_id=sp_notion.id
+                            ).first()
+                            
+                            if not existing_sp:
+                                style_sp = StyleNotion(
+                                    style_id=current_style.id,
+                                    notion_id=sp_notion.id,
+                                    quantity_required=sp_qty
+                                )
+                                db.session.add(style_sp)
+                
+                # ===== PROCESS LABOR =====
+                
+                # Marker/Cut/Fusing (Row 16, index 15)
+                if len(df) > 15:
+                    mcf_label = str(df.iloc[15, 0]).strip() if pd.notna(df.iloc[15, 0]) else ""
+                    if 'MARKER' in mcf_label.upper() or 'FUSING' in mcf_label.upper():
+                        mcf_cost = float(df.iloc[15, 2]) if pd.notna(df.iloc[15, 2]) else 3.00
+                        mcf_qty = float(df.iloc[15, 3]) if pd.notna(df.iloc[15, 3]) else 1
+                        
+                        if mcf_qty > 0:
+                            # Find Marker+Cut labor operation
+                            labor_op = LaborOperation.query.filter(
+                                LaborOperation.name.ilike('%marker%cut%')
+                            ).first()
+                            
+                            if labor_op:
+                                existing_sl = StyleLabor.query.filter_by(
+                                    style_id=current_style.id,
+                                    labor_operation_id=labor_op.id
+                                ).first()
+                                
+                                if not existing_sl:
+                                    style_labor = StyleLabor(
+                                        style_id=current_style.id,
+                                        labor_operation_id=labor_op.id,
+                                        quantity=int(mcf_qty)
+                                    )
+                                    db.session.add(style_labor)
+                
+                # Sewing (Row 19, index 18)
+                if len(df) > 18:
+                    sewing_label = str(df.iloc[18, 0]).strip() if pd.notna(df.iloc[18, 0]) else ""
+                    if 'SEWING' in sewing_label.upper():
+                        sewing_hours = float(df.iloc[18, 3]) if pd.notna(df.iloc[18, 3]) else 0
+                        
+                        if sewing_hours > 0:
+                            # Find Sewing labor operation
+                            sewing_op = LaborOperation.query.filter(
+                                LaborOperation.name.ilike('%sewing%')
+                            ).first()
+                            
+                            if sewing_op:
+                                existing_sewing = StyleLabor.query.filter_by(
+                                    style_id=current_style.id,
+                                    labor_operation_id=sewing_op.id
+                                ).first()
+                                
+                                if not existing_sewing:
+                                    style_sewing = StyleLabor(
+                                        style_id=current_style.id,
+                                        labor_operation_id=sewing_op.id,
+                                        time_hours=sewing_hours
+                                    )
+                                    db.session.add(style_sewing)
+                
+                # Finishing - Check rows 21-23 (index 20-22)
+                for finish_row in [20, 21, 22]:
+                    if len(df) > finish_row:
+                        finish_label = str(df.iloc[finish_row, 0]).strip() if pd.notna(df.iloc[finish_row, 0]) else ""
+                        if 'FINISH' in finish_label.upper():
+                            finish_qty = float(df.iloc[finish_row, 3]) if pd.notna(df.iloc[finish_row, 3]) else 0
+                            
+                            if finish_qty > 0:
+                                # Use the garment type for cleaning/ironing
+                                cleaning_op = CleaningCost.query.filter_by(garment_type=garment_type).first()
+                                if cleaning_op:
+                                    # Add cleaning cost as labor
+                                    pass  # Cleaning costs are usually automatic based on garment type
+                                break  # Only process one finishing entry
+                
+                # Commit after each style
+                db.session.commit()
+                
             except Exception as e:
-                errors.append(f"Row {index}: {str(e)}")
+                db.session.rollback()
+                errors.append(f"Sheet '{sheet_name}': {str(e)}")
                 continue
         
-        # Commit all changes
-        db.session.commit()
-        
-        # Return results
-        result_html = f"""
-        <div style="max-width: 800px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
-            <h1>Import Results</h1>
-            <div style="background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                <h3>Import Completed!</h3>
-                <p><strong>{imported_count} uniform styles imported successfully</strong></p>
-            </div>
-        """
+        # Flash success message
+        if imported_count > 0 or updated_count > 0:
+            flash(f'Successfully imported {imported_count} new styles and updated {updated_count} existing styles!', 'success')
         
         if errors:
-            result_html += f"""
-            <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                <h3>Warnings ({len(errors)} issues):</h3>
-                <ul>
-            """
-            for error in errors[:5]:  # Show first 5 errors
-                result_html += f"<li>{error}</li>"
-            if len(errors) > 5:
-                result_html += f"<li>... and {len(errors) - 5} more issues</li>"
-            result_html += "</ul></div>"
+            flash(f'{len(errors)} sheets had issues. Check the details below.', 'warning')
         
-        result_html += """
-            <div style="margin: 30px 0;">
-                <a href="/view-all-styles" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Imported Styles</a>
-                <a href="/import-excel" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-left: 10px;">Import More Files</a>
-                <a href="/admin-panel" style="background-color: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-left: 10px;">Back to Admin</a>
-            </div>
-        </div>
-        """
-        
-        return result_html
-        
-    except Exception as e:
-        return f"<h1>Import Error:</h1><p>{str(e)}</p><a href='/import-excel'>Try Again</a>"
+        # Return results page
+        return render_template('import_results.html',
+                             imported_count=imported_count,
+                             updated_count=updated_count,
+                             skipped_count=skipped_count,
+                             errors=errors)
     
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Import failed: {str(e)}', 'error')
+        return redirect(url_for('import_excel'))
+
+
+
 
 # ===== APPLICATION STARTUP =====
 if __name__ == '__main__':

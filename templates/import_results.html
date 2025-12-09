@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block title %}Import Results - J.A Uniforms{% endblock %}
+
+{% block extra_css %}
+<style>
+    .results-container {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 0 20px;
+    }
+    
+    .results-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+    
+    .results-header h1 {
+        font-size: 2rem;
+        color: #1e293b;
+        margin-bottom: 10px;
+    }
+    
+    .results-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        padding: 40px;
+        margin-bottom: 30px;
+    }
+    
+    .result-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .stat-box {
+        text-align: center;
+        padding: 25px;
+        border-radius: 12px;
+    }
+    
+    .stat-box.success {
+        background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+        border: 1px solid #bbf7d0;
+    }
+    
+    .stat-box.updated {
+        background: linear-gradient(135deg, #eff6ff, #dbeafe);
+        border: 1px solid #bfdbfe;
+    }
+    
+    .stat-box.errors {
+        background: linear-gradient(135deg, #fef2f2, #fee2e2);
+        border: 1px solid #fecaca;
+    }
+    
+    .stat-number {
+        font-size: 3rem;
+        font-weight: 700;
+    }
+    
+    .stat-box.success .stat-number { color: #22c55e; }
+    .stat-box.updated .stat-number { color: #3b82f6; }
+    .stat-box.errors .stat-number { color: #ef4444; }
+    
+    .stat-label {
+        color: #64748b;
+        font-size: 0.875rem;
+        margin-top: 5px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .success-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+    }
+    
+    .success-icon svg {
+        width: 40px;
+        height: 40px;
+        color: white;
+    }
+    
+    .errors-section {
+        background: #fef2f2;
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+    
+    .errors-section h3 {
+        color: #dc2626;
+        margin-bottom: 15px;
+        font-size: 1rem;
+    }
+    
+    .error-list {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    
+    .error-item {
+        background: white;
+        padding: 10px 15px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        font-size: 0.875rem;
+        color: #7f1d1d;
+        border-left: 3px solid #ef4444;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 30px;
+        flex-wrap: wrap;
+    }
+    
+    .btn {
+        padding: 14px 30px;
+        border-radius: 10px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        color: white;
+    }
+    
+    .btn-success {
+        background: linear-gradient(135deg, #22c55e, #16a34a);
+        color: white;
+    }
+    
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+        color: white;
+    }
+    
+    .btn-secondary {
+        background: #f1f5f9;
+        color: #475569;
+    }
+    
+    .btn-secondary:hover {
+        background: #e2e8f0;
+        color: #334155;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="results-container">
+    
+    <div class="results-header">
+        <div class="success-icon">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+        </div>
+        <h1>Import Complete!</h1>
+        <p style="color: #64748b;">Your Excel file has been processed successfully</p>
+    </div>
+    
+    <div class="results-card">
+        <div class="result-stats">
+            <div class="stat-box success">
+                <div class="stat-number">{{ imported_count }}</div>
+                <div class="stat-label">New Styles</div>
+            </div>
+            <div class="stat-box updated">
+                <div class="stat-number">{{ updated_count }}</div>
+                <div class="stat-label">Updated</div>
+            </div>
+            <div class="stat-box errors">
+                <div class="stat-number">{{ errors|length }}</div>
+                <div class="stat-label">Issues</div>
+            </div>
+        </div>
+        
+        {% if errors %}
+        <div class="errors-section">
+            <h3>⚠️ Issues Found ({{ errors|length }})</h3>
+            <div class="error-list">
+                {% for error in errors[:10] %}
+                <div class="error-item">{{ error }}</div>
+                {% endfor %}
+                {% if errors|length > 10 %}
+                <div class="error-item" style="background: #fef2f2; border-left-color: #f59e0b;">
+                    ... and {{ errors|length - 10 }} more issues
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="action-buttons">
+            <a href="{{ url_for('view_all_styles') }}" class="btn btn-primary">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                </svg>
+                View All Styles
+            </a>
+            <a href="{{ url_for('import_excel') }}" class="btn btn-success">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+                Import More
+            </a>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                Dashboard
+            </a>
+        </div>
+    </div>
+    
+</div>
+{% endblock %}

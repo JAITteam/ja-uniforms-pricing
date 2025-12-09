@@ -218,7 +218,7 @@
         
         <div class="stat-card-modern orange">
             <div class="stat-icon">🆕</div>
-            <div class="stat-value">3</div>
+            <div class="stat-value">{{ new_this_week }}</div>
             <div class="stat-label">This Week</div>
         </div>
         
@@ -232,18 +232,6 @@
             <div class="stat-icon">🏆</div>
             <div class="stat-value">{{ top_fabric if top_fabric != 'N/A' else '—' }}</div>
             <div class="stat-label">Top Fabric</div>
-        </div>
-        
-        <div class="stat-card-modern cyan">
-            <div class="stat-icon">💵</div>
-            <div class="stat-value">${{ "%.0f"|format(total_styles * avg_cost) }}</div>
-            <div class="stat-label">Portfolio</div>
-        </div>
-        
-        <div class="stat-card-modern indigo">
-            <div class="stat-icon">📊</div>
-            <div class="stat-value">+9.4%</div>
-            <div class="stat-label">Growth</div>
         </div>
         
     </div>

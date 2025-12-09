@@ -432,9 +432,23 @@
 /* ===== STATS CARDS GRID ===== */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 16px;
-    margin-bottom: var(--spacing);
+    grid-template-columns: repeat(5, 1fr);
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+/* Responsive - tablets */
+@media (max-width: 1024px) {
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Responsive - mobile */
+@media (max-width: 600px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 .stat-card-modern {

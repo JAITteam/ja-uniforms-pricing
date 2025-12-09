@@ -193,7 +193,7 @@ window.confirm = window.customConfirm;
                 set('#style_name', s.style_name);
                 set('#gender', s.gender);
                 set('#garment_type', s.garment_type);
-                set('#margin', s.margin);
+                set('#margin', 60);  // Always default to 60% for estimation
                 set('#suggested_price', s.suggested_price);
                 set('#notes', s.notes);
                 
@@ -881,7 +881,7 @@ document.addEventListener('DOMContentLoaded', () => {
     set('#gender', s.gender || 'MENS');
     set('#garment_type', s.garment_type);
     //set('#size_range', s.size_range);
-    set('#margin', s.margin || 60);
+    set('#margin', 60);  // Always default to 60% for estimation purposes
     set('#label_cost', s.label_cost || 0.20);
     set('#shipping_cost', s.shipping_cost || 0.00);
     set('#suggested_price', s.suggested_price || '');
@@ -1055,6 +1055,7 @@ updateSizeRangeDisplay();
       }
     }
     
+
     // ===== STEP 3: VALIDATE MARGIN =====
     const marginValue = $('#margin')?.value;
     validation = validatePercentage(marginValue, 'Margin');
@@ -1063,6 +1064,24 @@ updateSizeRangeDisplay();
       $('#margin')?.focus();
       return;
     }
+    
+    // ===== STEP 3.5: VALIDATE SUGGESTED PRICE (REQUIRED) =====
+    const suggestedPrice = parseFloat($('#suggested_price')?.value) || 0;
+    if (!suggestedPrice || suggestedPrice <= 0) {
+      await customAlert('Suggested Price is required and must be greater than 0', 'error');
+      $('#suggested_price')?.focus();
+      return;
+    }
+    
+    // ===== STEP 3.6: VALIDATE SUGGESTED MARGIN =====
+    const suggestedMargin = parseFloat($('#suggested_margin')?.value) || 0;
+    if (!suggestedMargin || suggestedMargin <= 0) {
+      await customAlert('Margin (from Suggested Price) is required. Please enter a Suggested Price first.', 'error');
+      $('#suggested_price')?.focus();
+      return;
+    }
+    
+    // ===== STEP 4: VALIDATE FIRST FABRIC ROW =====
     
     // ===== STEP 4: VALIDATE FIRST FABRIC ROW =====
     const firstVendor = document.querySelector('[data-fabric-vendor-id]')?.value;
@@ -2075,23 +2094,28 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   // Notification helper
-  function showNotification(message, type = 'success') {
-    let notification = $('#notification');
-    if (!notification) {
-      // Create notification if it doesn't exist
-      notification = document.createElement('div');
-      notification.id = 'notification';
-      notification.className = 'notification';
-      document.body.appendChild(notification);
+  function showNotification(message, type = 'success', isHtml = false) {
+    const notification = document.getElementById('notification');
+    const notificationText = document.getElementById('notificationText');
+
+    if (notification && notificationText) {
+        if (isHtml) {
+            notificationText.innerHTML = message;
+        } else {
+            notificationText.textContent = message;
+        }
+        notification.classList.remove('error');
+        if (type === 'error') {
+            notification.classList.add('error');
+        }
+        notification.classList.add('show');
+
+        // Longer timeout for error messages with links
+        const timeout = (type === 'error' && isHtml) ? 10000 : 3000;
+        setTimeout(() => {
+            notification.classList.remove('show');
+        }, timeout);
     }
-    
-    notification.textContent = message;
-    notification.className = 'notification ' + type;
-    notification.style.display = 'block';
-    
-    setTimeout(() => {
-      notification.style.display = 'none';
-    }, 3000);
   }
 
   // Initialize gallery on page load

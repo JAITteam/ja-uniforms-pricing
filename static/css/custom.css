@@ -66,6 +66,10 @@ body {
 
 /* Minimal Toolbar */
 .toolbar {
+  position: sticky;
+  top: 90px;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   background: var(--bg-card);
   padding: 1rem 1.25rem;
   margin: -1rem -1rem 1.5rem -1rem;

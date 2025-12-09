@@ -1,0 +1,591 @@
+{% extends "base.html" %}
+{% block title %}Import Excel - J.A Uniforms{% endblock %}
+
+{% block extra_css %}
+<style>
+    .import-container {
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 0 20px;
+    }
+    
+    .import-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+    
+    .import-header h1 {
+        font-size: 2rem;
+        color: #1e293b;
+        margin-bottom: 10px;
+    }
+    
+    .import-header p {
+        color: #64748b;
+        font-size: 1rem;
+    }
+    
+    .import-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        padding: 40px;
+        margin-bottom: 30px;
+    }
+    
+    .upload-zone {
+        border: 2px dashed #cbd5e1;
+        border-radius: 12px;
+        padding: 60px 40px;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        background: #f8fafc;
+    }
+    
+    .upload-zone:hover {
+        border-color: #3b82f6;
+        background: #eff6ff;
+    }
+    
+    .upload-zone.dragover {
+        border-color: #3b82f6;
+        background: #dbeafe;
+    }
+    
+    .upload-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 20px;
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .upload-icon svg {
+        width: 40px;
+        height: 40px;
+        color: white;
+    }
+    
+    .upload-zone h3 {
+        font-size: 1.25rem;
+        color: #1e293b;
+        margin-bottom: 8px;
+    }
+    
+    .upload-zone p {
+        color: #64748b;
+        margin-bottom: 20px;
+    }
+    
+    .browse-btn {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        color: white;
+        padding: 12px 28px;
+        border-radius: 8px;
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    
+    .browse-btn:hover {
+        transform: translateY(-2px);
+    }
+    
+    .file-input {
+        display: none;
+    }
+    
+    .selected-file {
+        display: none;
+        align-items: center;
+        gap: 15px;
+        padding: 20px;
+        background: #f0fdf4;
+        border-radius: 12px;
+        margin-top: 20px;
+        border: 1px solid #bbf7d0;
+    }
+    
+    .selected-file.show {
+        display: flex;
+    }
+    
+    .file-icon {
+        width: 50px;
+        height: 50px;
+        background: #22c55e;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .file-icon svg {
+        width: 28px;
+        height: 28px;
+        color: white;
+    }
+    
+    .file-details {
+        flex: 1;
+    }
+    
+    .file-name {
+        font-weight: 600;
+        color: #1e293b;
+    }
+    
+    .file-size {
+        color: #64748b;
+        font-size: 0.875rem;
+    }
+    
+    .remove-file {
+        background: none;
+        border: none;
+        color: #ef4444;
+        cursor: pointer;
+        padding: 8px;
+    }
+    
+    .template-section {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 30px;
+    }
+    
+    .template-section h3 {
+        font-size: 1rem;
+        color: #1e293b;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .download-template-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #10b981;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: background 0.2s;
+    }
+    
+    .download-template-btn:hover {
+        background: #059669;
+        color: white;
+    }
+    
+    .columns-info {
+        margin-top: 20px;
+    }
+    
+    .columns-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 10px;
+        margin-top: 15px;
+    }
+    
+    .column-tag {
+        background: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        color: #475569;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .column-tag strong {
+        color: #1e293b;
+    }
+    
+    .import-actions {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 30px;
+    }
+    
+    .btn-import {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        color: white;
+        padding: 14px 40px;
+        border-radius: 10px;
+        border: none;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.2s;
+    }
+    
+    .btn-import:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+    
+    .btn-import:disabled {
+        background: #94a3b8;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+    
+    .btn-cancel {
+        background: #f1f5f9;
+        color: #475569;
+        padding: 14px 40px;
+        border-radius: 10px;
+        border: none;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.2s;
+    }
+    
+    .btn-cancel:hover {
+        background: #e2e8f0;
+        color: #334155;
+    }
+    
+    /* Progress Section */
+    .import-progress {
+        display: none;
+        text-align: center;
+        padding: 40px;
+    }
+    
+    .import-progress.show {
+        display: block;
+    }
+    
+    .progress-spinner {
+        width: 60px;
+        height: 60px;
+        border: 4px solid #e2e8f0;
+        border-top-color: #3b82f6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .progress-text {
+        font-size: 1.1rem;
+        color: #1e293b;
+    }
+    
+    /* Results Section */
+    .import-results {
+        display: none;
+    }
+    
+    .import-results.show {
+        display: block;
+    }
+    
+    .result-summary {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .result-stat {
+        text-align: center;
+        padding: 25px;
+        border-radius: 12px;
+    }
+    
+    .result-stat.success {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+    }
+    
+    .result-stat.error {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+    }
+    
+    .result-stat.skipped {
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+    }
+    
+    .result-stat .number {
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+    
+    .result-stat.success .number {
+        color: #22c55e;
+    }
+    
+    .result-stat.error .number {
+        color: #ef4444;
+    }
+    
+    .result-stat.skipped .number {
+        color: #f59e0b;
+    }
+    
+    .result-stat .label {
+        color: #64748b;
+        font-size: 0.875rem;
+        margin-top: 5px;
+    }
+    
+    .error-list {
+        background: #fef2f2;
+        border-radius: 12px;
+        padding: 20px;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    
+    .error-list h4 {
+        color: #dc2626;
+        margin-bottom: 15px;
+    }
+    
+    .error-item {
+        padding: 8px 12px;
+        background: white;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        font-size: 0.875rem;
+        color: #7f1d1d;
+    }
+    
+    /* Image upload section */
+    .image-section {
+        margin-top: 30px;
+        padding-top: 30px;
+        border-top: 1px solid #e2e8f0;
+    }
+    
+    .image-section h3 {
+        font-size: 1.1rem;
+        color: #1e293b;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .image-info {
+        background: #eff6ff;
+        border-radius: 8px;
+        padding: 15px;
+        color: #1e40af;
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="import-container">
+    
+    <div class="import-header">
+        <h1>📥 Import Excel Data</h1>
+        <p>Upload your Excel file to bulk import uniform styles</p>
+    </div>
+    
+    <!-- Template Download Section -->
+    <div class="import-card">
+        <div class="template-section">
+            <h3>📋 Step 1: Download Template</h3>
+            <p style="color: #64748b; margin-bottom: 15px;">Start with our Excel template to ensure your data is formatted correctly.</p>
+            <a href="{{ url_for('download_import_template') }}" class="download-template-btn">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                Download Excel Template
+            </a>
+            
+            <div class="columns-info">
+                <p style="font-weight: 500; color: #1e293b;">Required Columns:</p>
+                <div class="columns-grid">
+                    <div class="column-tag"><strong>vendor_style</strong> - Unique ID</div>
+                    <div class="column-tag"><strong>style_name</strong> - Name</div>
+                    <div class="column-tag"><strong>gender</strong> - M/L/U</div>
+                    <div class="column-tag"><strong>garment_type</strong> - Type</div>
+                    <div class="column-tag"><strong>size_range</strong> - Sizes</div>
+                    <div class="column-tag"><strong>fabric_name</strong> - Fabric</div>
+                    <div class="column-tag"><strong>fabric_yards</strong> - Yards</div>
+                    <div class="column-tag"><strong>is_sublimation</strong> - Y/N</div>
+                    <div class="column-tag"><strong>notion_name</strong> - Notion</div>
+                    <div class="column-tag"><strong>notion_qty</strong> - Quantity</div>
+                    <div class="column-tag"><strong>colors</strong> - Colors</div>
+                    <div class="column-tag"><strong>notes</strong> - Notes</div>
+                    <div class="column-tag"><strong>image_filename</strong> - Image</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Upload Section -->
+        <form id="importForm" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <h3 style="margin-bottom: 20px; color: #1e293b;">📤 Step 2: Upload Your File</h3>
+            
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                </div>
+                <h3>Drag & Drop your Excel file here</h3>
+                <p>or click to browse files</p>
+                <button type="button" class="browse-btn">Choose File</button>
+                <input type="file" name="excel_file" id="excelFile" class="file-input" accept=".xlsx,.xls">
+            </div>
+            
+            <div class="selected-file" id="selectedFile">
+                <div class="file-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <div class="file-details">
+                    <div class="file-name" id="fileName"></div>
+                    <div class="file-size" id="fileSize"></div>
+                </div>
+                <button type="button" class="remove-file" id="removeFile">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Image Upload Section -->
+            <div class="image-section">
+                <h3>🖼️ Step 3: Upload Images (Optional)</h3>
+                <div class="image-info">
+                    <strong>Tip:</strong> Name your image files to match the <code>image_filename</code> column in your Excel. 
+                    For example, if your Excel has "shirt-001.jpg", upload a file named "shirt-001.jpg".
+                </div>
+                <div style="margin-top: 15px;">
+                    <input type="file" name="images" id="imageFiles" multiple accept="image/*" style="padding: 10px;">
+                    <p style="color: #64748b; font-size: 0.875rem; margin-top: 8px;">Select multiple images at once (JPG, PNG, GIF)</p>
+                </div>
+            </div>
+            
+            <div class="import-actions">
+                <a href="{{ url_for('index') }}" class="btn-cancel">Cancel</a>
+                <button type="submit" class="btn-import" id="importBtn" disabled>
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                    </svg>
+                    Import Styles
+                </button>
+            </div>
+        </form>
+        
+        <!-- Progress -->
+        <div class="import-progress" id="importProgress">
+            <div class="progress-spinner"></div>
+            <div class="progress-text">Importing your styles... Please wait.</div>
+        </div>
+    </div>
+    
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('excelFile');
+    const selectedFile = document.getElementById('selectedFile');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const removeFile = document.getElementById('removeFile');
+    const importBtn = document.getElementById('importBtn');
+    const importForm = document.getElementById('importForm');
+    const importProgress = document.getElementById('importProgress');
+    
+    // Click to browse
+    uploadZone.addEventListener('click', () => fileInput.click());
+    
+    // Drag and drop
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.classList.add('dragover');
+    });
+    
+    uploadZone.addEventListener('dragleave', () => {
+        uploadZone.classList.remove('dragover');
+    });
+    
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            handleFileSelect(e.dataTransfer.files[0]);
+        }
+    });
+    
+    // File input change
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+    
+    // Remove file
+    removeFile.addEventListener('click', (e) => {
+        e.stopPropagation();
+        fileInput.value = '';
+        selectedFile.classList.remove('show');
+        uploadZone.style.display = 'block';
+        importBtn.disabled = true;
+    });
+    
+    function handleFileSelect(file) {
+        if (!file.name.match(/\.(xlsx|xls)$/i)) {
+            alert('Please select an Excel file (.xlsx or .xls)');
+            return;
+        }
+        
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        selectedFile.classList.add('show');
+        uploadZone.style.display = 'none';
+        importBtn.disabled = false;
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' bytes';
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+    
+    // Form submit
+    importForm.addEventListener('submit', function(e) {
+        importBtn.disabled = true;
+        importProgress.classList.add('show');
+    });
+});
+</script>
+{% endblock %}

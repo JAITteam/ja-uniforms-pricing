@@ -73,7 +73,7 @@ function openModal(type, id = null) {
                 <input type="text" id="name" required placeholder="e.g., XANADU">
             </div>
             <div class="form-group">
-                <label>Fabric Code</label>
+                <label>Fabric Code *</label>
                 <input type="text" id="fabric_code" placeholder="e.g., F1">
             </div>
             <div class="form-group">
@@ -380,7 +380,16 @@ function deleteItem(endpoint, id) {
             showNotification('Deleted successfully!', 'success');
             setTimeout(() => location.reload(), 1500);
         } else {
-            showNotification('Delete failed: ' + (data.error || 'Unknown error'), 'error');
+            // Check if styles_using is provided for clickable links
+            if (data.styles_using && data.styles_using.length > 0) {
+                const styleLinks = data.styles_using.map(s => 
+                    `<a href="/style/view?vendor_style=${encodeURIComponent(s.vendor_style)}" target="_blank" style="color: white; text-decoration: underline; font-weight: bold;">${s.vendor_style || s.style_name}</a>`
+                ).join(', ');
+                const message = `Delete failed: Used in ${data.styles_using.length} style(s): ${styleLinks}`;
+                showNotification(message, 'error', true);
+            } else {
+                showNotification('Delete failed: ' + (data.error || 'Unknown error'), 'error');
+            }
         }
     })
     .catch(error => {
@@ -422,24 +431,29 @@ function showDeleteConfirmation(message, onConfirm, onCancel) {
     });
 }
 
-function showNotification(message, type = 'success') {
+function showNotification(message, type = 'success', isHtml = false) {
     const notification = document.getElementById('notification');
     const notificationText = document.getElementById('notificationText');
     
     if (notification && notificationText) {
-        notificationText.textContent = message;
+        if (isHtml) {
+            notificationText.innerHTML = message;
+        } else {
+            notificationText.textContent = message;
+        }
         notification.classList.remove('error');
         if (type === 'error') {
             notification.classList.add('error');
         }
         notification.classList.add('show');
-        
+
+        // Longer timeout for error messages with links
+        const timeout = (type === 'error' && isHtml) ? 10000 : 3000;
         setTimeout(() => {
             notification.classList.remove('show');
-        }, 3000);
+        }, timeout);
     }
 }
-
 function capitalize(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
