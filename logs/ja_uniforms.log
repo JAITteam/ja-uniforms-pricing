@@ -604,3 +604,15 @@ DETAIL:  Key (vendor_code)=(F103) already exists.
 [2025-12-08 12:00:34,700] INFO in app: === J.A. Uniforms Application Started ===
 [2025-12-08 12:08:51,351] INFO in app: === J.A. Uniforms Application Started ===
 [2025-12-08 14:00:31,866] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-08 14:03:05,443] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-08 14:03:35,954] ERROR in app: Error updating fabric vendor: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "fabric_vendors_vendor_code_key"
+DETAIL:  Key (vendor_code)=(F109) already exists.
+
+[SQL: UPDATE fabric_vendors SET vendor_code=%(vendor_code)s WHERE fabric_vendors.id = %(fabric_vendors_id)s]
+[parameters: {'vendor_code': 'F109', 'fabric_vendors_id': 12}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+[2025-12-08 14:15:46,747] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-08 14:45:43,001] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-08 14:50:04,237] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-08 14:53:55,460] INFO in app: === J.A. Uniforms Application Started ===
+[2025-12-09 09:15:10,710] INFO in app: === J.A. Uniforms Application Started ===

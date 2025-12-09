@@ -584,7 +584,70 @@ window.addEventListener('click', function(event) {
 console.log('✅ Master costs page JavaScript loaded with event delegation');
 
 // ============================================
-// COLUMN SORTING (NEW FEATURE)
+// NATURAL NUMBER SORTING HELPER
+// ============================================
+
+function naturalSort(aValue, bValue, ascending = true) {
+    // Extract prefix and number (e.g., F102 -> F, 102)
+    const aMatch = aValue.match(/^([A-Za-z]*)(\d+)$/);
+    const bMatch = bValue.match(/^([A-Za-z]*)(\d+)$/);
+    
+    if (aMatch && bMatch) {
+        // Compare prefix first
+        if (aMatch[1] !== bMatch[1]) {
+            const prefixCompare = aMatch[1].localeCompare(bMatch[1]);
+            return ascending ? prefixCompare : -prefixCompare;
+        }
+        // Same prefix - compare numbers
+        const aNum = parseInt(aMatch[2], 10);
+        const bNum = parseInt(bMatch[2], 10);
+        return ascending ? aNum - bNum : bNum - aNum;
+    }
+    
+    // Try numeric comparison for prices
+    const aNum = parseFloat(aValue.replace(/[$,%]/g, ''));
+    const bNum = parseFloat(bValue.replace(/[$,%]/g, ''));
+    
+    if (!isNaN(aNum) && !isNaN(bNum)) {
+        return ascending ? aNum - bNum : bNum - aNum;
+    }
+    
+    // Fallback to text comparison
+    return ascending ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+}
+
+// ============================================
+// AUTO-SORT TABLE FUNCTION
+// ============================================
+
+function autoSortTableByColumn(tableSelector, columnIndex, ascending = true) {
+    const table = document.querySelector(tableSelector);
+    if (!table) return;
+    
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+    
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    if (rows.length === 0) return;
+    
+    rows.sort((a, b) => {
+        const aCell = a.cells[columnIndex];
+        const bCell = b.cells[columnIndex];
+        
+        if (!aCell || !bCell) return 0;
+        
+        const aValue = aCell.textContent.trim();
+        const bValue = bCell.textContent.trim();
+        
+        return naturalSort(aValue, bValue, ascending);
+    });
+    
+    // Re-append sorted rows
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+// ============================================
+// COLUMN SORTING (CLICK HEADERS)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -617,28 +680,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const aValue = aCell.textContent.trim();
                 const bValue = bCell.textContent.trim();
 
-                // Extract numbers from codes like F1, F10, N101, etc.
-                const aMatch = aValue.match(/([A-Za-z]*)(\d+)/);
-                const bMatch = bValue.match(/([A-Za-z]*)(\d+)/);
-
-                if (aMatch && bMatch && aMatch[1] === bMatch[1]) {
-                    // Same prefix (e.g., both start with F) - sort by number
-                    const aNum = parseInt(aMatch[2], 10);
-                    const bNum = parseInt(bMatch[2], 10);
-                    return isAscending ? aNum - bNum : bNum - aNum;
-                }
-
-                // Numeric comparison for prices
-                const aNum = parseFloat(aValue.replace(/[$,%]/g, ''));
-                const bNum = parseFloat(bValue.replace(/[$,%]/g, ''));
-
-                if (!isNaN(aNum) && !isNaN(bNum)) {
-                    return isAscending ? aNum - bNum : bNum - aNum;
-                }
-                
-                return isAscending ? 
-                    bValue.localeCompare(aValue) : 
-                    aValue.localeCompare(bValue);
+                return naturalSort(aValue, bValue, !isAscending);
             });
             
             rows.forEach(row => tbody.appendChild(row));
@@ -648,6 +690,88 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+    
+    // ============================================
+    // AUTO-SORT ALL TABLES ON PAGE LOAD
+    // ============================================
+    
+    // Helper function to sort tbody by column
+    function sortTbodyByColumn(tbodyId, columnIndex) {
+        const tbody = document.getElementById(tbodyId);
+        if (!tbody) return false;
+        
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        if (rows.length === 0) return false;
+        
+        rows.sort((a, b) => {
+            const aCell = a.cells[columnIndex];
+            const bCell = b.cells[columnIndex];
+            if (!aCell || !bCell) return 0;
+            return naturalSort(aCell.textContent.trim(), bCell.textContent.trim(), true);
+        });
+        rows.forEach(row => tbody.appendChild(row));
+        console.log(`✅ Sorted ${tbodyId} by column ${columnIndex}`);
+        return true;
+    }
+    
+    // Helper function to sort table in section by column
+    function sortSectionTable(sectionId, columnIndex) {
+        const section = document.getElementById(sectionId);
+        if (!section) return false;
+        
+        const tbody = section.querySelector('tbody');
+        if (!tbody) return false;
+        
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        if (rows.length === 0) return false;
+        
+        rows.sort((a, b) => {
+            const aCell = a.cells[columnIndex];
+            const bCell = b.cells[columnIndex];
+            if (!aCell || !bCell) return 0;
+            return naturalSort(aCell.textContent.trim(), bCell.textContent.trim(), true);
+        });
+        rows.forEach(row => tbody.appendChild(row));
+        console.log(`✅ Sorted ${sectionId} by column ${columnIndex}`);
+        return true;
+    }
+    
+    // Sort Fabric Vendors by CODE (column 1)
+    sortSectionTable('fabric-vendors', 1);
+    
+    // Sort Notion Vendors by CODE (column 1)
+    // Notion Vendors doesn't have an ID, so find it by position (second vendor-card)
+    const vendorCards = document.querySelectorAll('.vendor-card');
+    if (vendorCards.length >= 2) {
+        const notionVendorCard = vendorCards[1]; // Second card is Notion Vendors
+        const tbody = notionVendorCard.querySelector('tbody');
+        if (tbody) {
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            rows.sort((a, b) => {
+                const aCell = a.cells[1]; // CODE column
+                const bCell = b.cells[1];
+                if (!aCell || !bCell) return 0;
+                return naturalSort(aCell.textContent.trim(), bCell.textContent.trim(), true);
+            });
+            rows.forEach(row => tbody.appendChild(row));
+            console.log('✅ Notion Vendors sorted');
+        }
+    }
+    
+    // Sort Fabrics by FABRIC CODE (column 1)
+    sortTbodyByColumn('fabricTable', 1);
+    
+    // Sort Notions by NAME (column 0)
+    sortTbodyByColumn('notionTable', 0);
+    
+    // Sort other sections
+    sortSectionTable('labor-section', 0);
+    sortSectionTable('cleaning-section', 0);
+    sortSectionTable('size-ranges-section', 0);
+    sortSectionTable('colors-section', 0);
+    sortSectionTable('variables-section', 0);
+    
+    console.log('✅ Tables auto-sorted by code/name on page load');
 });
 
 function refreshIcons() {
@@ -655,6 +779,7 @@ function refreshIcons() {
         feather.replace();
     }
 }
+
 // ============================================
 // SEARCH ICON TOGGLE
 // ============================================

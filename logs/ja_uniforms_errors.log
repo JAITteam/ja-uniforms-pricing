@@ -430,3 +430,11 @@ DETAIL:  Key (vendor_code)=(F103) already exists.
 [parameters: {'vendor_code': 'F103', 'fabric_vendors_id': 1}]
 (Background on this error at: https://sqlalche.me/e/20/gkpj)
 
+[2025-12-08 14:03:35,954] ERROR in C:\Users\it2\ja_uniforms_pricing\app.py:2487
+Error updating fabric vendor: (psycopg2.errors.UniqueViolation) duplicate key value violates unique constraint "fabric_vendors_vendor_code_key"
+DETAIL:  Key (vendor_code)=(F109) already exists.
+
+[SQL: UPDATE fabric_vendors SET vendor_code=%(vendor_code)s WHERE fabric_vendors.id = %(fabric_vendors_id)s]
+[parameters: {'vendor_code': 'F109', 'fabric_vendors_id': 12}]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+
