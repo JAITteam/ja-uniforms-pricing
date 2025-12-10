@@ -731,7 +731,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sp=+($('#suggested_price')?.value||0);
     if (sp > 0 && total > 0) {
       const sugg = Math.max(0, Math.min(95, ((sp - total) / sp) * 100));
-      $('#suggested_margin').value = sugg.toFixed(0);
+      $('#suggested_margin').value = sugg.toFixed(1);
     } else {
       $('#suggested_margin').value = '';
     }
@@ -765,7 +765,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
     if (sp > 0 && total > 0) {
       const margin = ((sp - total) / sp) * 100;
-      $('#suggested_margin').value = Math.max(0, Math.min(95, margin)).toFixed(0);
+      $('#suggested_margin').value = Math.max(0, Math.min(95, margin)).toFixed(1);
     }
   });
   

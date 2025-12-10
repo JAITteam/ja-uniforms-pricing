@@ -257,7 +257,11 @@ class Style(db.Model):
         label_setting = GlobalSetting.query.filter_by(setting_key='avg_label_cost').first()
         label_cost = label_setting.setting_value if label_setting else 0.20
         
-        return self.get_total_fabric_cost() + self.get_total_notion_cost() + self.get_total_labor_cost() + label_cost
+        # Include shipping cost from global settings
+        shipping_setting = GlobalSetting.query.filter_by(setting_key='shipping_cost').first()
+        shipping_cost = shipping_setting.setting_value if shipping_setting else 0.00
+
+        return self.get_total_fabric_cost() + self.get_total_notion_cost() + self.get_total_labor_cost() + label_cost + shipping_cost
     
     def get_retail_price(self, size_multiplier=1.0):
         base_cost = self.get_total_cost() * size_multiplier

@@ -3334,14 +3334,15 @@ def style_wizard():
     fabrics = Fabric.query.order_by(Fabric.name).all()
     notions = Notion.query.order_by(Notion.name).all()
     # Get labor operations in the order you want them displayed
+    # Get labor operations in the order you want them displayed
     labor_ops=[]
-    fusion = LaborOperation.query.filter_by(name='FUSION').first()
+    fusion = LaborOperation.query.filter(LaborOperation.name.ilike('%fus%')).first()
     if fusion: labor_ops.append(fusion)
-    marker = LaborOperation.query.filter_by(name='Marker+Cut').first()
+    marker = LaborOperation.query.filter(LaborOperation.name.ilike('%marker%')).first()
     if marker: labor_ops.append(marker)
-    sewing = LaborOperation.query.filter_by(name='Sewing').first()
+    sewing = LaborOperation.query.filter(LaborOperation.name.ilike('%sewing%')).first()
     if sewing: labor_ops.append(sewing)
-    button = LaborOperation.query.filter_by(name='Button/Snap/Grommet').first()
+    button = LaborOperation.query.filter(LaborOperation.name.ilike('%button%')).first()
     if button: labor_ops.append(button)
     garment_types = [cc.garment_type for cc in CleaningCost.query.order_by(CleaningCost.garment_type).all()]
     size_ranges = SizeRange.query.order_by(SizeRange.name).all()
@@ -3384,17 +3385,16 @@ def style_view():
     notion_vendors = NotionVendor.query.order_by(NotionVendor.name).all()
     fabrics = Fabric.query.order_by(Fabric.name).all()
     notions = Notion.query.order_by(Notion.name).all()
-    
+
     labor_ops = []
-    fusion = LaborOperation.query.filter_by(name='FUSION').first()
+    fusion = LaborOperation.query.filter(LaborOperation.name.ilike('%fus%')).first()
     if fusion: labor_ops.append(fusion)
-    marker = LaborOperation.query.filter_by(name='Marker+Cut').first()
+    marker = LaborOperation.query.filter(LaborOperation.name.ilike('%marker%')).first()
     if marker: labor_ops.append(marker)
-    sewing = LaborOperation.query.filter_by(name='Sewing').first()
+    sewing = LaborOperation.query.filter(LaborOperation.name.ilike('%sewing%')).first()
     if sewing: labor_ops.append(sewing)
-    button = LaborOperation.query.filter_by(name='Button/Snap/Grommet').first()
+    button = LaborOperation.query.filter(LaborOperation.name.ilike('%button%')).first()
     if button: labor_ops.append(button)
-    
     garment_types = [cc.garment_type for cc in CleaningCost.query.order_by(CleaningCost.garment_type).all()]
     size_ranges = SizeRange.query.order_by(SizeRange.name).all()
     
