@@ -136,7 +136,7 @@ setup_logging(app)
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"],
+    default_limits=["2000 per day", "500 per hour"],
     storage_uri="memory://"
 )
 app.config.from_object(Config)
@@ -3816,7 +3816,7 @@ def api_style_by_vendor_style():
 # with this validated version
 
 @app.post("/api/style/save")
-@limiter.limit("20 per minute")
+@limiter.limit("60 per minute")
 @admin_required 
 def api_style_save():
     """
