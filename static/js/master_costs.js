@@ -16,6 +16,17 @@ window.masterCostsData = masterCostsData;
 let currentEditType = '';
 let currentEditId = null;
 
+// Auto-calculate cleaning cost from minutes
+function calculateCleaningCost() {
+    const masterData = JSON.parse(document.getElementById('master-costs-data').textContent);
+    const cleaningRate = masterData.cleaningCostPerMinute || 0.32;
+    const minutes = parseFloat(document.getElementById('avg_minutes')?.value) || 0;
+    const fixedCostInput = document.getElementById('fixed_cost');
+    if (fixedCostInput && minutes > 0) {
+        fixedCostInput.value = (minutes * cleaningRate).toFixed(2);
+    }
+}
+
 // Get vendor options from injected data
 const fabricVendorOptions = masterCostsData.fabricVendors
     .map(v => `<option value="${v.id}">${v.name}</option>`)
@@ -143,21 +154,24 @@ function openModal(type, id = null) {
             </div>
         `;
     } else if (type === 'cleaning') {
+        // Get cleaning cost per minute from data
+        const masterData = JSON.parse(document.getElementById('master-costs-data').textContent);
+        const cleaningRate = masterData.cleaningCostPerMinute || 0.32;
+        
         formHtml = `
             <div class="form-group">
                 <label>Garment Type *</label>
-                <input type="text" id="garment_type" required placeholder="e.g., SS TOP/SS DRESS" style="text-transform: uppercase;">
-                <small style="color: #666;">Enter any garment type description</small>
+                <input type="text" id="garment_type" required placeholder="e.g., SS TOP/ SS DRESS">
             </div>
             <div class="form-group">
                 <label>Average Minutes *</label>
-                <input type="number" id="avg_minutes" required placeholder="e.g., 5">
-                <small style="color: #666;">Based on $0.32/minute</small>
+                <input type="number" id="avg_minutes" required placeholder="e.g., 5" oninput="calculateCleaningCost()">
+                <small style="color: #666;">Based on $${cleaningRate.toFixed(2)}/minute</small>
             </div>
             <div class="form-group">
                 <label>Fixed Cost *</label>
                 <input type="number" id="fixed_cost" step="0.01" required placeholder="e.g., 1.60">
-                <small style="color: #666;">Will be calculated: Minutes × $0.32</small>
+                <small style="color: #666;">Will be calculated: Minutes × $${cleaningRate.toFixed(2)}</small>
             </div>
         `;
     } else if (type === 'color') {
@@ -341,7 +355,6 @@ function saveModal() {
         showNotification('Save failed: ' + error.message, 'error');
     });
 }
-
 function loadItemData(type, id) {
     const endpoint = type.replace(/_/g, '-');
     
@@ -357,6 +370,17 @@ function loadItemData(type, id) {
             
             if (type === 'labor') {
                 updateLaborFields();
+            }
+            
+            // Special handling for cleaning - calculate minutes from fixed_cost
+            if (type === 'cleaning' && data.fixed_cost) {
+                const masterData = JSON.parse(document.getElementById('master-costs-data').textContent);
+                const cleaningRate = masterData.cleaningCostPerMinute || 0.32;
+                const minutes = Math.round(data.fixed_cost / cleaningRate);
+                const avgMinutesInput = document.getElementById('avg_minutes');
+                if (avgMinutesInput) {
+                    avgMinutesInput.value = minutes;
+                }
             }
         })
         .catch(error => {

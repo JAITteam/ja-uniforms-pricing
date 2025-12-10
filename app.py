@@ -1413,10 +1413,17 @@ def api_global_setting_detail(setting_id):
                 if error:
                     return jsonify({'success': False, 'error': error}), 400
                 setting.setting_value = value
-            
+                
+                # Auto-update cleaning costs when rate changes
+                if setting.setting_key == 'cleaning_cost_per_minute':
+                    cleaning_costs = CleaningCost.query.all()
+                    for cc in cleaning_costs:
+                        cc.fixed_cost = cc.avg_minutes * value
+                    app.logger.info(f"Updated {len(cleaning_costs)} cleaning costs with new rate ${value}/min")
+
             if 'description' in data:
                 setting.description = data.get('description', '').strip() if data.get('description') else None
-            
+
             db.session.commit()
             return jsonify({'success': True})
         except Exception as e:
@@ -2457,19 +2464,25 @@ def master_costs():
     colors = Color.query.order_by(Color.name).all()
     variables = Variable.query.order_by(Variable.name).all()
     size_ranges = SizeRange.query.order_by(SizeRange.name).all()
+    
     global_settings = GlobalSetting.query.all()
     
+    # Get cleaning cost per minute for the modal
+    cleaning_rate_setting = GlobalSetting.query.filter_by(setting_key='cleaning_cost_per_minute').first()
+    cleaning_cost_per_minute = cleaning_rate_setting.setting_value if cleaning_rate_setting else 0.32
+
     return render_template('master_costs.html',
                          fabrics=fabrics,
                          notions=notions,
-                         labor_costs=labor_ops,  # ← CHANGED THIS LINE
+                         labor_costs=labor_ops, 
                          cleaning_costs=cleaning_costs,
                          fabric_vendors=fabric_vendors,
                          notion_vendors=notion_vendors,
                          colors=colors,
                          variables=variables,
                          size_ranges=size_ranges,
-                         global_settings=global_settings)
+                         global_settings=global_settings,
+                         cleaning_cost_per_minute=cleaning_cost_per_minute)
 
 # ===== API ENDPOINTS FOR MASTER COSTS =====
 
@@ -3880,15 +3893,15 @@ def api_style_save():
         valid, margin = validate_percentage(margin, "Margin")
         if not valid:
             return jsonify({"error": margin}), 400
-        
-        # Validate suggested price - REQUIRED
+    
+        # Validate suggested price - OPTIONAL (defaults to 60% margin calculation)
         suggested_price = s.get("suggested_price")
-        if not suggested_price:
-            return jsonify({"error": "Suggested Price is required"}), 400
-        
-        suggested_price, error = validate_positive_number(suggested_price, "Suggested Price", allow_zero=False)
-        if error:
-            return jsonify({"error": error}), 400
+        if suggested_price:
+            suggested_price, error = validate_positive_number(suggested_price, "Suggested Price", allow_zero=False)
+            if error:
+                return jsonify({"error": error}), 400
+        else:
+            suggested_price = None  # Will be calculated after costs are known
         
         # ===== STEP 4: VALIDATE FABRIC DATA =====
         fabrics_data = data.get("fabrics") or []
@@ -3922,15 +3935,6 @@ def api_style_save():
         style.size_range = (s.get("size_range") or None)
         style.notes = (s.get("notes") or None)
         style.suggested_price = suggested_price
-        
-        # Calculate actual margin from suggested_price for View All Styles
-        total_cost = style.get_total_cost()
-        if suggested_price and suggested_price > 0 and total_cost > 0:
-            calculated_margin = ((suggested_price - total_cost) / suggested_price) * 100
-            style.base_margin_percent = round(calculated_margin, 2)
-        else:
-            style.base_margin_percent = margin  # fallback to default
-        
         db.session.add(style)
         db.session.flush()
         
@@ -4088,10 +4092,28 @@ def api_style_save():
                 
                 sv = StyleVariable(style_id=style.id, variable_id=variable.id)
                 db.session.add(sv)
-    
+        
+        # ===== STEP 12.5: RECALCULATE MARGIN WITH ACTUAL COSTS =====
+        db.session.flush()  # Ensure all relationships are saved
+        total_cost = style.get_total_cost()
+        
+        if suggested_price and suggested_price > 0 and total_cost > 0:
+            # User provided a sale price - calculate actual margin
+            calculated_margin = ((suggested_price - total_cost) / suggested_price) * 100
+            style.base_margin_percent = round(calculated_margin, 2)
+            style.suggested_price = suggested_price
+        elif total_cost > 0:
+            # No sale price provided - default to 60% margin
+            style.base_margin_percent = 60.0
+            style.suggested_price = round(total_cost / (1 - 0.60), 2)
+        else:
+            # No costs yet - use defaults
+            style.base_margin_percent = margin if margin else 60.0
+            style.suggested_price = suggested_price if suggested_price else 0
 
         # ===== STEP 13: COMMIT ALL CHANGES =====
         db.session.commit()
+    
         
         # Return appropriate message
         if is_new:

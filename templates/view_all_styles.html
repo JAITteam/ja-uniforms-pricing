@@ -893,11 +893,11 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
                     <td><strong>${{ "%.2f"|format(style.get_total_cost()) }}</strong></td>
                     <td>
                         {% if style.base_margin_percent >= 65 %}
-                        <span style="font-weight: 700; color: #059669;">{{ style.base_margin_percent|int }}%</span>
+                        <span style="font-weight: 700; color: #059669;">{{ style.base_margin_percent|round(1) }}%</span>
                         {% elif style.base_margin_percent >= 50 %}
-                        <span style="font-weight: 700; color: #3b82f6;">{{ style.base_margin_percent|int }}%</span>
+                        <span style="font-weight: 700; color: #3b82f6;">{{ style.base_margin_percent|round(1) }}%</span>
                         {% else %}
-                        <span style="font-weight: 700; color: #dc2626;">{{ style.base_margin_percent|int }}%</span>
+                        <span style="font-weight: 700; color: #dc2626;">{{ style.base_margin_percent|round(1) }}%</span>
                         {% endif %}
                     </td>
                     <td>

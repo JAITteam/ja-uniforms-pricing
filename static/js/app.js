@@ -1064,22 +1064,7 @@ updateSizeRangeDisplay();
       $('#margin')?.focus();
       return;
     }
-    
-    // ===== STEP 3.5: VALIDATE SUGGESTED PRICE (REQUIRED) =====
-    const suggestedPrice = parseFloat($('#suggested_price')?.value) || 0;
-    if (!suggestedPrice || suggestedPrice <= 0) {
-      await customAlert('Suggested Price is required and must be greater than 0', 'error');
-      $('#suggested_price')?.focus();
-      return;
-    }
-    
-    // ===== STEP 3.6: VALIDATE SUGGESTED MARGIN =====
-    const suggestedMargin = parseFloat($('#suggested_margin')?.value) || 0;
-    if (!suggestedMargin || suggestedMargin <= 0) {
-      await customAlert('Margin (from Suggested Price) is required. Please enter a Suggested Price first.', 'error');
-      $('#suggested_price')?.focus();
-      return;
-    }
+
     
     // ===== STEP 4: VALIDATE FIRST FABRIC ROW =====
     

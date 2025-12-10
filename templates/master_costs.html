@@ -680,10 +680,10 @@
             {% for v in notion_vendors %}
             {"id": {{ v.id }}, "name": {{ v.name|tojson }}}{% if not loop.last %},{% endif %}
             {% endfor %}
-        ]
+        ],
+        "cleaningCostPerMinute": {{ cleaning_cost_per_minute }}
     }
     </script>
-
 {% endblock %}
 
 {% block extra_js %}
