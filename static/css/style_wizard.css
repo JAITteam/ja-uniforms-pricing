@@ -1,0 +1,329 @@
+/* ============================================
+   STYLE WIZARD - CLEAN MODERN DESIGN
+   ============================================ */
+
+/* === PAGE BACKGROUND === */
+body {
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;
+    min-height: 100vh;
+}
+
+/* === FIX ALL OVERFLOW ISSUES === */
+.panel,
+.panel *,
+.pb,
+.pb *,
+.kv,
+.kv *,
+.toolbar,
+.toolbar *,
+.snapshot,
+.snapshot * {
+    overflow: visible !important;
+}
+
+/* === TOOLBAR === */
+.toolbar {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+    border-radius: 12px !important;
+    padding: 1rem 1.5rem !important;
+    margin-bottom: 1.5rem !important;
+}
+
+/* === PANEL CARDS === */
+.panel {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+    margin-bottom: 1.5rem !important;
+}
+
+.panel:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* === PANEL HEADERS === */
+.ph {
+    background: #f8fafc !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    color: #374151 !important;
+    padding: 1rem 1.5rem !important;
+    font-weight: 600 !important;
+    font-size: 0.8rem !important;
+    letter-spacing: 0.5px !important;
+    text-transform: uppercase !important;
+    position: relative !important;
+    border-radius: 16px 16px 0 0 !important;
+}
+
+/* Colored left accent bar */
+.ph::before {
+    content: '' !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: 4px !important;
+    background: #3b82f6 !important;
+    border-radius: 16px 0 0 0 !important;
+}
+
+#materialsPanel .ph::before {
+    background: #10b981 !important;
+}
+
+#laborPanel .ph::before {
+    background: #f59e0b !important;
+}
+
+/* Panel Body */
+.pb {
+    padding: 1.5rem !important;
+    background: #ffffff !important;
+    border-radius: 0 0 16px 16px !important;
+}
+
+/* === SNAPSHOT PANEL === */
+.snapshot {
+    background: #ffffff !important;
+    border: 2px solid #3b82f6 !important;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15) !important;
+}
+
+.snapshot .ph {
+    background: #3b82f6 !important;
+    color: #ffffff !important;
+    border-bottom: none !important;
+}
+
+.snapshot .ph::before {
+    display: none !important;
+}
+
+.snapshot .pb {
+    background: #ffffff !important;
+    padding: 1.25rem !important;
+}
+
+.snapshot #snap_vendor_style {
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    color: #1f2937 !important;
+}
+
+.snapshot #snap_style {
+    color: #6b7280 !important;
+    font-size: 0.875rem !important;
+}
+
+.snapshot .sumline {
+    background: #f9fafb !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    padding: 0.75rem 1rem !important;
+    margin-top: 0.5rem !important;
+}
+
+.snapshot .sumline span {
+    color: #4b5563 !important;
+    font-weight: 500 !important;
+    font-size: 0.8rem !important;
+}
+
+.snapshot .sumline strong {
+    color: #1f2937 !important;
+    font-size: 1.1rem !important;
+    font-weight: 600 !important;
+}
+
+/* Total cost row */
+.snapshot .sumline:last-of-type {
+    background: #eff6ff !important;
+    border: 2px solid #3b82f6 !important;
+    margin-top: 0.75rem !important;
+}
+
+.snapshot .sumline:last-of-type span {
+    color: #1e40af !important;
+    font-weight: 600 !important;
+}
+
+.snapshot .sumline:last-of-type strong,
+.snapshot #snap_total {
+    color: #1e40af !important;
+    font-size: 1.4rem !important;
+    font-weight: 700 !important;
+}
+
+.snapshot hr {
+    border: none !important;
+    height: 1px !important;
+    background: #e5e7eb !important;
+    margin: 0.75rem 0 !important;
+}
+
+/* === SUM LINES (Materials/Labor totals) === */
+.sumline {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 0.875rem 1rem !important;
+    background: #f9fafb !important;
+    border-radius: 8px !important;
+    margin-top: 1rem !important;
+    border: 1px solid #e5e7eb !important;
+}
+
+.sumline span {
+    font-weight: 600 !important;
+    color: #374151 !important;
+    font-size: 0.85rem !important;
+    text-transform: uppercase !important;
+}
+
+.sumline strong {
+    font-size: 1.15rem !important;
+    font-weight: 600 !important;
+    color: #111827 !important;
+}
+
+/* === FORM INPUTS === */
+.form-control, .form-select {
+    background: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 8px !important;
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    color: #111827 !important;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+    outline: none !important;
+}
+
+.form-control:disabled, .form-control[readonly] {
+    background: #f9fafb !important;
+    color: #374151 !important;
+    border-color: #e5e7eb !important;
+}
+
+/* === KEY-VALUE ROWS === */
+.kv {
+    display: flex !important;
+    gap: 0.75rem !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    padding: 0.75rem 0 !important;
+    border-bottom: 1px solid #f3f4f6 !important;
+}
+
+.kv:last-child {
+    border-bottom: none !important;
+}
+
+.kv label {
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    color: #374151 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.3px !important;
+}
+
+/* === LINK-LIKE BUTTONS === */
+.linklike {
+    color: #3b82f6 !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    padding: 0.375rem 0.75rem !important;
+    border-radius: 6px !important;
+    background: transparent !important;
+}
+
+.linklike:hover {
+    background: #eff6ff !important;
+}
+
+/* === BUTTONS === */
+.btn-primary {
+    background: #3b82f6 !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+}
+
+.btn-primary:hover {
+    background: #2563eb !important;
+}
+
+.btn-outline-secondary {
+    background: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 8px !important;
+    color: #374151 !important;
+}
+
+.btn-success {
+    background: #10b981 !important;
+    border: none !important;
+}
+
+.btn-danger {
+    background: #ef4444 !important;
+    border: none !important;
+    border-radius: 6px !important;
+}
+
+/* === IMAGE SECTION === */
+.image-section {
+    background: #f9fafb !important;
+    border: 2px dashed #d1d5db !important;
+    border-radius: 12px !important;
+    padding: 1rem !important;
+}
+
+#imageGallery {
+    border: none !important;
+    background: transparent !important;
+}
+
+.add-image-box {
+    background: #ffffff !important;
+    border: 2px dashed #d1d5db !important;
+    border-radius: 8px !important;
+}
+
+.add-image-box:hover {
+    border-color: #3b82f6 !important;
+    background: #eff6ff !important;
+}
+
+/* === MULTI-SELECT === */
+select[multiple] {
+    background: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 8px !important;
+}
+
+/* === TEXTAREA === */
+textarea.form-control {
+    border-radius: 8px !important;
+    min-height: 80px !important;
+}
+
+/* === STICKY SIDEBAR === */
+.right-sticky {
+    position: sticky !important;
+    top: 100px !important;
+}
+
+@media (max-width: 992px) {
+    .right-sticky {
+        position: static !important;
+    }
+}
