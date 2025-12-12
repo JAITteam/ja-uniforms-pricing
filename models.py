@@ -220,6 +220,9 @@ class Style(db.Model):
             # Add $6 sublimation upcharge if checked
             if sf.is_sublimation:
                 base_cost += 6.00 * sf.yards_required
+            # Add fabric vendor shipping cost
+            if sf.fabric.fabric_vendor and sf.fabric.fabric_vendor.f_ship_cost:
+                base_cost += sf.fabric.fabric_vendor.f_ship_cost
             total += base_cost
         return round(total, 2)
         

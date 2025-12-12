@@ -2527,7 +2527,31 @@ def api_fabric_vendor_detail(vendor_id):
                 vendor.f_ship_cost = float(data.get('f_ship_cost') or 0.0)
             
             db.session.commit()
-            
+
+            # Auto-update all styles using this vendor's fabrics
+            if 'f_ship_cost' in data:
+                # Find all fabrics from this vendor
+                fabrics = Fabric.query.filter_by(fabric_vendor_id=vendor.id).all()
+                fabric_ids = [f.id for f in fabrics]
+                
+                if fabric_ids:
+                    # Find all styles using these fabrics
+                    affected_style_ids = db.session.query(StyleFabric.style_id).filter(
+                        StyleFabric.fabric_id.in_(fabric_ids)
+                    ).distinct().all()
+                    
+                    for (style_id,) in affected_style_ids:
+                        style = Style.query.get(style_id)
+                        if style and style.base_margin_percent:
+                            # Recalculate suggested_price based on new cost and stored margin
+                            new_cost = style.get_total_cost()
+                            margin = style.base_margin_percent / 100.0
+                            if margin < 1:  # Prevent division by zero
+                                style.suggested_price = round(new_cost / (1 - margin), 2)
+                    
+                    db.session.commit()
+                    app.logger.info(f"Auto-updated {len(affected_style_ids)} styles after f_ship_cost change for vendor {vendor.name}")
+ 
             # Log the update
             log_audit(
                 action='UPDATE',
@@ -2749,7 +2773,22 @@ def api_fabric_detail(fabric_id):
                 cost, error = validate_positive_number(data.get('cost_per_yard'), 'Cost per yard')
                 if error:
                     return jsonify({'success': False, 'error': error}), 400
+                old_cost = fabric.cost_per_yard
                 fabric.cost_per_yard = cost
+                
+                # Auto-update styles if cost changed
+                if old_cost != cost:
+                    affected_style_ids = db.session.query(StyleFabric.style_id).filter(
+                        StyleFabric.fabric_id == fabric.id
+                    ).distinct().all()
+                    
+                    for (style_id,) in affected_style_ids:
+                        style = Style.query.get(style_id)
+                        if style and style.base_margin_percent:
+                            new_cost = style.get_total_cost()
+                            margin = style.base_margin_percent / 100.0
+                            if margin < 1:
+                                style.suggested_price = round(new_cost / (1 - margin), 2)
             
             if 'fabric_vendor_id' in data:
                 fabric.fabric_vendor_id = data.get('fabric_vendor_id')
@@ -2951,7 +2990,22 @@ def api_notion_detail(notion_id):
                 cost, error = validate_positive_number(data.get('cost_per_unit'), 'Cost per unit')
                 if error:
                     return jsonify({'success': False, 'error': error}), 400
+                old_cost = notion.cost_per_unit
                 notion.cost_per_unit = cost
+                
+                # Auto-update styles if cost changed
+                if old_cost != cost:
+                    affected_style_ids = db.session.query(StyleNotion.style_id).filter(
+                        StyleNotion.notion_id == notion.id
+                    ).distinct().all()
+                    
+                    for (style_id,) in affected_style_ids:
+                        style = Style.query.get(style_id)
+                        if style and style.base_margin_percent:
+                            new_cost = style.get_total_cost()
+                            margin = style.base_margin_percent / 100.0
+                            if margin < 1:
+                                style.suggested_price = round(new_cost / (1 - margin), 2)
             
             if 'notion_vendor_id' in data:
                 notion.notion_vendor_id = data.get('notion_vendor_id')
@@ -3131,7 +3185,22 @@ def api_labor_detail(labor_id):
                 cost, error = validate_positive_number(data.get('fixed_cost'), 'Fixed cost', required=False)
                 if error:
                     return jsonify({'success': False, 'error': error}), 400
+                old_cost = labor.fixed_cost
                 labor.fixed_cost = cost
+                
+                # Auto-update styles if cost changed
+                if old_cost != cost:
+                    affected_style_ids = db.session.query(StyleLabor.style_id).filter(
+                        StyleLabor.labor_operation_id == labor.id
+                    ).distinct().all()
+                    
+                    for (style_id,) in affected_style_ids:
+                        style = Style.query.get(style_id)
+                        if style and style.base_margin_percent:
+                            new_cost = style.get_total_cost()
+                            margin = style.base_margin_percent / 100.0
+                            if margin < 1:
+                                style.suggested_price = round(new_cost / (1 - margin), 2)
             
             if 'cost_per_hour' in data:
                 cost, error = validate_positive_number(data.get('cost_per_hour'), 'Cost per hour', required=False)
@@ -3265,7 +3334,20 @@ def api_cleaning_detail(cleaning_id):
                 cost, error = validate_positive_number(data.get('fixed_cost'), 'Fixed cost')
                 if error:
                     return jsonify({'success': False, 'error': error}), 400
+                old_cost = cleaning.fixed_cost
                 cleaning.fixed_cost = cost
+                
+                # Auto-update styles if cost changed
+                if old_cost != cost:
+                    # Find styles with this garment type
+                    affected_styles = Style.query.filter_by(garment_type=cleaning.garment_type).all()
+                    
+                    for style in affected_styles:
+                        if style.base_margin_percent:
+                            new_cost = style.get_total_cost()
+                            margin = style.base_margin_percent / 100.0
+                            if margin < 1:
+                                style.suggested_price = round(new_cost / (1 - margin), 2)
             
             if 'avg_minutes' in data:
                 minutes, error = validate_positive_integer(data.get('avg_minutes'), 'Average minutes')

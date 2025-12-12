@@ -864,7 +864,8 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
             </thead>
             <tbody id="tableBody">
                 {% for style in styles %}
-                <tr class="{% if style.base_margin_percent >= 65 %}margin-high{% elif style.base_margin_percent >= 50 %}margin-medium{% else %}margin-low{% endif %}"
+                {% set actual_margin = ((style.suggested_price - style.get_total_cost()) / style.suggested_price * 100) if style.suggested_price and style.suggested_price > 0 else style.base_margin_percent %}
+                <tr class="{% if actual_margin >= 65 %}margin-high{% elif actual_margin >= 50 %}margin-medium{% else %}margin-low{% endif %}"
                     data-id="{{ style.id }}"
                     data-vendor-style="{{ style.vendor_style }}"
                     data-vendor-style-lower="{{ style.vendor_style|lower }}"
@@ -872,7 +873,7 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
                     data-style-name-lower="{{ style.style_name|lower }}"
                     data-gender="{{ style.gender }}"
                     data-cost="{{ style.get_total_cost() }}"
-                    data-margin="{{ style.base_margin_percent }}"
+                    data-margin="{{ actual_margin|round(1) }}"
                     data-updated="{{ style.updated_at.isoformat() if style.updated_at else '' }}"
                     data-favorite="{{ 'true' if style.is_favorite else 'false' }}"
                     data-visible="true">
@@ -892,12 +893,12 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
                     <td>{{ style.gender }}</td>
                     <td><strong>${{ "%.2f"|format(style.get_total_cost()) }}</strong></td>
                     <td>
-                        {% if style.base_margin_percent >= 65 %}
-                        <span style="font-weight: 700; color: #059669;">{{ style.base_margin_percent|round(1) }}%</span>
-                        {% elif style.base_margin_percent >= 50 %}
-                        <span style="font-weight: 700; color: #3b82f6;">{{ style.base_margin_percent|round(1) }}%</span>
+                        {% if actual_margin >= 65 %}
+                        <span style="font-weight: 700; color: #059669;">{{ actual_margin|round(1) }}%</span>
+                        {% elif actual_margin >= 50 %}
+                        <span style="font-weight: 700; color: #3b82f6;">{{ actual_margin|round(1) }}%</span>
                         {% else %}
-                        <span style="font-weight: 700; color: #dc2626;">{{ style.base_margin_percent|round(1) }}%</span>
+                        <span style="font-weight: 700; color: #dc2626;">{{ actual_margin|round(1) }}%</span>
                         {% endif %}
                     </td>
                     <td>
@@ -1060,9 +1061,10 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
 
     function init() {
         bindEvents();
-        sortTable("updated_at");
+        // Force descending sort on updated_at
+        currentSort = { column: "", direction: "" };
+        sortTable("updated_at", "desc");
     }
-
     function bindEvents() {
         document.getElementById("searchInput").addEventListener("keyup", applyFilters);
         document.getElementById("genderFilter").addEventListener("change", applyFilters);
@@ -1302,18 +1304,20 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
         }
     }
 
-    function sortTable(column) {
+    function sortTable(column, forceDirection) {
         var table = document.getElementById("stylesTable");
         var tbody = table.querySelector("tbody");
         var rows = Array.from(tbody.querySelectorAll("tr"));
         
-        if (currentSort.column === column) {
+        if (forceDirection) {
+            currentSort.column = column;
+            currentSort.direction = forceDirection;
+        } else if (currentSort.column === column) {
             currentSort.direction = currentSort.direction === "asc" ? "desc" : "asc";
         } else {
             currentSort.column = column;
             currentSort.direction = "asc";
         }
-        
         table.querySelectorAll("th").forEach(function(th) {
             th.classList.remove("sort-asc", "sort-desc");
         });

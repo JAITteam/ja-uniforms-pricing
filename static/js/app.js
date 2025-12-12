@@ -194,6 +194,7 @@ window.confirm = window.customConfirm;
                 set('#gender', s.gender);
                 set('#garment_type', s.garment_type);
                 set('#margin', 60);  // Always default to 60% for estimation
+                set('#suggested_margin', s.margin || 60);
                 set('#suggested_price', s.suggested_price);
                 set('#notes', s.notes);
                 
@@ -700,7 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const labels = +($('#label_cost')?.value || 0);
     const shipping = +($('#shipping_cost')?.value || 0);
-    const materials = fabricTotal + notionTotal + labels;
+    const materials = fabricTotal + notionTotal + labels+ totalFShip;
     
     setText('#sumMaterials', fmt(materials));
     setText('#snap_mat', fmt(materials));
@@ -747,12 +748,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const m=Math.max(0,Math.min(95,+($('#margin')?.value||60)));
     const retail= total ? (total/(1-(m/100))) : 0; 
     if ($('#retail_price')) $('#retail_price').value = retail ? fmt(retail) : '';
-    const sp=+($('#suggested_price')?.value||0);
-    if (sp > 0 && total > 0) {
-      const sugg = Math.max(0, Math.min(95, ((sp - total) / sp) * 100));
-      $('#suggested_margin').value = sugg.toFixed(1);
-    } else {
-      $('#suggested_margin').value = '';
+    const margin = +($('#suggested_margin')?.value || 0);
+    if (margin > 0 && total > 0) {
+      const sp = total / (1 - (margin / 100));
+      $('#suggested_price').value = sp.toFixed(2);
+    } else if (total > 0) {
+      // Default to 60% margin if none set
+      const sp = total / (1 - 0.60);
+      $('#suggested_price').value = sp.toFixed(2);
+      $('#suggested_margin').value = '60.0';
     }
   }
 
@@ -901,8 +905,9 @@ document.addEventListener('DOMContentLoaded', () => {
     set('#garment_type', s.garment_type);
     //set('#size_range', s.size_range);
     set('#margin', 60);  // Always default to 60% for estimation purposes
-    set('#label_cost', s.label_cost || 0.20);
+    set('#suggested_margin', s.margin || 60); 
     set('#shipping_cost', s.shipping_cost || 0.00);
+    set('#label_cost', s.label_cost || 0.20);
     set('#suggested_price', s.suggested_price || '');
     set('#notes', s.notes || '');
     setText('#snap_vendor_style', s.vendor_style || $('#vendor_style')?.value || '(vendor style)');
