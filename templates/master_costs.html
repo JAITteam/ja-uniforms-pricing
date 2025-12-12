@@ -100,6 +100,7 @@
                                 <tr>
                                     <th data-sort="name">Name <i data-feather="arrow-up-down" class="sort-icon"></i></th>
                                     <th data-sort="code">Code <i data-feather="arrow-up-down" class="sort-icon"></i></th>
+                                    <th>F.Ship</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -107,6 +108,7 @@
                                 <tr data-id="{{ vendor.id }}">
                                     <td>{{ vendor.name }}</td>
                                     <td>{{ vendor.vendor_code or '' }}</td>
+                                    <td>${{ "%.2f"|format(vendor.f_ship_cost or 0) }}</td>
                                     {% if current_user.is_admin() %}
                             {% if current_user.is_admin() %}
                             <td class="actions-cell">

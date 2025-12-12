@@ -2502,7 +2502,8 @@ def api_fabric_vendor_detail(vendor_id):
         return jsonify({
             'id': vendor.id,
             'name': vendor.name,
-            'vendor_code': vendor.vendor_code
+            'vendor_code': vendor.vendor_code,
+            'f_ship_cost': vendor.f_ship_cost or 0.0
         })
     
     elif request.method == 'PUT':
@@ -2521,6 +2522,9 @@ def api_fabric_vendor_detail(vendor_id):
             
             if 'vendor_code' in data:
                 vendor.vendor_code = data.get('vendor_code', '').strip() if data.get('vendor_code') else None
+
+            if 'f_ship_cost' in data:
+                vendor.f_ship_cost = float(data.get('f_ship_cost') or 0.0)
             
             db.session.commit()
             
@@ -2578,7 +2582,8 @@ def api_add_fabric_vendor():
         
         vendor = FabricVendor(
             name=name,
-            vendor_code=data.get('vendor_code', '').strip() if data.get('vendor_code') else None
+            vendor_code=data.get('vendor_code', '').strip() if data.get('vendor_code') else None,
+            f_ship_cost=float(data.get('f_ship_cost') or 0.0)
         )
         db.session.add(vendor)
         db.session.commit()

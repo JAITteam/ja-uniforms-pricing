@@ -65,6 +65,10 @@ function openModal(type, id = null) {
                 <label>Vendor Code *</label>
                 <input type="text" id="vendor_code" required placeholder="e.g., F101">
             </div>
+            <div class="form-group">
+                <label>Shipping Cost (per yard)</label>
+                <input type="number" id="f_ship_cost" step="0.01" min="0" placeholder="e.g., 0.50" value="0.00">
+            </div>
         `;
     } else if (type === 'notion_vendor') {
         formHtml = `

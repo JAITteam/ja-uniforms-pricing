@@ -244,10 +244,16 @@ window.confirm = window.customConfirm;
                                 if (opt.text === f.name) fabricSelect.value = opt.value;
                             });
                         }
-                        
                         if (yardsInput) yardsInput.value = f.yards || '';
                         if (costInput) costInput.value = f.cost_per_yard || '';
                         if (sublimationCheckbox) sublimationCheckbox.checked = f.sublimation || false;
+                        
+                        // Set F.Ship from vendor
+                        const fshipInput = targetRow.querySelector('[data-fabric-fship]');
+                        if (vendorSelect && fshipInput) {
+                            const selectedVendorOpt = vendorSelect.options[vendorSelect.selectedIndex];
+                            fshipInput.value = selectedVendorOpt?.dataset?.fship || '0.00';
+                        }
                     }
                 });
                 
@@ -429,7 +435,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const fabricVendorOptions = fabricVendorSelect 
     ? Array.from(fabricVendorSelect.options).map(opt => ({
         value: opt.value,
-        text: opt.text
+        text: opt.text,
+        fship: opt.dataset.fship || '0'
       }))
     : [];
 
@@ -571,6 +578,14 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('[data-fabric-vendor-id]')?.addEventListener('change', function() {
     const vendorId = this.value;
     const fabricSelect = document.querySelector('[data-fabric-id]');
+    const row = this.closest('.kv');
+    
+    // Auto-fill F.Ship from selected vendor
+    const selectedOption = this.options[this.selectedIndex];
+    const fshipInput = row.querySelector('[data-fabric-fship]');
+    if (fshipInput) {
+      fshipInput.value = selectedOption.dataset.fship || '0.00';
+    }
     
     if (!fabricSelect) return;
     
@@ -586,6 +601,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     fabricSelect.value = '';
     document.querySelector('[data-fabric-cost]').value = '';
+    recalcMaterials();
   });
 
   // Notion dropdown - auto-fill cost when selected (first row only)
@@ -658,15 +674,18 @@ document.addEventListener('DOMContentLoaded', () => {
   function recalcMaterials(){
     let fabricTotal = 0;
     let notionTotal = 0;
+    let totalFShip = 0;
     
     document.querySelectorAll('[data-fabric-cost]').forEach(costInput => {
       const row = costInput.closest('.kv');
       const cost = +(costInput.value || 0);
       const yds = +(row.querySelector('[data-fabric-yds]')?.value || 0);
-      const total = cost * yds;
+      const fship = +(row.querySelector('[data-fabric-fship]')?.value || 0);
+      const total = (cost * yds) + fship;
       const totalInput = row.querySelector('[data-fabric-total]');
       if (totalInput) totalInput.value = total ? fmt(total) : '';
-      fabricTotal += total;
+      fabricTotal += (cost * yds);
+      totalFShip += fship;
     });
     
     document.querySelectorAll('[data-notion-cost]').forEach(costInput => {
@@ -913,15 +932,32 @@ updateSizeRangeDisplay();
         $('[data-fabric-id]').value = f.fabric_id;
         if (f.vendor_id) $('[data-fabric-vendor-id]').value = f.vendor_id;
         $('[data-fabric-yds]').value = f.yards;
-        
+
+        // Set F.Ship from vendor
+        const vendorSelect = document.querySelector('[data-fabric-vendor-id]');
+        const fshipInput = document.querySelector('[data-fabric-fship]');
+        if (vendorSelect && fshipInput) {
+          const selectedVendorOpt = vendorSelect.options[vendorSelect.selectedIndex];
+          fshipInput.value = selectedVendorOpt?.dataset?.fship || '0.00';
+        }
+
         // Set sublimation checkbox first
         const sublimationCheckbox = document.querySelector('[data-fabric-sublimation]');
         if (sublimationCheckbox) sublimationCheckbox.checked = f.sublimation || false;
-        
+
         // Calculate cost including sublimation
         const baseCost = parseFloat(f.cost_per_yard || 0);
         const sublimationCost = (sublimationCheckbox && sublimationCheckbox.checked) ? 6.00 : 0;
         $('[data-fabric-cost]').value = (baseCost + sublimationCost).toFixed(2);
+        // Set Fabric Code in Basic Info from first fabric
+        const fabricSelectEl = document.querySelector('[data-fabric-id]');
+        if (fabricSelectEl && f.fabric_id) {
+          const selectedOpt = Array.from(fabricSelectEl.options).find(opt => opt.value == f.fabric_id);
+          const fabricCode = selectedOpt?.dataset?.fabricCode || '';
+          const fcInput = document.getElementById('fabric_code');
+          if (fcInput) fcInput.value = fabricCode || 'Auto';
+          buildVendorStyle();
+        }
       } else {
         $('#addFabric').click();
         const allFabricSelects = document.querySelectorAll('[data-fabric-id]');
@@ -929,7 +965,15 @@ updateSizeRangeDisplay();
         newRow.querySelector('[data-fabric-id]').value = f.fabric_id;
         if (f.vendor_id) newRow.querySelector('[data-fabric-vendor-id]').value = f.vendor_id;
         newRow.querySelector('[data-fabric-yds]').value = f.yards;
-        
+
+        // Set F.Ship from vendor
+        const vendorSelect = newRow.querySelector('[data-fabric-vendor-id]');
+        const fshipInput = newRow.querySelector('[data-fabric-fship]');
+        if (vendorSelect && fshipInput) {
+          const selectedVendorOpt = vendorSelect.options[vendorSelect.selectedIndex];
+          fshipInput.value = selectedVendorOpt?.dataset?.fship || '0.00';
+        }
+
         // Set sublimation checkbox first
         const sublimationCheckbox = newRow.querySelector('[data-fabric-sublimation]');
         if (sublimationCheckbox) sublimationCheckbox.checked = f.sublimation || false;
@@ -1309,14 +1353,16 @@ updateSizeRangeDisplay();
     const newRow = document.createElement('div');
     newRow.className = 'kv';
     
+
     const vendorOptionsHtml = fabricVendorOptions.map(opt => 
-      `<option value="${opt.value}">${opt.text}</option>`
+      `<option value="${opt.value}" data-fship="${opt.fship}">${opt.text}</option>`
     ).join('');
     
     const fabricOptionsHtml = fabricOptions.map(opt => 
       `<option value="${opt.value}" data-cost="${opt.cost}" data-vendor="${opt.vendor}" data-fabric-code="${opt.fabricCode || ''}">${opt.text}</option>`
     ).join('');
     
+
     newRow.innerHTML = `
       <label>Vendor</label>
       <select class="form-select md" data-fabric-vendor-id>
@@ -1332,6 +1378,7 @@ updateSizeRangeDisplay();
       </label>
       <label>Cost/yd</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-fabric-cost readonly>
       <label>Yards</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-fabric-yds>
+      <label>F.Ship</label><input class="form-control w-80 text-end" type="number" step="0.01" min="0" value="" data-fabric-fship readonly>
       <label>Total</label><input class="form-control w-110 text-end" value="" disabled data-fabric-total>
       <button type="button" class="btn btn-sm btn-danger" data-remove-btn>Remove</button>
     `;
@@ -1357,11 +1404,18 @@ updateSizeRangeDisplay();
       }
     });
 
-    // Add vendor filter for dynamic fabric row - ADD HERE
+    // Add vendor filter for dynamic fabric row + auto-fill F.Ship
     const fabricVendorSelect = newRow.querySelector('[data-fabric-vendor-id]');
     fabricVendorSelect?.addEventListener('change', function() {
       const vendorId = this.value;
       const fabricSelect = newRow.querySelector('[data-fabric-id]');
+      
+      // Auto-fill F.Ship from selected vendor
+      const selectedOption = this.options[this.selectedIndex];
+      const fshipInput = newRow.querySelector('[data-fabric-fship]');
+      if (fshipInput) {
+        fshipInput.value = selectedOption.dataset.fship || '0.00';
+      }
       
       Array.from(fabricSelect.options).forEach(option => {
         if (option.value === '') {
@@ -1375,6 +1429,7 @@ updateSizeRangeDisplay();
       
       fabricSelect.value = '';
       newRow.querySelector('[data-fabric-cost]').value = '';
+      recalcMaterials();
     });
 
     // Sublimation checkbox handler for dynamically added rows

@@ -105,6 +105,7 @@ class FabricVendor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     vendor_code = db.Column(db.String(20), unique=True)
+    f_ship_cost = db.Column(db.Float, default=0.0)
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 class NotionVendor(db.Model):
