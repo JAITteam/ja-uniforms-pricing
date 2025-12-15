@@ -4231,15 +4231,12 @@ def api_style_save():
         db.session.flush()  # Ensure all relationships are saved
         total_cost = style.get_total_cost()
         
-        if suggested_price and suggested_price > 0 and total_cost > 0:
-            # User provided a sale price - calculate actual margin
-            calculated_margin = ((suggested_price - total_cost) / suggested_price) * 100
-            style.base_margin_percent = round(calculated_margin, 2)
-            style.suggested_price = suggested_price
-        elif total_cost > 0:
-            # No sale price provided - default to 60% margin
-            style.base_margin_percent = 60.0
-            style.suggested_price = round(total_cost / (1 - 0.60), 2)
+        if total_cost > 0:
+            # Use the margin from payload (user-set or default 60%)
+            style.base_margin_percent = margin if margin else 60.0
+            # Calculate sale price from margin
+            margin_decimal = style.base_margin_percent / 100.0
+            style.suggested_price = round(total_cost / (1 - margin_decimal), 2)
         else:
             # No costs yet - use defaults
             style.base_margin_percent = margin if margin else 60.0

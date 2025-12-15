@@ -102,10 +102,10 @@
             <option value="{{ v.id }}" data-fship="{{ v.f_ship_cost or 0 }}">{{ v.name }}</option>
             {% endfor %}
           </select>
-          
           <label>Fabric</label>
           <select class="form-select md" data-fabric-id>
             <option value="">Select Fabric</option>
+            <option value="__ADD_NEW__" style="color: #10b981; font-weight: 600;">+ Add New Fabric</option>
             {% for f in fabrics %}
             <option value="{{ f.id }}" data-cost="{{ f.cost_per_yard }}" data-vendor="{{ f.fabric_vendor_id }}" data-fabric-code="{{ f.fabric_code or '' }}">{{ f.name }}</option>
             {% endfor %}
@@ -142,10 +142,11 @@
             <option value="{{ v.id }}">{{ v.name }}</option>
             {% endfor %}
           </select>
-          
+        
           <label>Notion</label>
           <select class="form-select md" data-notion-id>
             <option value="">Select Notion</option>
+            <option value="__ADD_NEW__" style="color: #10b981; font-weight: 600;">+ Add New Notion</option>
             {% for n in notions %}
             <option value="{{ n.id }}" data-cost="{{ n.cost_per_unit }}" data-vendor="{{ n.notion_vendor_id }}">{{ n.name }}</option>
             {% endfor %}
@@ -499,4 +500,74 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 {% endif %}
 
+<!-- Quick Add Fabric Modal -->
+<div id="quickAddFabricModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+  <div style="background: white; padding: 2rem; border-radius: 12px; width: 400px; max-width: 90%;">
+    <h3 style="margin: 0 0 1.5rem 0; color: #1e293b;">Add New Fabric</h3>
+    
+    <div style="margin-bottom: 1rem;">
+      <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Fabric Name *</label>
+      <input type="text" id="quick_fabric_name" class="form-control" placeholder="e.g., XANADU" style="width: 100%;">
+    </div>
+    
+    <div style="margin-bottom: 1rem;">
+      <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Fabric Code *</label>
+      <input type="text" id="quick_fabric_code" class="form-control" placeholder="e.g., T1" style="width: 100%;">
+    </div>
+    
+    <div style="margin-bottom: 1rem;">
+      <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Cost per Yard *</label>
+      <input type="number" id="quick_fabric_cost" class="form-control" step="0.01" min="0" placeholder="e.g., 6.50" style="width: 100%;">
+    </div>
+    
+    <div style="margin-bottom: 1.5rem;">
+      <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Vendor *</label>
+      <select id="quick_fabric_vendor" class="form-select" style="width: 100%;">
+        <option value="">Select Vendor</option>
+        {% for v in fabric_vendors %}
+        <option value="{{ v.id }}">{{ v.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    
+    <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+      <button type="button" onclick="closeQuickAddFabric()" style="padding: 0.5rem 1rem; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer;">Cancel</button>
+      <button type="button" onclick="saveQuickFabric()" style="padding: 0.5rem 1rem; border: none; background: #10b981; color: white; border-radius: 6px; cursor: pointer; font-weight: 600;">Save Fabric</button>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Add Notion Modal -->
+<div id="quickAddNotionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+  <div style="background: white; padding: 2rem; border-radius: 12px; width: 400px; max-width: 90%;">
+    <h3 style="margin: 0 0 1.5rem 0; color: #1e293b;">Add New Notion</h3>
+    
+    <div style="margin-bottom: 1rem;">
+      <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Notion Name *</label>
+      <input type="text" id="quick_notion_name" class="form-control" placeholder="e.g., 18L SPORT BUTTON" style="width: 100%;">
+    </div>
+    
+    <div style="margin-bottom: 1rem;">
+      <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Cost per Unit *</label>
+      <input type="number" id="quick_notion_cost" class="form-control" step="0.01" min="0" placeholder="e.g., 0.15" style="width: 100%;">
+    </div>
+    
+    <div style="margin-bottom: 1.5rem;">
+      <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Vendor *</label>
+      <select id="quick_notion_vendor" class="form-select" style="width: 100%;">
+        <option value="">Select Vendor</option>
+        {% for v in notion_vendors %}
+        <option value="{{ v.id }}">{{ v.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    
+    <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+      <button type="button" onclick="closeQuickAddNotion()" style="padding: 0.5rem 1rem; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer;">Cancel</button>
+      <button type="button" onclick="saveQuickNotion()" style="padding: 0.5rem 1rem; border: none; background: #10b981; color: white; border-radius: 6px; cursor: pointer; font-weight: 600;">Save Notion</button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
+

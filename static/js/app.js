@@ -547,14 +547,25 @@ document.addEventListener('DOMContentLoaded', () => {
   // Fabric dropdown - auto-fill cost when selected (first row only)
   $('[data-fabric-id]')?.addEventListener('change', function() {
     const opt = this.options[this.selectedIndex];
-    if (opt.value) {
+    if (opt.value && opt.value !== '__ADD_NEW__') {
       const row = this.closest('.kv');
       const baseCost = parseFloat(opt.dataset.cost || 0);
       const sublimationCheckbox = row.querySelector('[data-fabric-sublimation]');
       const sublimationCost = sublimationCheckbox?.checked ? (window.SUBLIMATION_COST || 6.00) : 0;
-    
+
       row.querySelector('[data-fabric-cost]').value = (baseCost + sublimationCost).toFixed(2);
-      row.querySelector('[data-fabric-vendor-id]').value = opt.dataset.vendor || '';
+      
+      // Set vendor and F.Ship
+      const vendorSelect = row.querySelector('[data-fabric-vendor-id]');
+      const fshipInput = row.querySelector('[data-fabric-fship]');
+      if (vendorSelect && opt.dataset.vendor) {
+        vendorSelect.value = opt.dataset.vendor;
+        // Get F.Ship from vendor option
+        const vendorOpt = vendorSelect.options[vendorSelect.selectedIndex];
+        if (fshipInput && vendorOpt) {
+          fshipInput.value = vendorOpt.dataset.fship || '0.00';
+        }
+      }
       recalcMaterials();
       buildVendorStyle();
     }
@@ -1295,7 +1306,7 @@ updateSizeRangeDisplay();
         gender: $('#gender')?.value || 'MENS',
         garment_type: $('#garment_type')?.value?.trim() || '',
         size_range: $('#size_range_id')?.options[$('#size_range_id')?.selectedIndex]?.dataset.name || '',
-        margin: parseFloat($('#margin')?.value) || 60.0,
+        margin: parseFloat($('#suggested_margin')?.value) || 60.0,
         label_cost: parseFloat($('#label_cost')?.value) || 0.20,
         shipping_cost: parseFloat($('#shipping_cost')?.value) || 0.00,
         suggested_price: parseFloat($('#suggested_price')?.value) || null,
@@ -1358,17 +1369,17 @@ updateSizeRangeDisplay();
     }
     const newRow = document.createElement('div');
     newRow.className = 'kv';
-    
 
-    const vendorOptionsHtml = fabricVendorOptions.map(opt => 
-      `<option value="${opt.value}" data-fship="${opt.fship}">${opt.text}</option>`
-    ).join('');
+    const vendorOptionsHtml = '<option value="">Select Fabric Vendor</option>' + 
+      fabricVendorOptions.filter(opt => opt.value !== '').map(opt => 
+        `<option value="${opt.value}" data-fship="${opt.fship}">${opt.text}</option>`
+      ).join('');
     
-    const fabricOptionsHtml = fabricOptions.map(opt => 
-      `<option value="${opt.value}" data-cost="${opt.cost}" data-vendor="${opt.vendor}" data-fabric-code="${opt.fabricCode || ''}">${opt.text}</option>`
-    ).join('');
+    const fabricOptionsHtml = '<option value="">Select Fabric</option><option value="__ADD_NEW__" style="color: #10b981; font-weight: 600;">+ Add New Fabric</option>' + 
+      fabricOptions.filter(opt => opt.value !== '' && opt.value !== '__ADD_NEW__').map(opt =>
+        `<option value="${opt.value}" data-cost="${opt.cost}" data-vendor="${opt.vendor}" data-fabric-code="${opt.fabricCode || ''}">${opt.text}</option>`
+      ).join('');
     
-
     newRow.innerHTML = `
       <label>Vendor</label>
       <select class="form-select md" data-fabric-vendor-id>
@@ -1382,13 +1393,16 @@ updateSizeRangeDisplay();
         <input type="checkbox" data-fabric-sublimation style="width: auto; margin: 0;">
         Sub.
       </label>
-      <label>Cost/yd</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-fabric-cost readonly>
-      <label>Yards</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-fabric-yds>
-      <label>F.Ship</label><input class="form-control w-80 text-end" type="number" step="0.01" min="0" value="" data-fabric-fship readonly>
-      <label>Total</label><input class="form-control w-110 text-end" value="" disabled data-fabric-total>
+      <label>Avg.Cost/yd</label>
+      <input class="form-control w-110 text-end" type="number" step="0.01" min="0" data-fabric-cost readonly>
+      <label>Avg.Yds</label>
+      <input class="form-control w-110 text-end" type="number" step="0.01" min="0" data-fabric-yds>
+      <label>F.Ship</label>
+      <input class="form-control text-end" type="number" step="0.01" min="0" data-fabric-fship readonly style="width: 70px;">
+      <label>Total</label>
+      <input class="form-control w-110 text-end" disabled data-fabric-total>
       <button type="button" class="btn btn-sm btn-danger" data-remove-btn>Remove</button>
     `;
-    
     const addBtn = $('#addFabric').parentElement;
     addBtn.parentElement.insertBefore(newRow, addBtn);
     // Apply negative prevention to new row's number inputs
@@ -1399,13 +1413,24 @@ updateSizeRangeDisplay();
     const fabricSelect = newRow.querySelector('[data-fabric-id]');
     fabricSelect?.addEventListener('change', function() {
       const opt = this.options[this.selectedIndex];
-      if (opt.value) {
+      if (opt.value && opt.value !== '__ADD_NEW__') {
         const baseCost = parseFloat(opt.dataset.cost || 0);
         const sublimationCheckbox = newRow.querySelector('[data-fabric-sublimation]');
         const sublimationCost = sublimationCheckbox?.checked ? (window.SUBLIMATION_COST || 6.00) : 0;
-    
+
         newRow.querySelector('[data-fabric-cost]').value = (baseCost + sublimationCost).toFixed(2);
-        newRow.querySelector('[data-fabric-vendor-id]').value = opt.dataset.vendor || '';
+        
+        // Set vendor and F.Ship
+        const vendorSelect = newRow.querySelector('[data-fabric-vendor-id]');
+        const fshipInput = newRow.querySelector('[data-fabric-fship]');
+        if (vendorSelect && opt.dataset.vendor) {
+          vendorSelect.value = opt.dataset.vendor;
+          // Get F.Ship from vendor option
+          const vendorOpt = vendorSelect.options[vendorSelect.selectedIndex];
+          if (fshipInput && vendorOpt) {
+            fshipInput.value = vendorOpt.dataset.fship || '0.00';
+          }
+        }
         recalcMaterials();
       }
     });
@@ -1475,14 +1500,16 @@ updateSizeRangeDisplay();
     }
     const newRow = document.createElement('div');
     newRow.className = 'kv';
+
+    const vendorOptionsHtml = '<option value="">Select Notion Vendor</option>' + 
+      notionVendorOptions.filter(opt => opt.value !== '').map(opt => 
+        `<option value="${opt.value}">${opt.text}</option>`
+      ).join('');
     
-    const vendorOptionsHtml = notionVendorOptions.map(opt => 
-      `<option value="${opt.value}">${opt.text}</option>`
-    ).join('');
-    
-    const notionOptionsHtml = notionOptions.map(opt => 
-      `<option value="${opt.value}" data-cost="${opt.cost}" data-vendor="${opt.vendor}">${opt.text}</option>`
-    ).join('');
+    const notionOptionsHtml = '<option value="">Select Notion</option><option value="__ADD_NEW__" style="color: #10b981; font-weight: 600;">+ Add New Notion</option>' + 
+      notionOptions.filter(opt => opt.value !== '' && opt.value !== '__ADD_NEW__').map(opt =>
+        `<option value="${opt.value}" data-cost="${opt.cost}" data-vendor="${opt.vendor}">${opt.text}</option>`
+      ).join('');
     
     newRow.innerHTML = `
       <label>Vendor</label>
@@ -1493,7 +1520,7 @@ updateSizeRangeDisplay();
       <select class="form-select md" data-notion-id>
         ${notionOptionsHtml}
       </select>
-      <label>Cost</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-notion-cost readonly>
+      <label>Avg.Cost</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-notion-cost readonly>
       <label>Qty</label><input class="form-control qty text-end" type="number" step="1" value="" data-notion-qty>
       <label>Total</label><input class="form-control w-110 text-end" value="" disabled data-notion-total>
       <button type="button" class="btn btn-sm btn-danger" data-remove-btn>Remove</button>
@@ -2268,4 +2295,275 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+});
+// ============================================
+// QUICK ADD FABRIC/NOTION FROM STYLE WIZARD
+// ============================================
+
+// Track which dropdown triggered the modal
+let quickAddFabricTrigger = null;
+let quickAddNotionTrigger = null;
+
+// Open Quick Add Fabric Modal
+function openQuickAddFabric(triggerSelect) {
+  quickAddFabricTrigger = triggerSelect;
+  const modal = document.getElementById('quickAddFabricModal');
+  modal.style.display = 'flex';
+  
+  // Clear form
+  document.getElementById('quick_fabric_name').value = '';
+  document.getElementById('quick_fabric_code').value = '';
+  document.getElementById('quick_fabric_cost').value = '';
+  document.getElementById('quick_fabric_vendor').value = '';
+  
+  // Auto-generate next fabric code
+  generateNextFabricCode();
+  
+  // Focus on name field
+  setTimeout(() => document.getElementById('quick_fabric_name').focus(), 100);
+}
+
+// Close Quick Add Fabric Modal
+function closeQuickAddFabric(keepSelection = false) {
+  const modal = document.getElementById('quickAddFabricModal');
+  modal.style.display = 'none';
+  
+  // Reset the dropdown to empty only if not keeping selection
+  if (quickAddFabricTrigger && !keepSelection) {
+    quickAddFabricTrigger.value = '';
+  }
+  quickAddFabricTrigger = null;
+}
+// Generate next fabric code (T1, T2, T3...)
+function generateNextFabricCode() {
+  const existingCodes = [];
+  document.querySelectorAll('[data-fabric-id] option').forEach(opt => {
+    const code = opt.dataset.fabricCode;
+    if (code) existingCodes.push(code.toUpperCase());
+  });
+  
+  let nextNum = 1;
+  while (existingCodes.includes('T' + nextNum)) {
+    nextNum++;
+  }
+  
+  document.getElementById('quick_fabric_code').value = 'T' + nextNum;
+}
+
+// Save Quick Fabric
+async function saveQuickFabric() {
+  const name = document.getElementById('quick_fabric_name').value.trim();
+  const code = document.getElementById('quick_fabric_code').value.trim().toUpperCase();
+  const cost = document.getElementById('quick_fabric_cost').value;
+  const vendorId = document.getElementById('quick_fabric_vendor').value;
+  
+  // Validation
+  if (!name) {
+    alert('Please enter fabric name');
+    document.getElementById('quick_fabric_name').focus();
+    return;
+  }
+  if (!code) {
+    alert('Please enter fabric code');
+    document.getElementById('quick_fabric_code').focus();
+    return;
+  }
+  if (!code.startsWith('T')) {
+    alert('Fabric code must start with T (e.g., T1, T2, T3)');
+    document.getElementById('quick_fabric_code').focus();
+    return;
+  }
+  if (!cost || parseFloat(cost) < 0) {
+    alert('Please enter valid cost per yard');
+    document.getElementById('quick_fabric_cost').focus();
+    return;
+  }
+  if (!vendorId) {
+    alert('Please select a vendor');
+    document.getElementById('quick_fabric_vendor').focus();
+    return;
+  }
+  
+  try {
+    const res = await fetch('/api/fabrics', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: name,
+        fabric_code: code,
+        cost_per_yard: parseFloat(cost),
+        fabric_vendor_id: parseInt(vendorId)
+      })
+    });
+    
+    const data = await res.json();
+    
+    if (data.success) {
+      // Add new option to ALL fabric dropdowns
+      const newOption = document.createElement('option');
+      newOption.value = data.id;
+      newOption.text = name;
+      newOption.dataset.cost = cost;
+      newOption.dataset.vendor = vendorId;
+      newOption.dataset.fabricCode = code;
+      
+      document.querySelectorAll('[data-fabric-id]').forEach(select => {
+        const clone = newOption.cloneNode(true);
+        // Insert after "+ Add New Fabric" option
+        const addNewOption = Array.from(select.options).find(o => o.value === '__ADD_NEW__');
+        if (addNewOption) {
+          addNewOption.after(clone);
+        } else {
+          select.add(clone);
+        }
+      });
+
+      // Select the new fabric in the trigger dropdown
+      if (quickAddFabricTrigger) {
+        quickAddFabricTrigger.value = data.id;
+        // Trigger change event to update cost and vendor
+        quickAddFabricTrigger.dispatchEvent(new Event('change', { bubbles: true }));
+        
+        // Also set F.Ship from the vendor
+        const row = quickAddFabricTrigger.closest('.kv');
+        if (row) {
+          const vendorSelect = row.querySelector('[data-fabric-vendor-id]');
+          const fshipInput = row.querySelector('[data-fabric-fship]');
+          if (vendorSelect && fshipInput) {
+            // Set vendor if not already set
+            if (!vendorSelect.value) {
+              vendorSelect.value = vendorId;
+            }
+            const selectedVendorOpt = vendorSelect.options[vendorSelect.selectedIndex];
+            fshipInput.value = selectedVendorOpt?.dataset?.fship || '0.00';
+          }
+        }
+      }
+      
+      closeQuickAddFabric(true);
+      alert('Fabric "' + name + '" created successfully!');
+    } else {
+      alert('Error: ' + (data.error || 'Failed to create fabric'));
+    }
+  } catch (e) {
+    alert('Error creating fabric: ' + e.message);
+  }
+}
+
+// Open Quick Add Notion Modal
+function openQuickAddNotion(triggerSelect) {
+  quickAddNotionTrigger = triggerSelect;
+  const modal = document.getElementById('quickAddNotionModal');
+  modal.style.display = 'flex';
+  
+  // Clear form
+  document.getElementById('quick_notion_name').value = '';
+  document.getElementById('quick_notion_cost').value = '';
+  document.getElementById('quick_notion_vendor').value = '';
+  
+  // Focus on name field
+  setTimeout(() => document.getElementById('quick_notion_name').focus(), 100);
+}
+
+// Close Quick Add Notion Modal
+function closeQuickAddNotion(keepSelection = false) {
+  const modal = document.getElementById('quickAddNotionModal');
+  modal.style.display = 'none';
+  
+  // Reset the dropdown to empty only if not keeping selection
+  if (quickAddNotionTrigger && !keepSelection) {
+    quickAddNotionTrigger.value = '';
+  }
+  quickAddNotionTrigger = null;
+}
+
+// Save Quick Notion
+async function saveQuickNotion() {
+  const name = document.getElementById('quick_notion_name').value.trim();
+  const cost = document.getElementById('quick_notion_cost').value;
+  const vendorId = document.getElementById('quick_notion_vendor').value;
+  
+  // Validation
+  if (!name) {
+    alert('Please enter notion name');
+    document.getElementById('quick_notion_name').focus();
+    return;
+  }
+  if (!cost || parseFloat(cost) < 0) {
+    alert('Please enter valid cost per unit');
+    document.getElementById('quick_notion_cost').focus();
+    return;
+  }
+  if (!vendorId) {
+    alert('Please select a vendor');
+    document.getElementById('quick_notion_vendor').focus();
+    return;
+  }
+  
+  try {
+    const res = await fetch('/api/notions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: name,
+        cost_per_unit: parseFloat(cost),
+        notion_vendor_id: parseInt(vendorId)
+      })
+    });
+    
+    const data = await res.json();
+    
+    if (data.success) {
+      // Add new option to ALL notion dropdowns
+      const newOption = document.createElement('option');
+      newOption.value = data.id;
+      newOption.text = name;
+      newOption.dataset.cost = cost;
+      newOption.dataset.vendor = vendorId;
+      
+      document.querySelectorAll('[data-notion-id]').forEach(select => {
+        const clone = newOption.cloneNode(true);
+        // Insert after "+ Add New Notion" option
+        const addNewOption = Array.from(select.options).find(o => o.value === '__ADD_NEW__');
+        if (addNewOption) {
+          addNewOption.after(clone);
+        } else {
+          select.add(clone);
+        }
+      });
+      
+      // Select the new notion in the trigger dropdown
+      if (quickAddNotionTrigger) {
+        quickAddNotionTrigger.value = data.id;
+        // Trigger change event to update cost
+        quickAddNotionTrigger.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      
+      closeQuickAddNotion(true);
+      alert('Notion "' + name + '" created successfully!');
+    } else {
+      alert('Error: ' + (data.error || 'Failed to create notion'));
+    }
+  } catch (e) {
+    alert('Error creating notion: ' + e.message);
+  }
+}
+
+// Listen for "__ADD_NEW__" selection on fabric dropdowns
+document.addEventListener('change', function(e) {
+  if (e.target.matches('[data-fabric-id]') && e.target.value === '__ADD_NEW__') {
+    openQuickAddFabric(e.target);
+  }
+  if (e.target.matches('[data-notion-id]') && e.target.value === '__ADD_NEW__') {
+    openQuickAddNotion(e.target);
+  }
+});
+
+// Close modals when clicking outside
+document.getElementById('quickAddFabricModal')?.addEventListener('click', function(e) {
+  if (e.target === this) closeQuickAddFabric();
+});
+
+document.getElementById('quickAddNotionModal')?.addEventListener('click', function(e) {
+  if (e.target === this) closeQuickAddNotion();
 });
