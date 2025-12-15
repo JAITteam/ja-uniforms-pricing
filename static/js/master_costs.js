@@ -89,7 +89,7 @@ function openModal(type, id = null) {
             </div>
             <div class="form-group">
                 <label>Fabric Code *</label>
-                <input type="text" id="fabric_code" placeholder="e.g., F1">
+                <input type="text" id="fabric_code" placeholder="e.g., T1">
             </div>
             <div class="form-group">
                 <label>Cost per Yard *</label>
@@ -267,7 +267,7 @@ function autoPopulateNextCode(type) {
             const codeCell = row.querySelector('td:nth-child(2)');
             if (codeCell) codes.push(codeCell.textContent.trim());
         });
-        const nextCode = getNextSequentialCode(codes, 'F', 1);
+        const nextCode = getNextSequentialCode(codes, 'T', 1);
         const input = document.getElementById('fabric_code');
         if (input) input.value = nextCode;
     }

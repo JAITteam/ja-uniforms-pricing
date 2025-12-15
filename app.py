@@ -2831,12 +2831,14 @@ def api_fabric_detail(fabric_id):
             
             if 'fabric_vendor_id' in data:
                 fabric.fabric_vendor_id = data.get('fabric_vendor_id')
-        
+
             
             if 'fabric_code' in data:
-                new_code = data.get('fabric_code', '').strip() if data.get('fabric_code') else None
+                new_code = data.get('fabric_code', '').strip().upper() if data.get('fabric_code') else None
                 if not new_code:
                     return jsonify({'success': False, 'error': 'Fabric code is required'}), 400
+                if not new_code.startswith('T'):
+                    return jsonify({'success': False, 'error': 'Fabric code must start with T (e.g., T1, T2, T3)'}), 400
                 # Check if new code already exists (but not for this fabric)
                 existing = Fabric.query.filter(Fabric.fabric_code == new_code, Fabric.id != fabric_id).first()
                 if existing:
@@ -2948,6 +2950,8 @@ def api_add_fabric():
         fabric_code = data.get('fabric_code', '').strip() if data.get('fabric_code') else None
         if not fabric_code:
             return jsonify({'success': False, 'error': 'Fabric code is required'}), 400
+        if not fabric_code.startswith('T'):
+            return jsonify({'success': False, 'error': 'Fabric code must start with T (e.g., T1, T2, T3)'}), 400
         
         # Check if fabric_code already exists
         existing_fabric = Fabric.query.filter_by(fabric_code=fabric_code).first()
@@ -4340,7 +4344,7 @@ def download_import_template():
         cell.border = thin_border
     
     # Row 3: Sample Style Data
-    sample_data = ['44217', 'Ladies Ls "Server" Jacket', 'Base', 'F6', 24]
+    sample_data = ['44217', 'Ladies Ls "Server" Jacket', 'Base', 'T6', 24]
     for col, value in enumerate(sample_data, 1):
         cell = ws.cell(row=3, column=col, value=value)
         cell.border = thin_border
@@ -4359,7 +4363,7 @@ def download_import_template():
     
     # Row 5: Fabric
     ws['A5'] = "Fabric"
-    ws['B5'] = "F4 Perfectly Poplin"
+    ws['B5'] = "T4 Perfectly Poplin"
     ws['C5'] = 4
     ws['D5'] = 1.89
     ws['E5'] = "=C5*D5"
