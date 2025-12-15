@@ -1509,8 +1509,8 @@ def api_colors_create():
         )
         db.session.add(color)
         db.session.commit()
-        
-        return jsonify({'success': True, 'id': color.id})
+
+        return jsonify({'success': True, 'id': color.id, 'name': color.name})
     except Exception as e:
         db.session.rollback()
         app.logger.error(f"Error adding color: {e}")
@@ -3663,8 +3663,7 @@ def api_variables_create():
         variable = Variable(name=name)
         db.session.add(variable)
         db.session.commit()
-        
-        return jsonify({'success': True, 'id': variable.id})
+        return jsonify({'success': True, 'id': variable.id, 'name': variable.name})
     except Exception as e:
         db.session.rollback()
         app.logger.error(f"Error adding variable: {e}")

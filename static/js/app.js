@@ -1590,45 +1590,47 @@ updateSizeRangeDisplay();
   window.addNewColor = async function() {
     const input = $('#new_color_input');
     const colorName = input.value.trim().toUpperCase();
-    
+
     if (!colorName) {
       alert('Please enter a color name');
       return;
     }
-    
+
     try {
       const res = await fetch('/api/colors', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({name: colorName})
-    });
-      
+      });
+
       const data = await res.json();
-      
+
       if (data.success) {
         const dropdown = $('#color_dropdown');
         const opt = document.createElement('option');
         opt.value = data.id;
         opt.textContent = data.name;
         dropdown.appendChild(opt);
-        
+
         const colorList = $('#color_list');
         const existing = Array.from(colorList.options).find(o => o.value === data.id.toString());
-        
+
         if (!existing) {
           const listOpt = document.createElement('option');
           listOpt.text = data.name;
           listOpt.value = data.id;
           colorList.add(listOpt);
         }
-        
+
         input.value = '';
-        
+
         if (data.existed) {
           alert('Color already existed in master list - added to selection');
         } else {
           alert('New color created and added!');
         }
+      } else {
+        alert(data.error || 'Failed to create color');
       }
     } catch (e) {
       alert('Failed to create color: ' + e.message);
@@ -1735,12 +1737,14 @@ updateSizeRangeDisplay();
         } else {
           alert('New variable created and added!');
         }
+      } else {
+        alert(data.error || 'Failed to create variable');
       }
     } catch (e) {
       alert('Failed to create variable: ' + e.message);
     }
   };
-
+  
   window.removeSelectedVariables = function() {
     const variableList = $('#variable_list');
     if (!variableList) return;
