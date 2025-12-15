@@ -213,13 +213,18 @@ class Style(db.Model):
     is_favorite = db.Column(db.Boolean, default=False, index=True)
     colors = db.relationship('StyleColor', back_populates='style', cascade='all, delete-orphan')
     
+    
     def get_total_fabric_cost(self):
+        # Get sublimation cost from global settings
+        sublimation_setting = GlobalSetting.query.filter_by(setting_key='sublimation_cost').first()
+        sublimation_cost = sublimation_setting.setting_value if sublimation_setting else 6.00
+        
         total = 0
         for sf in self.style_fabrics:
             base_cost = sf.yards_required * sf.fabric.cost_per_yard
-            # Add $6 sublimation upcharge if checked
+            # Add sublimation upcharge if checked
             if sf.is_sublimation:
-                base_cost += 6.00 * sf.yards_required
+                base_cost += sublimation_cost * sf.yards_required
             # Add fabric vendor shipping cost
             if sf.fabric.fabric_vendor and sf.fabric.fabric_vendor.f_ship_cost:
                 base_cost += sf.fabric.fabric_vendor.f_ship_cost

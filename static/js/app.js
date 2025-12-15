@@ -551,7 +551,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const row = this.closest('.kv');
       const baseCost = parseFloat(opt.dataset.cost || 0);
       const sublimationCheckbox = row.querySelector('[data-fabric-sublimation]');
-      const sublimationCost = sublimationCheckbox?.checked ? 6.00 : 0;
+      const sublimationCost = sublimationCheckbox?.checked ? (window.SUBLIMATION_COST || 6.00) : 0;
     
       row.querySelector('[data-fabric-cost]').value = (baseCost + sublimationCost).toFixed(2);
       row.querySelector('[data-fabric-vendor-id]').value = opt.dataset.vendor || '';
@@ -569,7 +569,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (fabricSelect && fabricSelect.value && costInput) {
       const opt = fabricSelect.options[fabricSelect.selectedIndex];
       const baseCost = parseFloat(opt.dataset.cost || 0);
-      const sublimationCost = this.checked ? 6.00 : 0;
+      const sublimationCost = this.checked ? (window.SUBLIMATION_COST || 6.00) : 0;
+
       costInput.value = (baseCost + sublimationCost).toFixed(2);
       recalcMaterials();
     }
@@ -952,7 +953,7 @@ updateSizeRangeDisplay();
 
         // Calculate cost including sublimation
         const baseCost = parseFloat(f.cost_per_yard || 0);
-        const sublimationCost = (sublimationCheckbox && sublimationCheckbox.checked) ? 6.00 : 0;
+        const sublimationCost = (sublimationCheckbox && sublimationCheckbox.checked) ? (window.SUBLIMATION_COST || 6.00) : 0;
         $('[data-fabric-cost]').value = (baseCost + sublimationCost).toFixed(2);
         // Set Fabric Code in Basic Info from first fabric
         const fabricSelectEl = document.querySelector('[data-fabric-id]');
@@ -985,7 +986,7 @@ updateSizeRangeDisplay();
         
         // Calculate cost including sublimation
         const baseCost = parseFloat(f.cost_per_yard || 0);
-        const sublimationCost = (sublimationCheckbox && sublimationCheckbox.checked) ? 6.00 : 0;
+        const sublimationCost = (sublimationCheckbox && sublimationCheckbox.checked) ? (window.SUBLIMATION_COST || 6.00) : 0;
         newRow.querySelector('[data-fabric-cost]').value = (baseCost + sublimationCost).toFixed(2);
       }
     });
@@ -1401,7 +1402,7 @@ updateSizeRangeDisplay();
       if (opt.value) {
         const baseCost = parseFloat(opt.dataset.cost || 0);
         const sublimationCheckbox = newRow.querySelector('[data-fabric-sublimation]');
-        const sublimationCost = sublimationCheckbox?.checked ? 6.00 : 0;
+        const sublimationCost = sublimationCheckbox?.checked ? (window.SUBLIMATION_COST || 6.00) : 0;
     
         newRow.querySelector('[data-fabric-cost]').value = (baseCost + sublimationCost).toFixed(2);
         newRow.querySelector('[data-fabric-vendor-id]').value = opt.dataset.vendor || '';
@@ -1446,7 +1447,8 @@ updateSizeRangeDisplay();
       if (fabricSelect && fabricSelect.value && costInput) {
         const opt = fabricSelect.options[fabricSelect.selectedIndex];
         const baseCost = parseFloat(opt.dataset.cost || 0);
-        const sublimationCost = this.checked ? 6.00 : 0;
+        const sublimationCost = this.checked ? (window.SUBLIMATION_COST || 6.00) : 0;
+
         costInput.value = (baseCost + sublimationCost).toFixed(2);
         recalcMaterials();
       }

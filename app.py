@@ -1413,13 +1413,52 @@ def api_global_setting_detail(setting_id):
                 if error:
                     return jsonify({'success': False, 'error': error}), 400
                 setting.setting_value = value
-                
+
                 # Auto-update cleaning costs when rate changes
                 if setting.setting_key == 'cleaning_cost_per_minute':
                     cleaning_costs = CleaningCost.query.all()
                     for cc in cleaning_costs:
                         cc.fixed_cost = cc.avg_minutes * value
                     app.logger.info(f"Updated {len(cleaning_costs)} cleaning costs with new rate ${value}/min")
+                
+                # Auto-update all styles when sublimation cost changes
+                if setting.setting_key == 'sublimation_cost':
+                    # Find all styles that use sublimation
+                    affected_style_ids = db.session.query(StyleFabric.style_id).filter(
+                        StyleFabric.is_sublimation == True
+                    ).distinct().all()
+                    
+                    for (style_id,) in affected_style_ids:
+                        style = Style.query.get(style_id)
+                        if style and style.base_margin_percent:
+                            new_cost = style.get_total_cost()
+                            margin = style.base_margin_percent / 100.0
+                            if margin < 1:
+                                style.suggested_price = round(new_cost / (1 - margin), 2)
+                    
+                    app.logger.info(f"Updated {len(affected_style_ids)} styles after sublimation cost change to ${value}")
+                
+                # Auto-update all styles when label cost changes
+                if setting.setting_key == 'avg_label_cost':
+                    all_styles = Style.query.all()
+                    for style in all_styles:
+                        if style.base_margin_percent:
+                            new_cost = style.get_total_cost()
+                            margin = style.base_margin_percent / 100.0
+                            if margin < 1:
+                                style.suggested_price = round(new_cost / (1 - margin), 2)
+                    app.logger.info(f"Updated {len(all_styles)} styles after label cost change to ${value}")
+                
+                # Auto-update all styles when shipping cost changes
+                if setting.setting_key == 'shipping_cost':
+                    all_styles = Style.query.all()
+                    for style in all_styles:
+                        if style.base_margin_percent:
+                            new_cost = style.get_total_cost()
+                            margin = style.base_margin_percent / 100.0
+                            if margin < 1:
+                                style.suggested_price = round(new_cost / (1 - margin), 2)
+                    app.logger.info(f"Updated {len(all_styles)} styles after shipping cost change to ${value}")
 
             if 'description' in data:
                 setting.description = data.get('description', '').strip() if data.get('description') else None
@@ -3448,10 +3487,12 @@ def style_wizard():
     size_ranges = SizeRange.query.order_by(SizeRange.name).all()
     label_cost_setting = GlobalSetting.query.filter_by(setting_key='avg_label_cost').first()
     shipping_cost_setting = GlobalSetting.query.filter_by(setting_key='shipping_cost').first()
+    sublimation_cost_setting = GlobalSetting.query.filter_by(setting_key='sublimation_cost').first()
     default_label_cost = label_cost_setting.setting_value if label_cost_setting else 0.20
     default_shipping_cost = shipping_cost_setting.setting_value if shipping_cost_setting else 0.00
-    
-    return render_template("style_wizard.html", 
+    default_sublimation_cost = sublimation_cost_setting.setting_value if sublimation_cost_setting else 6.00
+
+    return render_template("style_wizard.html",
                           fabric_vendors=fabric_vendors,
                           notion_vendors=notion_vendors,
                           fabrics=fabrics,
@@ -3460,7 +3501,8 @@ def style_wizard():
                           garment_types=garment_types,
                           size_ranges=size_ranges,
                           default_label_cost=default_label_cost,
-                          default_shipping_cost=default_shipping_cost)
+                          default_shipping_cost=default_shipping_cost,
+                          default_sublimation_cost=default_sublimation_cost)
 
 @app.route("/style/view")
 @role_required('admin', 'user')  # Both can view
@@ -3500,14 +3542,15 @@ def style_view():
     
     label_cost_setting = GlobalSetting.query.filter_by(setting_key='avg_label_cost').first()
     shipping_cost_setting = GlobalSetting.query.filter_by(setting_key='shipping_cost').first()
+    sublimation_cost_setting = GlobalSetting.query.filter_by(setting_key='sublimation_cost').first()
     default_label_cost = label_cost_setting.setting_value if label_cost_setting else 0.20
     default_shipping_cost = shipping_cost_setting.setting_value if shipping_cost_setting else 0.00
-    
+    default_sublimation_cost = sublimation_cost_setting.setting_value if sublimation_cost_setting else 6.00
+
     # Get permissions
     permissions = get_user_permissions()
-    
+
     return render_template("style_wizard.html",
-                          style=style,  # ✅ PASS THE STYLE!
                           fabric_vendors=fabric_vendors,
                           notion_vendors=notion_vendors,
                           fabrics=fabrics,
@@ -3517,6 +3560,7 @@ def style_view():
                           size_ranges=size_ranges,
                           default_label_cost=default_label_cost,
                           default_shipping_cost=default_shipping_cost,
+                          default_sublimation_cost=default_sublimation_cost,
                           permissions=permissions,
                           view_mode=not permissions['can_edit'])
 
