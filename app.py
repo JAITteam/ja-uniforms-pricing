@@ -305,20 +305,19 @@ def validate_positive_integer(value, field_name, required=True):
         return num, None
     except (ValueError, TypeError):
         return None, f"{field_name} must be a valid whole number"
-
-def get_next_fabric_code():
-    """Generate next sequential fabric code like T1, T2, T3..."""
-    existing = Fabric.query.with_entities(Fabric.fabric_code).all()
-    max_num = 0
-    for (code,) in existing:
-        if code and code.upper().startswith('T'):
-            try:
-                num = int(code[1:])
-                if num > max_num:
-                    max_num = num
-            except ValueError:
-                pass
-    return f"T{max_num + 1}"
+def safe_margin_calculation(cost, margin_percent):
+    """
+    Calculate sale price from cost and margin, preventing division by zero.
+    Caps margin at 99% to avoid unrealistic prices.
+    """
+    if cost is None or cost <= 0:
+        return 0
+    margin_decimal = (margin_percent or 60) / 100.0
+    if margin_decimal >= 0.99:
+        margin_decimal = 0.99
+    if margin_decimal < 0:
+        margin_decimal = 0
+    return round(cost / (1 - margin_decimal), 2)
 
 def get_next_fabric_code():
     """Generate next sequential fabric code like T1, T2, T3..."""
@@ -370,13 +369,13 @@ def validate_required_field(value, field_name):
     if not value or not str(value).strip():
         return False, f"{field_name} is required"
     return True, str(value).strip()
-
-def validate_percentage(value, field_name):
-    """Validate that a percentage is between 0 and 100"""
+    
+def validate_percentage(value, field_name, max_value=99):
+    """Validate that a percentage is between 0 and max_value (default 99 to prevent division by zero)"""
     try:
         num = float(value)
-        if num < 0 or num > 100:
-            return False, f"{field_name} must be between 0 and 100"
+        if num < 0 or num > max_value:
+            return False, f"{field_name} must be between 0 and {max_value}"
         return True, num
     except (ValueError, TypeError):
         return False, f"{field_name} must be a valid number"
@@ -4290,6 +4289,8 @@ def api_style_save():
             style.base_margin_percent = margin if margin else 60.0
             # Calculate sale price from margin
             margin_decimal = style.base_margin_percent / 100.0
+            if margin_decimal >= 0.99:  # Prevent division by zero or near-zero
+                margin_decimal = 0.99     
             style.suggested_price = round(total_cost / (1 - margin_decimal), 2)
         else:
             # No costs yet - use defaults

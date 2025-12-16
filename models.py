@@ -275,6 +275,8 @@ class Style(db.Model):
     def get_retail_price(self, size_multiplier=1.0):
         base_cost = self.get_total_cost() * size_multiplier
         margin = self.base_margin_percent / 100.0
+        if margin >= 0.99:  # Prevent division by zero or near-zero
+            margin = 0.99
         return round(base_cost / (1 - margin), 2)
 
 
