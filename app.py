@@ -2434,6 +2434,24 @@ def load_style_for_duplicate(style_id):
                     "name": variable.name
                 })
         
+        # Get cleaning cost
+        cleaning_data = None
+        if style.garment_type:
+            cleaning_op = LaborOperation.query.filter_by(name='Cleaning & Ironing').first()
+            if cleaning_op:
+                cleaning_cost_record = CleaningCost.query.filter_by(garment_type=style.garment_type).first()
+                if cleaning_cost_record:
+                    cleaning_data = {
+                        "garment_type": style.garment_type,
+                        "cost": cleaning_cost_record.fixed_cost
+                    }
+
+         # Get label and shipping costs from global settings
+        label_setting = GlobalSetting.query.filter_by(setting_key='avg_label_cost').first()
+        shipping_setting = GlobalSetting.query.filter_by(setting_key='shipping_cost').first()
+        label_cost_value = label_setting.setting_value if label_setting else 0.20
+        shipping_cost_value = shipping_setting.setting_value if shipping_setting else 0.00
+
         return jsonify({
             "success": True,
             "style": {
@@ -2447,15 +2465,20 @@ def load_style_for_duplicate(style_id):
                 "margin": style.base_margin_percent,
                 "suggested_price": style.suggested_price,
                 "notes": style.notes,
+                "label_cost": label_cost_value,
+                "shipping_cost": shipping_cost_value,
                 "original_vendor_style": style.vendor_style,  # Track original
                 "original_style_name": style.style_name        # Track original
             },
             "fabrics": fabrics,
             "notions": notions,
             "labor": labor,
+            "cleaning": cleaning_data,
             "colors": colors,
             "variables": variables
         }), 200
+    
+
         
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500

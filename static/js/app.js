@@ -239,25 +239,39 @@ window.confirm = window.customConfirm;
                                 if (opt.text === f.vendor) vendorSelect.value = opt.value;
                             });
                         }
-                        
                         if (fabricSelect && f.name) {
                             Array.from(fabricSelect.options).forEach(opt => {
                                 if (opt.text === f.name) fabricSelect.value = opt.value;
                             });
                         }
                         if (yardsInput) yardsInput.value = f.yards || '';
-                        if (costInput) costInput.value = f.cost_per_yard || '';
+                        
+                        // Set sublimation checkbox first
                         if (sublimationCheckbox) sublimationCheckbox.checked = f.sublimation || false;
                         
+                        // Calculate cost with sublimation if checked
+                        if (costInput) {
+                            const baseCost = parseFloat(f.cost_per_yard || 0);
+                            const sublimationCost = (sublimationCheckbox && sublimationCheckbox.checked) ? (window.SUBLIMATION_COST || 6.00) : 0;
+                            costInput.value = (baseCost + sublimationCost).toFixed(2);
+                        }
+
                         // Set F.Ship from vendor
                         const fshipInput = targetRow.querySelector('[data-fabric-fship]');
                         if (vendorSelect && fshipInput) {
                             const selectedVendorOpt = vendorSelect.options[vendorSelect.selectedIndex];
                             fshipInput.value = selectedVendorOpt?.dataset?.fship || '0.00';
                         }
+                        
+                        // Set Fabric Code for first fabric row
+                        if (index === 0 && fabricSelect) {
+                            const selectedFabricOpt = fabricSelect.options[fabricSelect.selectedIndex];
+                            const fabricCode = selectedFabricOpt?.dataset?.fabricCode || '';
+                            const fcInput = document.getElementById('fabric_code');
+                            if (fcInput) fcInput.value = fabricCode || '';
+                        }
                     }
                 });
-                
                 // Load notions
                 const notions = data.notions || [];
                 notions.forEach((n, index) => {
@@ -290,14 +304,61 @@ window.confirm = window.customConfirm;
                         if (costInput) costInput.value = n.cost_per_unit || '';
                     }
                 });
-                
-                // Load labor
+
+                // Load labor - match by name, not index
                 const labor = data.labor || [];
-                document.querySelectorAll('[data-labor-row]').forEach((row, i) => {
-                    const l = labor[i] || {};
-                    const qInput = row.querySelector('[data-labor-qoh]');
-                    if (qInput && l.qty_or_hours) qInput.value = l.qty_or_hours;
+                document.querySelectorAll('[data-labor-row]').forEach((row) => {
+                    const rowName = row.getAttribute('data-labor-name') || row.querySelector('label')?.textContent?.trim();
+                    const matchingLabor = labor.find(l => l.name === rowName);
+                    if (matchingLabor) {
+                        const qInput = row.querySelector('[data-labor-qoh]');
+                        if (qInput && matchingLabor.qty_or_hours) {
+                            qInput.value = matchingLabor.qty_or_hours;
+                        }
+                    }
                 });
+
+                // Load cleaning cost
+                if (data.cleaning && data.cleaning.cost) {
+                    set('#cleaning_cost', data.cleaning.cost);
+                }
+
+                // Load label cost and shipping cost
+                if (s.label_cost !== undefined) set('#label_cost', s.label_cost);
+                if (s.shipping_cost !== undefined) set('#shipping_cost', s.shipping_cost);
+
+                // Update size range display
+                if (sizeRangeSelect && sizeRangeSelect.value) {
+                    const selectedOption = sizeRangeSelect.options[sizeRangeSelect.selectedIndex];
+                    if (selectedOption) {
+                        const regDisplay = $('#regular_sizes_display');
+                        const extDisplay = $('#extended_sizes_display');
+                        if (regDisplay) regDisplay.value = selectedOption.dataset.regular || '';
+                        if (extDisplay) extDisplay.value = selectedOption.dataset.extended || '';
+                    }
+                }
+
+
+                // Load cleaning cost
+                if (data.cleaning && data.cleaning.cost) {
+                    set('#cleaning_cost', data.cleaning.cost);
+                }
+
+                // Load label cost and shipping cost
+                if (s.label_cost !== undefined) set('#label_cost', s.label_cost);
+                if (s.shipping_cost !== undefined) set('#shipping_cost', s.shipping_cost);
+
+                // Update size range display
+                if (sizeRangeSelect && sizeRangeSelect.value) {
+                    const selectedOption = sizeRangeSelect.options[sizeRangeSelect.selectedIndex];
+                    if (selectedOption) {
+                        const regDisplay = $('#regular_sizes_display');
+                        const extDisplay = $('#extended_sizes_display');
+                        if (regDisplay) regDisplay.value = selectedOption.dataset.regular || '';
+                        if (extDisplay) extDisplay.value = selectedOption.dataset.extended || '';
+                    }
+                }
+
                 
                 // Load colors
                 if (data.colors && data.colors.length > 0) {
@@ -326,11 +387,41 @@ window.confirm = window.customConfirm;
                         });
                     }
                 }
-                
-                // Trigger calculations
-                const recalcEvent = new Event('input', { bubbles: true });
-                $('#margin')?.dispatchEvent(recalcEvent);
-                document.querySelector('[data-fabric-yds]')?.dispatchEvent(recalcEvent);
+                // Trigger calculations after a short delay to ensure all values are set
+                setTimeout(() => {
+                    // Dispatch input events to trigger recalculations
+                    const inputEvent = new Event('input', { bubbles: true });
+                    const changeEvent = new Event('change', { bubbles: true });
+                    
+                    // Trigger fabric recalc
+                    document.querySelector('[data-fabric-yds]')?.dispatchEvent(inputEvent);
+                    
+                    // Trigger labor recalc - dispatch on each labor row
+                    document.querySelectorAll('[data-labor-qoh]').forEach(input => {
+                        input.dispatchEvent(inputEvent);
+                    });
+                    
+                    // Trigger garment type change to fetch cleaning cost
+                    const garmentTypeSelect = document.querySelector('#garment_type');
+                    if (garmentTypeSelect && garmentTypeSelect.value) {
+                        garmentTypeSelect.dispatchEvent(changeEvent);
+                    }
+                    
+                    // Trigger totals recalc
+                    document.querySelector('#margin')?.dispatchEvent(inputEvent);
+                    
+                    // Trigger size range display update
+                    const sizeRangeSelect = document.querySelector('#size_range_id');
+                    if (sizeRangeSelect) {
+                        sizeRangeSelect.dispatchEvent(changeEvent);
+                    }
+                    
+                    // Trigger fabric change to update vendor style and fabric code
+                    const firstFabricSelect = document.querySelector('[data-fabric-id]');
+                    if (firstFabricSelect && firstFabricSelect.value) {
+                        firstFabricSelect.dispatchEvent(changeEvent);
+                    }
+                }, 200);
                 
                 alert('✅ Style data loaded for duplication!\n\nPlease change the Vendor Style and Style Name before saving.');
                 
