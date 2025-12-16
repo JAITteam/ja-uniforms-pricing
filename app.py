@@ -305,6 +305,34 @@ def validate_positive_integer(value, field_name, required=True):
         return num, None
     except (ValueError, TypeError):
         return None, f"{field_name} must be a valid whole number"
+
+def get_next_fabric_code():
+    """Generate next sequential fabric code like T1, T2, T3..."""
+    existing = Fabric.query.with_entities(Fabric.fabric_code).all()
+    max_num = 0
+    for (code,) in existing:
+        if code and code.upper().startswith('T'):
+            try:
+                num = int(code[1:])
+                if num > max_num:
+                    max_num = num
+            except ValueError:
+                pass
+    return f"T{max_num + 1}"
+
+def get_next_fabric_code():
+    """Generate next sequential fabric code like T1, T2, T3..."""
+    existing = Fabric.query.with_entities(Fabric.fabric_code).all()
+    max_num = 0
+    for (code,) in existing:
+        if code and code.upper().startswith('T'):
+            try:
+                num = int(code[1:])
+                if num > max_num:
+                    max_num = num
+            except ValueError:
+                pass
+    return f"T{max_num + 1}"
         
 def validate_required_string(value, field_name, max_length=200):
     """Validate that a value is a non-empty string"""
@@ -456,7 +484,9 @@ def audit_logs():
     if action:
         query = query.filter(AuditLog.action == action)
     if search:
-        query = query.filter(AuditLog.item_name.ilike(f'%{search}%'))
+        sanitized, search_pattern = sanitize_search_query(search)
+        if sanitized:
+            query = query.filter(AuditLog.item_name.ilike(search_pattern, escape='\\'))
     if date_from:
         from datetime import datetime
         try:
@@ -4129,6 +4159,7 @@ def api_style_save():
                     
                     fabric = Fabric(
                         name=fabric_name,
+                        fabric_code=get_next_fabric_code(),
                         cost_per_yard=float(f.get("cost_per_yard") or 0),
                         fabric_vendor_id=vendor.id if vendor else None
                     )
@@ -4679,6 +4710,7 @@ def import_excel():
                             
                             fabric = Fabric(
                                 name=fabric_name,
+                                fabric_code=get_next_fabric_code(),
                                 cost_per_yard=fabric_cost,
                                 fabric_vendor_id=vendor.id
                             )
@@ -4718,6 +4750,7 @@ def import_excel():
                             vendor = FabricVendor.query.filter_by(name="IMPORTED").first()
                             fabric2 = Fabric(
                                 name=fabric2_name,
+                                fabric_code=get_next_fabric_code(),
                                 cost_per_yard=fabric2_cost,
                                 fabric_vendor_id=vendor.id
                             )
@@ -4753,6 +4786,7 @@ def import_excel():
                             vendor = FabricVendor.query.filter_by(name="IMPORTED").first()
                             lining = Fabric(
                                 name=lining_name,
+                                fabric_code=get_next_fabric_code(),
                                 cost_per_yard=lining_cost,
                                 fabric_vendor_id=vendor.id
                             )
