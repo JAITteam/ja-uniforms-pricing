@@ -4207,14 +4207,14 @@ def api_style_save():
                     style_id=style.id,
                     labor_operation_id=op.id,
                     time_hours=qty_or_hours,
-                    quantity=1
+                    quantity=0
                 )
             else:
                 sl = StyleLabor(
                     style_id=style.id,
                     labor_operation_id=op.id,
                     time_hours=0,
-                    quantity=int(qty_or_hours) if qty_or_hours else 1
+                    quantity=int(qty_or_hours) if qty_or_hours else 0
                 )
             db.session.add(sl)
         
