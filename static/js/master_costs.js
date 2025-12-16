@@ -196,9 +196,10 @@ function openModal(type, id = null) {
                 <label>Extended Sizes (e.g., 2XL-6XL, 20-30)</label>
                 <input type="text" id="extended_sizes" placeholder="e.g., 2XL-6XL">
             </div>
-            <div class="form-group">
-                <label>Extended Markup % *</label>
-                <input type="number" id="extended_markup_percent" required value="15" step="0.1" min="0" max="100">
+            <div class="form-group" id="extended_markup_group">
+                <label>Extended Markup %</label>
+                <input type="number" id="extended_markup_percent" value="15" step="0.1" min="0" max="100">
+                <small class="text-muted" id="extended_markup_hint">Leave empty or 0 if no extended sizes</small>
             </div>
             <div class="form-group">
                 <label>Description (optional)</label>
@@ -219,12 +220,16 @@ function openModal(type, id = null) {
     }
     
     modalBody.innerHTML = formHtml;
-    
     if (id) {
         loadItemData(type, id);
     } else {
         // AUTO-POPULATE SEQUENTIAL CODES FOR NEW ITEMS
         autoPopulateNextCode(type);
+    }
+    
+    // Setup extended markup toggle for size_range type
+    if (type === 'size_range') {
+        setTimeout(setupExtendedMarkupToggle, 150);
     }
     
     if (typeof feather !== 'undefined') {
@@ -386,11 +391,42 @@ function loadItemData(type, id) {
                     avgMinutesInput.value = minutes;
                 }
             }
+            
+            // Setup extended markup toggle after loading size_range data
+            if (type === 'size_range') {
+                setTimeout(setupExtendedMarkupToggle, 100);
+            }
         })
         .catch(error => {
             console.error('Error loading data:', error);
             showNotification('Error loading data', 'error');
         });
+}
+
+// Toggle extended markup visibility based on extended sizes
+function setupExtendedMarkupToggle() {
+    const extendedSizesInput = document.getElementById('extended_sizes');
+    const extendedMarkupInput = document.getElementById('extended_markup_percent');
+    
+    if (!extendedSizesInput || !extendedMarkupInput) return;
+    
+    const markupGroup = extendedMarkupInput.closest('.form-group');
+    
+    function toggleExtendedMarkup() {
+        const hasExtendedSizes = extendedSizesInput.value.trim() !== '';
+        if (hasExtendedSizes) {
+            markupGroup.style.display = 'block';
+            extendedMarkupInput.required = true;
+        } else {
+            markupGroup.style.display = 'none';
+            extendedMarkupInput.required = false;
+            extendedMarkupInput.value = '0';
+        }
+    }
+    
+    extendedSizesInput.addEventListener('input', toggleExtendedMarkup);
+    // Initial check
+    setTimeout(toggleExtendedMarkup, 100);
 }
 
 function deleteItem(endpoint, id) {

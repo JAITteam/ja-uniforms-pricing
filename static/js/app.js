@@ -838,15 +838,31 @@ document.addEventListener('DOMContentLoaded', () => {
     setText('#snap_total', fmt(total));
 
     if ($('#total_reg')) $('#total_reg').value = total ? fmt(total) : '';
+    
     // Get dynamic markup from selected size range
     const sizeRangeSelect = $('#size_range_id');
     let extendedMarkup = 1.15; // default 15%
+    let hasExtendedSizes = false;
+    
     if (sizeRangeSelect && sizeRangeSelect.value) {
       const selectedOption = sizeRangeSelect.options[sizeRangeSelect.selectedIndex];
-      const markupPercent = parseFloat(selectedOption.dataset.markup || 15);
-      extendedMarkup = 1 + (markupPercent / 100);
+      const extendedSizes = selectedOption?.dataset?.extended || '';
+      hasExtendedSizes = extendedSizes.trim() !== '';
+      
+      if (hasExtendedSizes) {
+        const markupPercent = parseFloat(selectedOption.dataset.markup || 15);
+        extendedMarkup = 1 + (markupPercent / 100);
+      }
     }
-    if ($('#total_ext')) $('#total_ext').value = total ? fmt(total * extendedMarkup) : '';
+    
+    // Only calculate extended price if extended sizes exist
+    if ($('#total_ext')) {
+      if (hasExtendedSizes && total) {
+        $('#total_ext').value = fmt(total * extendedMarkup);
+      } else {
+        $('#total_ext').value = '';
+      }
+    }
 
     const m=Math.max(0,Math.min(95,+($('#margin')?.value||60)));
     const retail= total ? (total/(1-(m/100))) : 0; 
@@ -863,12 +879,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+
   function updateSizeRangeDisplay() {
     const sizeRangeSelect = $('#size_range_id');
+    const extendedRow = $('#extended_label')?.closest('.kv');
+    
     if (!sizeRangeSelect || !sizeRangeSelect.value) {
       $('#regular_sizes_display').value = '';
       $('#extended_sizes_display').value = '';
       $('#extended_label').textContent = 'Extended Sizes (+15%)';
+      if (extendedRow) extendedRow.style.display = '';
       return;
     }
     
@@ -878,8 +898,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const markup = selectedOption.dataset.markup || '15';
     
     $('#regular_sizes_display').value = regularSizes;
-    $('#extended_sizes_display').value = extendedSizes || 'N/A';
-    $('#extended_label').textContent = `Extended Sizes (+${markup}%)`;
+    
+    // Hide extended row if no extended sizes
+    if (!extendedSizes || extendedSizes.trim() === '') {
+      if (extendedRow) extendedRow.style.display = 'none';
+      $('#extended_sizes_display').value = '';
+      if ($('#total_ext')) $('#total_ext').value = '';
+    } else {
+      if (extendedRow) extendedRow.style.display = '';
+      $('#extended_sizes_display').value = extendedSizes;
+      $('#extended_label').textContent = `Extended Sizes (+${markup}%)`;
+    }
     
     recalcTotals();
   }
