@@ -1405,6 +1405,7 @@ def api_size_range_modify(size_range_id):
         except Exception as e:
             db.session.rollback()
             app.logger.error(f"Error deleting size range: {e}")
+            return jsonify({'success': False, 'error': 'Failed to delete size range'}), 500
 
 # GLOBAL SETTINGS ENDPOINTS
 @app.route('/api/global-settings', methods=['GET'])
