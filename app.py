@@ -706,6 +706,12 @@ def register():
             last_name = request.form.get('lastName', '').strip()
             email = request.form.get('email', '').strip().lower()
             password = request.form.get('password')
+
+            # Name length validation
+            if not first_name or len(first_name) > 50:
+                return jsonify({'success': False, 'error': 'First name is required and must be 50 characters or less'}), 200
+            if not last_name or len(last_name) > 50:
+                return jsonify({'success': False, 'error': 'Last name is required and must be 50 characters or less'}), 200
             
             # Validation
             if not email or not email.endswith('@jauniforms.com'):

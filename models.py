@@ -161,7 +161,7 @@ class CleaningCost(db.Model):
     __tablename__ = 'cleaning_costs'
     
     id = db.Column(db.Integer, primary_key=True)
-    garment_type = db.Column(db.String(50), nullable=False, unique=True)
+    garment_type = db.Column(db.String(50), nullable=False, unique=True, index=True)
     fixed_cost = db.Column(db.Float, nullable=False)
     avg_minutes = db.Column(db.Integer, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)

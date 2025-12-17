@@ -1011,23 +1011,6 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
                 </label>
             </div>
             <div class="export-styles-list" id="exportStylesList"></div>
-            
-            <!-- Variable Export Option -->
-            <div class="export-variable-option" style="margin-top: 1rem; padding: 1rem; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 2px solid #7dd3fc; border-radius: 12px;">
-                <label style="font-weight: 600; color: #0369a1; font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">
-                    Variable Export Options:
-                </label>
-                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: #334155;">
-                        <input type="radio" name="variableOption" value="variables_only" checked style="accent-color: #0ea5e9;">
-                        <span>Export with variables only (no empty rows)</span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: #334155;">
-                        <input type="radio" name="variableOption" value="include_empty" style="accent-color: #0ea5e9;">
-                        <span>Include empty variable rows (current + empty)</span>
-                    </label>
-                </div>
-            </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" id="cancelExportBtn">Cancel</button>
@@ -1618,3 +1601,4 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
 </script>
 
 {% endblock %}
+
