@@ -337,28 +337,6 @@ window.confirm = window.customConfirm;
                         if (extDisplay) extDisplay.value = selectedOption.dataset.extended || '';
                     }
                 }
-
-
-                // Load cleaning cost
-                if (data.cleaning && data.cleaning.cost) {
-                    set('#cleaning_cost', data.cleaning.cost);
-                }
-
-                // Load label cost and shipping cost
-                if (s.label_cost !== undefined) set('#label_cost', s.label_cost);
-                if (s.shipping_cost !== undefined) set('#shipping_cost', s.shipping_cost);
-
-                // Update size range display
-                if (sizeRangeSelect && sizeRangeSelect.value) {
-                    const selectedOption = sizeRangeSelect.options[sizeRangeSelect.selectedIndex];
-                    if (selectedOption) {
-                        const regDisplay = $('#regular_sizes_display');
-                        const extDisplay = $('#extended_sizes_display');
-                        if (regDisplay) regDisplay.value = selectedOption.dataset.regular || '';
-                        if (extDisplay) extDisplay.value = selectedOption.dataset.extended || '';
-                    }
-                }
-
                 
                 // Load colors
                 if (data.colors && data.colors.length > 0) {
@@ -2195,22 +2173,6 @@ updateSizeRangeDisplay();
   console.log('✅ Enhanced clipboard paste enabled (Excel compatible)');
   // ===== END ENHANCED CLIPBOARD PASTE =====
 
-  // ============================================
-// PREVENT NEGATIVE NUMBERS IN REAL-TIME
-// ============================================
-function preventNegativeValues(input) {
-  input.addEventListener('input', function() {
-    if (this.value < 0) {
-      this.value = 0;
-    }
-  });
-  
-  input.addEventListener('keydown', function(e) {
-    if (e.key === '-' || e.key === 'Subtract') {
-      e.preventDefault();
-    }
-  });
-}
 
 // Apply on page load
 document.addEventListener('DOMContentLoaded', function() {
