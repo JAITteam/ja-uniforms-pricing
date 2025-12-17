@@ -487,14 +487,12 @@ def audit_logs():
         if sanitized:
             query = query.filter(AuditLog.item_name.ilike(search_pattern, escape='\\'))
     if date_from:
-        from datetime import datetime
         try:
             date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
             query = query.filter(AuditLog.timestamp >= date_from_obj)
         except ValueError:
             pass
     if date_to:
-        from datetime import datetime, timedelta
         try:
             date_to_obj = datetime.strptime(date_to, '%Y-%m-%d') + timedelta(days=1)
             query = query.filter(AuditLog.timestamp < date_to_obj)
@@ -533,23 +531,27 @@ def send_verification_code():
         return jsonify({'success': False, 'error': 'Email already registered'}), 400
     
     # Generate and store verification code
+    # Generate and store verification code
     code = generate_verification_code()
-    
-    # Delete any existing code for this email
-    VerificationCode.query.filter_by(email=email).delete()
-    
-    # Save to database
-    verification = VerificationCode(
-        email=email,
-        code=code,
-        password_hash='pending',  # Will be set in register route
-        first_name='',
-        last_name='',
-        expires_at=datetime.now() + timedelta(minutes=10)
-    )
-    db.session.add(verification)
-    db.session.commit()
-    
+    try:
+        # Delete any existing code for this email and create new one atomically
+        VerificationCode.query.filter_by(email=email).delete()
+        # Save to database
+        verification = VerificationCode(
+            email=email,
+            code=code,
+            password_hash='pending',  # Will be set in register route
+            first_name='',
+            last_name='',
+            expires_at=datetime.now() + timedelta(minutes=10)
+        )
+        db.session.add(verification)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        # Race condition occurred - another request just created a code
+        app.logger.warning(f"Race condition in verification code for {email}")
+        return jsonify({'success': True, 'message': 'Verification code sent successfully'}), 200
     # Send email
     if send_verification_email(email, code):
         return jsonify({'success': True, 'message': 'Verification code sent successfully'}), 200
@@ -966,8 +968,6 @@ def time_ago_filter(dt):
     if dt is None:
         return 'N/A'
     
-    from datetime import datetime
-    
     now = datetime.now()
     diff = now - dt
     
@@ -1023,8 +1023,8 @@ def index():
     total_notion_vendors = NotionVendor.query.count()
     
     # New styles this week
-    from datetime import datetime, timedelta
-    one_week_ago = datetime.utcnow() - timedelta(days=7)
+    
+    one_week_ago = datetime.now() - timedelta(days=7)
     new_this_week = Style.query.filter(Style.created_at >= one_week_ago).count()
     
     recent_styles = Style.query.order_by(Style.updated_at.desc()).limit(4).all()
