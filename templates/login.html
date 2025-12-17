@@ -280,7 +280,8 @@
                 setTimeout(function() {
                     const toast = document.createElement('div');
                     toast.className = 'toast toast-' + msg.category;
-                    toast.innerHTML = '<i data-feather="' + msg.icon + '"></i><span>' + msg.message + '</span>';
+                    toast.innerHTML = '<i data-feather="' + msg.icon + '"></i><span class="toast-message"></span>';
+                    toast.querySelector('.toast-message').textContent = msg.message;
                     container.appendChild(toast);
                     
                     if (typeof feather !== 'undefined') {
