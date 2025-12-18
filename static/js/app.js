@@ -1106,7 +1106,7 @@ updateSizeRangeDisplay();
       if (index === 0) {
         $('[data-notion-id]').value = n.notion_id;
         $('[data-notion-cost]').value = n.cost_per_unit;
-        $('[data-notion-qty]').value = n.qty;
+        $('[data-notion-qty]').value = n.qty || '';
         if (n.vendor_id) $('[data-notion-vendor-id]').value = n.vendor_id;
       } else {
         $('#addNotion').click();
@@ -1114,7 +1114,7 @@ updateSizeRangeDisplay();
         const newRow = allNotionSelects[allNotionSelects.length - 1].closest('.kv');
         newRow.querySelector('[data-notion-id]').value = n.notion_id;
         newRow.querySelector('[data-notion-cost]').value = n.cost_per_unit;
-        newRow.querySelector('[data-notion-qty]').value = n.qty;
+        newRow.querySelector('[data-notion-qty]').value = n.qty || '';
         if (n.vendor_id) newRow.querySelector('[data-notion-vendor-id]').value = n.vendor_id;
       }
     });
