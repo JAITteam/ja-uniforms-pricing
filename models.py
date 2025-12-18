@@ -234,9 +234,8 @@ class Style(db.Model):
     def get_total_notion_cost(self):
         total = 0
         for sn in self.style_notions:
-            total += sn.quantity_required * sn.notion.cost_per_unit
+            total += float(sn.quantity_required) * sn.notion.cost_per_unit
         return round(total, 2)
-    
    
     def get_total_labor_cost(self):
         total = 0
@@ -307,7 +306,7 @@ class StyleNotion(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False, index=True)  # ← ADDED INDEX
     notion_id = db.Column(db.Integer, db.ForeignKey('notions.id', ondelete='CASCADE'), nullable=False, index=True)  # ← ADDED INDEX
-    quantity_required = db.Column(db.Integer, nullable=False)
+    quantity_required = db.Column(db.Numeric(10, 2), nullable=False)
     notes = db.Column(db.String(200))
     
     style = db.relationship('Style', backref='style_notions')

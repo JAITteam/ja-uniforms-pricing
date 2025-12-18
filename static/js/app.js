@@ -1619,7 +1619,7 @@ updateSizeRangeDisplay();
         ${notionOptionsHtml}
       </select>
       <label>Avg.Cost</label><input class="form-control w-110 text-end" type="number" step="0.01" value="" data-notion-cost readonly>
-      <label>Qty</label><input class="form-control qty text-end" type="number" step="1" value="" data-notion-qty>
+      <label>Qty</label><input class="form-control qty text-end" type="number" step="0.01" value="" data-notion-qty>
       <label>Total</label><input class="form-control w-110 text-end" value="" disabled data-notion-total>
       <button type="button" class="btn btn-sm btn-danger" data-remove-btn>Remove</button>
     `;

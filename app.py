@@ -4821,7 +4821,7 @@ def import_excel():
                     if notion_type and notion_type != 'nan':
                         notion_name = str(df.iloc[8, 1]).strip() if pd.notna(df.iloc[8, 1]) else notion_type
                         notion_cost = float(df.iloc[8, 2]) if pd.notna(df.iloc[8, 2]) else 0.05
-                        notion_qty = int(float(df.iloc[8, 3])) if pd.notna(df.iloc[8, 3]) else 1
+                        notion_qty = float(df.iloc[8, 3]) if pd.notna(df.iloc[8, 3]) else 1
                         
                         if notion_name and notion_name != 'nan' and notion_qty > 0:
                             notion = Notion.query.filter_by(name=notion_name).first()
