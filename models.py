@@ -247,11 +247,11 @@ class Style(db.Model):
             if not labor_op:
                 continue
             if labor_op.cost_type == 'flat_rate':
-                total += (labor_op.fixed_cost or 0) * (sl.quantity or 1)
+                total += (labor_op.fixed_cost or 0) * (sl.quantity or 0)
             elif labor_op.cost_type == 'hourly':
                 total += (labor_op.cost_per_hour or 0) * (sl.time_hours or 0)
             elif labor_op.cost_type == 'per_piece':
-                total += (labor_op.cost_per_piece or 0) * (sl.quantity or 1)
+                total += (labor_op.cost_per_piece or 0) * (sl.quantity or 0)
         
         if self.garment_type:
             cleaning_cost = CleaningCost.query.filter_by(garment_type=self.garment_type).first()
