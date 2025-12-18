@@ -1181,3 +1181,54 @@ textarea {
         opacity: 1;
     }
 }
+/* ============================================
+   FABRIC & NOTION ROW DIFFERENTIATION
+   Add this to your static/css/custom.css file
+   ============================================ */
+
+/* Fabric rows - Blue left border */
+#materialsPanel .kv:has([data-fabric-id]),
+#materialsPanel .kv:has([data-fabric-vendor-id]) {
+    border-left: 4px solid #3b82f6;
+    padding-left: 12px;
+    margin-left: 0;
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, transparent 100%);
+    border-radius: 4px;
+}
+
+/* Notion rows - Purple left border */
+#materialsPanel .kv:has([data-notion-id]),
+#materialsPanel .kv:has([data-notion-vendor-id]) {
+    border-left: 4px solid #8b5cf6;
+    padding-left: 12px;
+    margin-left: 0;
+    background: linear-gradient(90deg, rgba(139, 92, 246, 0.05) 0%, transparent 100%);
+    border-radius: 4px;
+}
+
+/* Label cost row - Green left border */
+#materialsPanel .kv:has(#label_cost) {
+    border-left: 4px solid #10b981;
+    padding-left: 12px;
+    margin-left: 0;
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.05) 0%, transparent 100%);
+    border-radius: 4px;
+}
+
+/* Add Fabric/Notion link rows - subtle styling */
+#materialsPanel .kv:has(.linklike) {
+    border-left: 2px dashed #cbd5e1;
+    padding-left: 12px;
+    margin-left: 0;
+    opacity: 0.8;
+}
+
+/* Hover effect for fabric rows */
+#materialsPanel .kv:has([data-fabric-id]):hover {
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, transparent 100%);
+}
+
+/* Hover effect for notion rows */
+#materialsPanel .kv:has([data-notion-id]):hover {
+    background: linear-gradient(90deg, rgba(139, 92, 246, 0.1) 0%, transparent 100%);
+}
