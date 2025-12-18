@@ -519,7 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
     : [];
 
   const fabricSelect = document.querySelector('[data-fabric-id]');
-  const fabricOptions = fabricSelect
+  window.fabricOptions = fabricSelect
     ? Array.from(fabricSelect.options).map(opt => ({
         value: opt.value,
         text: opt.text,
@@ -530,7 +530,7 @@ document.addEventListener('DOMContentLoaded', () => {
     : [];
 
   const notionSelect = document.querySelector('[data-notion-id]');
-  const notionOptions = notionSelect
+  window.notionOptions = notionSelect
     ? Array.from(notionSelect.options).map(opt => ({
         value: opt.value,
         text: opt.text,
@@ -1474,7 +1474,7 @@ updateSizeRangeDisplay();
       ).join('');
     
     const fabricOptionsHtml = '<option value="">Select Fabric</option><option value="__ADD_NEW__" style="color: #10b981; font-weight: 600;">+ Add New Fabric</option>' + 
-      fabricOptions.filter(opt => opt.value !== '' && opt.value !== '__ADD_NEW__').map(opt =>
+      window.fabricOptions.filter(opt => opt.value !== '' && opt.value !== '__ADD_NEW__').map(opt =>
         `<option value="${opt.value}" data-cost="${opt.cost}" data-vendor="${opt.vendor}" data-fabric-code="${opt.fabricCode || ''}">${opt.text}</option>`
       ).join('');
     
@@ -1605,7 +1605,7 @@ updateSizeRangeDisplay();
       ).join('');
     
     const notionOptionsHtml = '<option value="">Select Notion</option><option value="__ADD_NEW__" style="color: #10b981; font-weight: 600;">+ Add New Notion</option>' + 
-      notionOptions.filter(opt => opt.value !== '' && opt.value !== '__ADD_NEW__').map(opt =>
+      window.notionOptions.filter(opt => opt.value !== '' && opt.value !== '__ADD_NEW__').map(opt =>
         `<option value="${opt.value}" data-cost="${opt.cost}" data-vendor="${opt.vendor}">${opt.text}</option>`
       ).join('');
     
@@ -2499,6 +2499,14 @@ async function saveQuickFabric() {
           select.add(clone);
         }
       });
+       // Also update the cached fabricOptions array for future dynamic rows
+      window.fabricOptions.push({
+        value: data.id.toString(),
+        text: name,
+        cost: cost,
+        vendor: vendorId,
+        fabricCode: code
+      });
 
       // Select the new fabric in the trigger dropdown
       if (quickAddFabricTrigger) {
@@ -2612,6 +2620,14 @@ async function saveQuickNotion() {
         } else {
           select.add(clone);
         }
+      });
+
+      // Also update the cached notionOptions array for future dynamic rows
+      window.notionOptions.push({
+        value: data.id.toString(),
+        text: name,
+        cost: cost,
+        vendor: vendorId
       });
       
       // Select the new notion in the trigger dropdown

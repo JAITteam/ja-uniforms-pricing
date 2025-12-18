@@ -2436,7 +2436,7 @@ def load_style_for_duplicate(style_id):
                 notions.append({
                     "name": notion.name,
                     "vendor": vendor_name,
-                    "qty": sn.quantity_required,
+                    "qty": float(sn.quantity_required) if sn.quantity_required else 0,
                     "cost_per_unit": notion.cost_per_unit
                 })
         
