@@ -1232,3 +1232,37 @@ textarea {
 #materialsPanel .kv:has([data-notion-id]):hover {
     background: linear-gradient(90deg, rgba(139, 92, 246, 0.1) 0%, transparent 100%);
 }
+/* ============================================
+   LABOR COST GRID ALIGNMENT
+   ============================================ */
+.labor-row {
+    display: grid;
+    grid-template-columns: 180px 80px 90px 50px 70px 45px 90px;
+    align-items: center;
+    gap: 8px;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.labor-row .labor-name {
+    font-weight: 600;
+    color: #334155;
+    font-size: 0.875rem;
+}
+
+.labor-row .labor-label {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    text-align: right;
+}
+
+.labor-row input,
+.labor-row select {
+    height: 32px;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+}
+/* Fix Cleaning & Ironing row layout */
+.labor-row:has(#garment_type) {
+    grid-template-columns: 180px 35px 220px 40px 90px !important;
+}
