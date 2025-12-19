@@ -1287,3 +1287,52 @@ textarea {
     white-space: nowrap;
     font-size: 0.75rem;
 }
+/* ============================================
+   IMPROVED FONT READABILITY
+   ============================================ */
+
+/* Darken body text */
+body {
+    color: #1e293b;
+}
+
+/* Darken labels */
+.kv label,
+.labor-row .labor-label,
+.total-cost-row .total-cost-label {
+    color: #475569;
+    font-weight: 500;
+}
+
+/* Darken input text */
+.form-control,
+.form-select {
+    color: #1e293b;
+}
+
+/* Darken disabled inputs (make them more readable) */
+.form-control:disabled,
+.form-select:disabled {
+    color: #334155;
+    opacity: 1;
+}
+
+/* Darken muted text */
+.text-muted {
+    color: #64748b !important;
+}
+
+/* Darken labor operation names */
+.labor-row .labor-name {
+    color: #1e293b;
+}
+
+/* Darken chips */
+.chip {
+    color: #475569;
+}
+
+/* Darken panel headers */
+.ph {
+    color: #1e293b;
+}
