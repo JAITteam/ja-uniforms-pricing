@@ -222,9 +222,9 @@
     <div class="panel">
       <div class="ph">TOTAL COST</div>
       <div class="pb">
-        <div class="kv">
-          <span class="text-muted">Size Range</span>
-          <select class="form-select md" id="size_range_id">
+        <div class="total-cost-row">
+          <span class="total-cost-label">Size Range</span>
+          <select class="form-select" id="size_range_id" style="width: 150px;">
             <option value="">Select Size Range</option>
             {% for sr in size_ranges %}
             <option value="{{ sr.id }}" 
@@ -237,15 +237,17 @@
             {% endfor %}
           </select>
           <span class="chip">Regular Sizes</span>
-          <input class="form-control sm text-center" id="regular_sizes_display" disabled>
-          <span class="text-muted">Total Cost Price for Reg. Sizes</span>
-          <input class="form-control w-110 text-end" id="total_reg" disabled>
+          <input class="form-control text-center" id="regular_sizes_display" disabled style="width: 80px;">
+          <span class="total-cost-label">Total Cost Price for Reg. Sizes</span>
+          <input class="form-control text-end" id="total_reg" disabled style="width: 90px;">
         </div>
-        <div class="kv mt-2">
+        <div class="total-cost-row">
+          <span class="total-cost-label"></span>
+          <span style="width: 150px;"></span>
           <span class="chip" id="extended_label">Extended Sizes (+15%)</span>
-          <input class="form-control sm text-center" id="extended_sizes_display" disabled>
-          <span class="text-muted">Total Cost Price for Ex. Sizes</span>
-          <input class="form-control w-110 text-end" id="total_ext" disabled>
+          <input class="form-control text-center" id="extended_sizes_display" disabled style="width: 80px;">
+          <span class="total-cost-label">Total Cost Price for Ex. Sizes</span>
+          <input class="form-control text-end" id="total_ext" disabled style="width: 90px;">
         </div>
       </div>
     </div>

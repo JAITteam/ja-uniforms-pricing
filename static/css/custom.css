@@ -1266,3 +1266,24 @@ textarea {
 .labor-row:has(#garment_type) {
     grid-template-columns: 180px 35px 220px 40px 90px !important;
 }
+/* ============================================
+   TOTAL COST GRID ALIGNMENT
+   ============================================ */
+.total-cost-row {
+    display: grid;
+    grid-template-columns: 80px 160px 140px 80px 200px 90px;
+    align-items: center;
+    gap: 10px;
+    padding: 0.5rem 0;
+}
+
+.total-cost-row .total-cost-label {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.total-cost-row .chip {
+    justify-self: end;
+    white-space: nowrap;
+    font-size: 0.75rem;
+}
