@@ -1291,7 +1291,7 @@ textarea {
    IMPROVED READABILITY - OTHER SECTIONS
    ============================================ */
 
-/* Labor section - subtle orange/amber tint */
+/* Labor section - subtle orange/amber tint (Style Wizard only) */
 #laborPanel .labor-row {
     border-left: 3px solid #f59e0b;
     padding-left: 12px;
@@ -1301,6 +1301,7 @@ textarea {
 #laborPanel .labor-row:hover {
     background: linear-gradient(90deg, rgba(245, 158, 11, 0.1) 0%, transparent 100%);
 }
+
 
 /* Total Cost section - subtle teal tint */
 .total-cost-row {
@@ -1313,24 +1314,23 @@ textarea {
     background: linear-gradient(90deg, rgba(20, 184, 166, 0.1) 0%, transparent 100%);
 }
 
-/* Basic Info section - subtle slate/blue tint */
-.panel:first-of-type .kv {
+/* Basic Info section - subtle slate/blue tint (Style Wizard only) */
+.panel:has(#vendor_style) .kv {
     border-left: 3px solid #6366f1;
     padding-left: 12px;
     background: linear-gradient(90deg, rgba(99, 102, 241, 0.05) 0%, transparent 100%);
 }
 
-.panel:first-of-type .kv:hover {
+.panel:has(#vendor_style) .kv:hover {
     background: linear-gradient(90deg, rgba(99, 102, 241, 0.1) 0%, transparent 100%);
 }
 
-/* Additional Info section - subtle pink tint */
-.panel:has(#notes) .kv {
+/* Additional Info section - subtle pink tint (Style Wizard only) */
+.panel:has(#notes):has(#color_list) .kv {
     border-left: 3px solid #ec4899;
     padding-left: 12px;
     background: linear-gradient(90deg, rgba(236, 72, 153, 0.05) 0%, transparent 100%);
 }
-
 /* Darken text across all sections */
 .labor-row .labor-name,
 .total-cost-row .total-cost-label,
@@ -1366,4 +1366,44 @@ textarea {
 .snapshot .sumline:last-of-type span {
     font-weight: 600;
     color: #1e293b;
+}
+/* Fix Labor Operations table column spacing */
+.table td,
+.table th {
+    padding: 1rem 1.5rem !important;
+}
+
+.table td:first-child {
+    width: 300px;
+}
+
+.table td:nth-child(2) {
+    width: 150px;
+}
+
+.table td:nth-child(3) {
+    width: 150px;
+}
+/* ============================================
+   FIX MASTER COSTS TABLES
+   ============================================ */
+.modern-table tbody tr {
+    background: white !important;
+    border-left: none !important;
+}
+
+.modern-table tbody tr:hover {
+    background: #f8fafc !important;
+}
+
+.modern-table tbody tr.labor-row {
+    display: table-row !important;
+    grid-template-columns: none !important;
+}
+
+.modern-table td,
+.modern-table th {
+    padding: 1rem 1.5rem !important;
+    border-left: none !important;
+    background: transparent !important;
 }
