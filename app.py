@@ -1220,6 +1220,8 @@ def upload_style_image(style_id):
     )
     
     db.session.add(new_image)
+    # Update style's updated_at timestamp
+    style.updated_at = datetime.now()
     db.session.commit()
     
     app.logger.info(f"Image uploaded: {filename} for style {style_id} ({file_size} bytes)")
@@ -1256,13 +1258,15 @@ def get_style_images(style_id):
         'upload_date': img.upload_date.isoformat() if img.upload_date else None
     } for img in images]), 200
 
-
 @app.route('/api/style-image/<int:image_id>', methods=['DELETE'])
 @admin_required 
 def delete_style_image(image_id):
     """Delete a style image"""
     # Find the image record
     img = StyleImage.query.get_or_404(image_id)
+    
+    # Get the style before deleting the image
+    style = Style.query.get(img.style_id)
     
     # Delete physical file from disk
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
@@ -1272,11 +1276,15 @@ def delete_style_image(image_id):
             os.remove(filepath)
         except Exception as e:
             app.logger.error(f"Error deleting file: {e}")
-
             # Continue anyway to remove from database
     
     # Delete database record
     db.session.delete(img)
+    
+    # Update style's updated_at timestamp
+    if style:
+        style.updated_at = datetime.now()
+
     db.session.commit()
     
     return jsonify({'success': True}), 200
