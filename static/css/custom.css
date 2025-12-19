@@ -1385,24 +1385,24 @@ textarea {
     width: 150px;
 }
 /* ============================================
-   FIX MASTER COSTS TABLES
+   FIX MASTER COSTS TABLES ONLY
    ============================================ */
-.modern-table tbody tr {
+.main-container .modern-table tbody tr {
     background: white !important;
     border-left: none !important;
 }
 
-.modern-table tbody tr:hover {
+.main-container .modern-table tbody tr:hover {
     background: #f8fafc !important;
 }
 
-.modern-table tbody tr.labor-row {
+.main-container .modern-table tbody tr.labor-row {
     display: table-row !important;
     grid-template-columns: none !important;
 }
 
-.modern-table td,
-.modern-table th {
+.main-container .modern-table td,
+.main-container .modern-table th {
     padding: 1rem 1.5rem !important;
     border-left: none !important;
     background: transparent !important;
