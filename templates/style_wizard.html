@@ -476,12 +476,17 @@ function exportCurrentStyle() {
 {% if view_mode %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Disable all form inputs
-    document.querySelectorAll('input, select, textarea').forEach(function(el) {
-        el.disabled = true;
-        el.style.backgroundColor = '#f3f4f6';
-        el.style.cursor = 'not-allowed';
-    });
+    // Function to disable all form elements
+    function disableAllInputs() {
+        document.querySelectorAll('input, select, textarea').forEach(function(el) {
+            el.disabled = true;
+            el.style.backgroundColor = '#f3f4f6';
+            el.style.cursor = 'not-allowed';
+        });
+    }
+    
+    // Initial disable
+    disableAllInputs();
     
     // Hide all add/remove buttons
     document.querySelectorAll('button').forEach(function(el) {
@@ -491,12 +496,45 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // Hide add links
+    document.querySelectorAll('.linklike').forEach(function(el) {
+        el.style.display = 'none';
+    });
+    
     // Disable image upload
     var imageUpload = document.getElementById('imageUpload');
     if (imageUpload) imageUpload.disabled = true;
     
     var addImageBox = document.getElementById('addImageBox');
     if (addImageBox) addImageBox.style.display = 'none';
+    
+    // Watch for dynamically added rows and disable them too
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+                if (node.nodeType === 1) { // Element node
+                    // Disable any inputs in the new node
+                    node.querySelectorAll?.('input, select, textarea').forEach(function(el) {
+                        el.disabled = true;
+                        el.style.backgroundColor = '#f3f4f6';
+                        el.style.cursor = 'not-allowed';
+                    });
+                    // Hide remove buttons
+                    node.querySelectorAll?.('button').forEach(function(el) {
+                        if (el.textContent.toLowerCase().includes('remove')) {
+                            el.style.display = 'none';
+                        }
+                    });
+                }
+            });
+        });
+    });
+    
+    // Observe the materials panel for changes
+    const materialsPanel = document.getElementById('materialsPanel');
+    if (materialsPanel) {
+        observer.observe(materialsPanel, { childList: true, subtree: true });
+    }
     
     console.log('View mode enabled - all inputs disabled');
 });
