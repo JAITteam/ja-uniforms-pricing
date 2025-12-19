@@ -9,6 +9,7 @@ import csv
 import json
 import random
 import string
+import html
 import secrets
 import logging
 from io import StringIO
@@ -432,7 +433,6 @@ def ratelimit_handler(e):
 def log_audit(action, item_type, item_id=None, item_name=None, 
               old_values=None, new_values=None, affected_styles_count=0, details=None):
     """Log an audit entry for tracking changes"""
-    print(f">>> LOG_AUDIT CALLED: {action} {item_type} {item_name}")
     try:
         user_name = 'System'
         user_email = None
@@ -459,7 +459,8 @@ def log_audit(action, item_type, item_id=None, item_name=None,
         db.session.add(log_entry)
         db.session.commit()
     except Exception as e:
-        print(f"Audit log error: {e}")
+        db.session.rollback()
+        app.logger.error(f"Audit log error: {e}")
 
 @app.route('/audit-logs')
 @login_required
@@ -517,7 +518,7 @@ def audit_logs():
 def send_verification_code():
     """API endpoint to send verification code"""
     data = request.get_json()
-    email = data.get('email')
+    email = data.get('email', '').strip().lower()
     
     if not email:
         return jsonify({'success': False, 'error': 'Email is required'}), 400
@@ -530,7 +531,6 @@ def send_verification_code():
     if User.query.filter_by(username=email).first():
         return jsonify({'success': False, 'error': 'Email already registered'}), 400
     
-    # Generate and store verification code
     # Generate and store verification code
     code = generate_verification_code()
     try:
@@ -551,7 +551,19 @@ def send_verification_code():
         db.session.rollback()
         # Race condition occurred - another request just created a code
         app.logger.warning(f"Race condition in verification code for {email}")
-        return jsonify({'success': True, 'message': 'Verification code sent successfully'}), 200
+        
+        # Check if a valid code already exists and resend it
+        existing_code = VerificationCode.query.filter_by(email=email).first()
+        if existing_code and not existing_code.is_expired():
+            # Resend the existing code
+            if send_verification_email(email, existing_code.code):
+                return jsonify({'success': True, 'message': 'Verification code sent successfully'}), 200
+            else:
+                return jsonify({'success': False, 'error': 'Failed to send verification email. Please try again.'}), 500
+        else:
+            # No valid code exists, ask user to try again
+            return jsonify({'success': False, 'error': 'Please try again in a moment.'}), 429
+    
     # Send email
     if send_verification_email(email, code):
         return jsonify({'success': True, 'message': 'Verification code sent successfully'}), 200
@@ -658,10 +670,10 @@ def login():
     #     return redirect(url_for('index'))
     
     if request.method == 'POST':
-        email = request.form.get('username')
+        email = request.form.get('username', '').strip().lower()
         password = request.form.get('password')
         
-        if not email.endswith('@jauniforms.com'):
+        if not email or not email.endswith('@jauniforms.com'):
             flash('Only company emails (@jauniforms.com) are allowed', 'danger')
             return render_template('login.html')
         
@@ -1150,7 +1162,6 @@ def api_dashboard_stats():
 @admin_required 
 def upload_style_image(style_id):
     """Upload an image for a style - with size and MIME validation"""
-    import imghdr
     
     # Check if style exists
     style = Style.query.get_or_404(style_id)
@@ -1271,12 +1282,13 @@ def delete_style_image(image_id):
     # Delete physical file from disk
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
     
-    if os.path.exists(filepath):
-        try:
-            os.remove(filepath)
-        except Exception as e:
-            app.logger.error(f"Error deleting file: {e}")
-            # Continue anyway to remove from database
+    try:
+        os.remove(filepath)
+    except FileNotFoundError:
+        pass  # File already deleted, that's fine
+    except Exception as e:
+        app.logger.error(f"Error deleting file: {e}")
+        # Continue anyway to remove from database
     
     # Delete database record
     db.session.delete(img)
@@ -1874,13 +1886,13 @@ def export_sap_single_style():
                     <h1>❌ Cannot Export</h1>
                     
                     <div class="style-info">
-                        <strong>Style:</strong> {style.vendor_style}<br>
-                        <strong>Name:</strong> {style.style_name or 'N/A'}
+                        <strong>Style:</strong> {html.escape(style.vendor_style or '')}<br>
+                        <strong>Name:</strong> {html.escape(style.style_name or 'N/A')}
                     </div>
                     
                     <div class="error-box">
                         <strong>Missing Required Fields:</strong>
-                        {''.join(f'<div class="missing-item">{item}</div>' for item in missing)}
+                        {''.join(f'<div class="missing-item">{html.escape(item)}</div>' for item in missing)}
                     </div>
                     
                     <p><strong>All fields below are REQUIRED for export:</strong></p>
@@ -1891,7 +1903,7 @@ def export_sap_single_style():
                         <li>Size Range (with sizes defined)</li>
                     </ul>
                     
-                    <a href="/style/new?vendor_style={vendor_style}" class="back-btn">← Edit This Style</a>
+                    <a href="/style/new?vendor_style={html.escape(vendor_style or '')}" class="back-btn">← Edit This Style</a>
                 </div>
             </body>
             </html>
@@ -1957,7 +1969,7 @@ def export_sap_single_style():
     except Exception as e:
         import traceback
         app.logger.error(traceback.format_exc())
-        return f"Error exporting: {str(e)}", 500
+        return f"Error exporting: {html.escape(str(e))}", 500
 
 
 # ===== BULK EXPORT =====
@@ -1990,30 +2002,30 @@ def export_sap_format():
         
         # If ANY style is invalid, block export and show errors
         if invalid_styles:
-            error_html = """
+            error_html = f"""
             <!DOCTYPE html>
             <html>
             <head>
                 <title>Export Validation Error</title>
                 <style>
-                    body {
+                    body {{
                         font-family: Arial, sans-serif;
                         padding: 40px;
                         background: #f5f5f5;
-                    }
-                    .container {
+                    }}
+                    .container {{
                         max-width: 900px;
                         margin: 0 auto;
                         background: white;
                         padding: 30px;
                         border-radius: 8px;
                         box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                    }
-                    h1 {
+                    }}
+                    h1 {{
                         color: #dc3545;
                         margin-bottom: 20px;
-                    }
-                    .summary {
+                    }}
+                    .summary {{
                         background: #fff3cd;
                         border: 2px solid #ffc107;
                         padding: 15px;
@@ -2021,44 +2033,44 @@ def export_sap_format():
                         border-radius: 4px;
                         font-weight: bold;
                         text-align: center;
-                    }
-                    .error-list {
+                    }}
+                    .error-list {{
                         background: #f8f9fa;
                         padding: 20px;
                         border-radius: 4px;
-                    }
-                    .style-error {
+                    }}
+                    .style-error {{
                         margin-bottom: 20px;
                         padding: 15px;
                         border-left: 4px solid #dc3545;
                         background: white;
-                    }
-                    .vendor-style {
+                    }}
+                    .vendor-style {{
                         font-weight: bold;
                         color: #333;
                         font-size: 1.1em;
                         margin-bottom: 5px;
-                    }
-                    .style-name {
+                    }}
+                    .style-name {{
                         color: #666;
                         font-size: 0.9em;
                         margin-bottom: 10px;
-                    }
-                    .missing-item {
+                    }}
+                    .missing-item {{
                         color: #856404;
                         margin: 3px 0;
                         padding-left: 20px;
-                    }
-                    .missing-item::before {
+                    }}
+                    .missing-item::before {{
                         content: "⚠️ ";
-                    }
-                    .requirements {
+                    }}
+                    .requirements {{
                         background: #e7f3ff;
                         border-left: 4px solid #007bff;
                         padding: 15px;
                         margin: 20px 0;
-                    }
-                    .back-btn {
+                    }}
+                    .back-btn {{
                         display: inline-block;
                         margin-top: 20px;
                         padding: 12px 24px;
@@ -2067,10 +2079,10 @@ def export_sap_format():
                         text-decoration: none;
                         border-radius: 4px;
                         font-weight: bold;
-                    }
-                    .back-btn:hover {
+                    }}
+                    .back-btn:hover {{
                         background: #0056b3;
-                    }
+                    }}
                 </style>
             </head>
             <body>
@@ -2087,9 +2099,9 @@ def export_sap_format():
             for inv in invalid_styles:
                 error_html += f"""
                         <div class="style-error">
-                            <div class="vendor-style">{inv['vendor_style']}</div>
-                            <div class="style-name">{inv['style_name']}</div>
-                            {''.join(f'<div class="missing-item">{item}</div>' for item in inv['missing'])}
+                            <div class="vendor-style">{html.escape(inv['vendor_style'])}</div>
+                            <div class="style-name">{html.escape(inv['style_name'])}</div>
+                            {''.join(f'<div class="missing-item">{html.escape(item)}</div>' for item in inv['missing'])}
                         </div>
                 """
             
@@ -2170,7 +2182,7 @@ def export_sap_format():
     except Exception as e:
         import traceback
         app.logger.error(traceback.format_exc())
-        return f"Error exporting: {str(e)}", 500
+        return f"Error exporting: {html.escape(str(e))}", 500
 
 
 @app.route('/view-all-styles')
@@ -2217,14 +2229,15 @@ def delete_style(style_id):
         images = StyleImage.query.filter_by(style_id=style_id).all()
         for img in images:
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
-            if os.path.exists(filepath):
-                try:
-                    os.remove(filepath)
-                    app.logger.info(f"Deleted image file: {filepath}")
-                except Exception as e:
-                    app.logger.warning(f"Could not delete image file {filepath}: {e}")
-                    # Continue anyway - don't fail the whole delete
-        
+            try:
+                os.remove(filepath)
+                app.logger.info(f"Deleted image file: {filepath}")
+            except FileNotFoundError:
+                pass  # File already deleted, that's fine
+            except Exception as e:
+                app.logger.warning(f"Could not delete image file {filepath}: {e}")
+                # Continue anyway - don't fail the whole delete
+           
         # Now delete database records
         StyleImage.query.filter_by(style_id=style_id).delete()
         StyleFabric.query.filter_by(style_id=style_id).delete()
@@ -2367,12 +2380,13 @@ def bulk_delete_styles():
             images = StyleImage.query.filter_by(style_id=style_id).all()
             for img in images:
                 filepath = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
-                if os.path.exists(filepath):
-                    try:
-                        os.remove(filepath)
-                        total_images_deleted += 1
-                    except Exception as e:
-                        app.logger.warning(f"Could not delete image file {filepath}: {e}")
+                try:
+                    os.remove(filepath)
+                    total_images_deleted += 1
+                except FileNotFoundError:
+                    pass  # File already deleted, that's fine
+                except Exception as e:
+                    app.logger.warning(f"Could not delete image file {filepath}: {e}")
             
             # Delete database records
             StyleImage.query.filter_by(style_id=style_id).delete()
@@ -2630,7 +2644,10 @@ def api_fabric_vendor_detail(vendor_id):
                 vendor.vendor_code = data.get('vendor_code', '').strip() if data.get('vendor_code') else None
 
             if 'f_ship_cost' in data:
-                vendor.f_ship_cost = float(data.get('f_ship_cost') or 0.0)
+                f_ship_cost = float(data.get('f_ship_cost') or 0.0)
+                if f_ship_cost < 0:
+                    return jsonify({'error': 'Shipping cost cannot be negative'}), 400
+                vendor.f_ship_cost = f_ship_cost
             
             db.session.commit()
 
