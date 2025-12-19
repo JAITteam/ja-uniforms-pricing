@@ -1288,51 +1288,82 @@ textarea {
     font-size: 0.75rem;
 }
 /* ============================================
-   IMPROVED FONT READABILITY
+   IMPROVED READABILITY - OTHER SECTIONS
    ============================================ */
 
-/* Darken body text */
-body {
-    color: #1e293b;
+/* Labor section - subtle orange/amber tint */
+#laborPanel .labor-row {
+    border-left: 3px solid #f59e0b;
+    padding-left: 12px;
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.05) 0%, transparent 100%);
 }
 
-/* Darken labels */
-.kv label,
-.labor-row .labor-label,
-.total-cost-row .total-cost-label {
-    color: #475569;
+#laborPanel .labor-row:hover {
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.1) 0%, transparent 100%);
+}
+
+/* Total Cost section - subtle teal tint */
+.total-cost-row {
+    border-left: 3px solid #14b8a6;
+    padding-left: 12px;
+    background: linear-gradient(90deg, rgba(20, 184, 166, 0.05) 0%, transparent 100%);
+}
+
+.total-cost-row:hover {
+    background: linear-gradient(90deg, rgba(20, 184, 166, 0.1) 0%, transparent 100%);
+}
+
+/* Basic Info section - subtle slate/blue tint */
+.panel:first-of-type .kv {
+    border-left: 3px solid #6366f1;
+    padding-left: 12px;
+    background: linear-gradient(90deg, rgba(99, 102, 241, 0.05) 0%, transparent 100%);
+}
+
+.panel:first-of-type .kv:hover {
+    background: linear-gradient(90deg, rgba(99, 102, 241, 0.1) 0%, transparent 100%);
+}
+
+/* Additional Info section - subtle pink tint */
+.panel:has(#notes) .kv {
+    border-left: 3px solid #ec4899;
+    padding-left: 12px;
+    background: linear-gradient(90deg, rgba(236, 72, 153, 0.05) 0%, transparent 100%);
+}
+
+/* Darken text across all sections */
+.labor-row .labor-name,
+.total-cost-row .total-cost-label,
+.kv label {
+    color: #334155;
+    font-weight: 500;
+}
+/* ============================================
+   SNAPSHOT PANEL ENHANCEMENT
+   ============================================ */
+
+.snapshot .sumline {
+    border-left: 3px solid #3b82f6;
+    padding-left: 12px;
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, transparent 100%);
+}
+
+.snapshot .sumline:hover {
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, transparent 100%);
+}
+
+.snapshot .sumline span {
+    color: #334155;
     font-weight: 500;
 }
 
-/* Darken input text */
-.form-control,
-.form-select {
-    color: #1e293b;
+/* Total Cost row - make it stand out */
+.snapshot .sumline:last-of-type {
+    border-left: 4px solid #10b981;
+    background: linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, transparent 100%);
 }
 
-/* Darken disabled inputs (make them more readable) */
-.form-control:disabled,
-.form-select:disabled {
-    color: #334155;
-    opacity: 1;
-}
-
-/* Darken muted text */
-.text-muted {
-    color: #64748b !important;
-}
-
-/* Darken labor operation names */
-.labor-row .labor-name {
-    color: #1e293b;
-}
-
-/* Darken chips */
-.chip {
-    color: #475569;
-}
-
-/* Darken panel headers */
-.ph {
+.snapshot .sumline:last-of-type span {
+    font-weight: 600;
     color: #1e293b;
 }
