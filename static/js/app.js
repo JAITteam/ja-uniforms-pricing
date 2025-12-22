@@ -1176,17 +1176,18 @@ updateSizeRangeDisplay();
     if ($('#saveBtn')) $('#saveBtn').disabled = false;
   }
 
-  const saveBtn = $('#saveBtn');
+  const saveBtn = $('#saveBtn');  
   function toggleSave(){ 
-    // Require BOTH style_name AND vendor_style to enable save
+    // Require style_name, vendor_style, AND base_item_number to enable save
     const hasStyleName = $('#style_name')?.value.trim();
     const hasVendorStyle = $('#vendor_style')?.value.trim();
-    if (saveBtn) saveBtn.disabled = !(hasStyleName && hasVendorStyle); 
+    const hasBaseItem = $('#base_item_number')?.value.trim();
+    if (saveBtn) saveBtn.disabled = !(hasStyleName && hasVendorStyle && hasBaseItem); 
   }
   $('#style_name')?.addEventListener('input', toggleSave);
   $('#vendor_style')?.addEventListener('input', toggleSave);
+  $('#base_item_number')?.addEventListener('input', toggleSave);
   toggleSave();
-  
   saveBtn?.addEventListener('click', async () => {
     // ========================================
     // ENHANCED SAVE VALIDATION
@@ -1224,6 +1225,14 @@ updateSizeRangeDisplay();
       await customAlert(validation.error, 'error');
       $('#vendor_style')?.focus();
       return;
+    }
+
+    //===== STEP 2.5: VALIDATE BASE ITEM NUMBER (REQUIRED) =====
+    const baseItemNumber = ($('#base_item_number')?.value || '').trim();
+    if (!baseItemNumber) {
+        await customAlert('Base Item Number is required', 'error');
+        $('#base_item_number')?.focus();
+        return;
     }
 
     // ===== STEP 3: VALIDATE MARGIN =====

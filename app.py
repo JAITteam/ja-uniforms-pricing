@@ -4073,6 +4073,11 @@ def api_style_save():
         if not valid:
             return jsonify({"error": vendor_style}), 400
         
+        # Base Item Number is REQUIRED
+        base_item_number = (s.get("base_item_number") or "").strip()
+        if not base_item_number:
+            return jsonify({"error": "Base Item Number is required"}), 400
+        
         # Validate style_name length
         valid, style_name = validate_string_length(style_name, "Style Name", 200)
         if not valid:
