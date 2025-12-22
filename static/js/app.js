@@ -984,6 +984,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const vendorStyle = ($('#vendor_style')?.value || '').trim();
     if (!vendorStyle) return;
 
+    isLoading = true; // Start loading - ignore dirty tracking
+
     const url = `/api/style/by-vendor-style?vendor_style=${encodeURIComponent(vendorStyle)}`;
     const res = await fetch(url);
     
@@ -1170,9 +1172,9 @@ updateSizeRangeDisplay();
 
     recalcMaterials();
     recalcLabor();
-    // Run validation on page load
     validateFirstFabricRow();
     validateFirstNotionRow();
+    isLoading = false; // Done loading
     markClean(); // Style just loaded, no changes yet
     if ($('#saveBtn')) $('#saveBtn').disabled = false;
   }
@@ -1181,6 +1183,7 @@ updateSizeRangeDisplay();
   // DIRTY FORM TRACKING - UNSAVED CHANGES
   // ============================================
   let isDirty = false;
+  let isLoading = false; // Flag to ignore changes during style load
 
   const saveBtn = $('#saveBtn');
 
@@ -1219,6 +1222,7 @@ updateSizeRangeDisplay();
   }
 
   function markDirty() {
+      if (isLoading) return;
       isDirty = true;
       updateSaveButtonState();
   }
@@ -1246,8 +1250,11 @@ updateSizeRangeDisplay();
       }
   });
 
-  // Intercept navigation clicks
+  // Intercept navigation clicks - ONLY on style wizard page
   document.addEventListener('click', async function(e) {
+      // Only check on style wizard page
+      if (!window.location.pathname.startsWith('/style/')) return;
+      
       const link = e.target.closest('a');
       if (!link) return;
       
@@ -1255,7 +1262,7 @@ updateSizeRangeDisplay();
       if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
       
       if (!isDirty) return;
-      
+        
       e.preventDefault();
       
       const shouldSave = await customConfirm(
@@ -1285,16 +1292,14 @@ updateSizeRangeDisplay();
   $('#vendor_style')?.addEventListener('input', toggleSave);
   $('#base_item_number')?.addEventListener('input', toggleSave);
 
-  // Attach dirty tracking after DOM loads
-  setTimeout(attachDirtyTracking, 500);
+  // Attach dirty tracking ONLY on style wizard page
+  if (window.location.pathname.startsWith('/style/')) {
+      console.log('✅ Dirty tracking enabled on style wizard');
+      setTimeout(attachDirtyTracking, 500);
+  }
 
   // Initial state
   updateSaveButtonState();
-
-
-
-
-
 
   saveBtn?.addEventListener('click', async () => {
     // ========================================
