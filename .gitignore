@@ -32,3 +32,4 @@ logs/
 
 # Uploaded images
 static/img/
+!static/img/logo.svg
