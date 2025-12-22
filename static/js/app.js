@@ -578,6 +578,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     $('#fabric_code').value = fabricCode || 'Auto';
     setText('#snap_vendor_style', vendorStyle || '(vendor style)');
+
+    // Trigger save button check
+    toggleSave();
   }
 
   // Bidirectional: Parse vendor style back to components
