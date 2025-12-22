@@ -33,3 +33,7 @@ logs/
 # Uploaded images
 static/img/
 !static/img/logo.svg
+
+# Backup script (each machine has its own)
+backup_database.ps1
+restore_database.ps1
