@@ -1175,9 +1175,13 @@ updateSizeRangeDisplay();
 
   const saveBtn = $('#saveBtn');
   function toggleSave(){ 
-    if (saveBtn) saveBtn.disabled = !($('#style_name')?.value.trim()); 
+    // Require BOTH style_name AND vendor_style to enable save
+    const hasStyleName = $('#style_name')?.value.trim();
+    const hasVendorStyle = $('#vendor_style')?.value.trim();
+    if (saveBtn) saveBtn.disabled = !(hasStyleName && hasVendorStyle); 
   }
-  $('#style_name')?.addEventListener('input', toggleSave); 
+  $('#style_name')?.addEventListener('input', toggleSave);
+  $('#vendor_style')?.addEventListener('input', toggleSave);
   toggleSave();
   
   saveBtn?.addEventListener('click', async () => {
@@ -1204,16 +1208,20 @@ updateSizeRangeDisplay();
       return;
     }
     
-    // ===== STEP 2: VALIDATE VENDOR STYLE =====
-    if (vendorStyle) {
-      validation = validateStringLength(vendorStyle, 'Vendor Style', 50);
-      if (!validation.valid) {
-        await customAlert(validation.error, 'error');
-        $('#vendor_style')?.focus();
-        return;
-      }
+    // ===== STEP 2: VALIDATE VENDOR STYLE (REQUIRED) =====
+    validation = validateRequired(vendorStyle, 'Vendor Style');
+    if (!validation.valid) {
+      await customAlert(validation.error, 'error');
+      $('#vendor_style')?.focus();
+      return;
     }
     
+    validation = validateStringLength(vendorStyle, 'Vendor Style', 50);
+    if (!validation.valid) {
+      await customAlert(validation.error, 'error');
+      $('#vendor_style')?.focus();
+      return;
+    }
 
     // ===== STEP 3: VALIDATE MARGIN =====
     const marginValue = $('#margin')?.value;
@@ -1223,9 +1231,6 @@ updateSizeRangeDisplay();
       $('#margin')?.focus();
       return;
     }
-
-    
-    // ===== STEP 4: VALIDATE FIRST FABRIC ROW =====
     
     // ===== STEP 4: VALIDATE FIRST FABRIC ROW =====
     const firstVendor = document.querySelector('[data-fabric-vendor-id]')?.value;

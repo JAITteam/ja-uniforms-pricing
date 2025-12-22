@@ -4043,8 +4043,6 @@ def api_style_by_vendor_style():
 
 
 # ===== ENHANCED /api/style/save WITH FULL VALIDATION =====
-# Replace your existing api_style_save function (starting at line ~2890)
-# with this validated version
 
 @app.post("/api/style/save")
 @limiter.limit("60 per minute")
@@ -4066,18 +4064,21 @@ def api_style_save():
         
         vendor_style = (s.get("vendor_style") or "").strip()
         
-        # Validate vendor_style if provided
-        if vendor_style:
-            valid, vendor_style = validate_string_length(vendor_style, "Vendor Style", 50)
-            if not valid:
-                return jsonify({"error": vendor_style}), 400
+        # Vendor Style is REQUIRED
+        if not vendor_style:
+            return jsonify({"error": "Vendor Style is required"}), 400
+        
+        # Validate vendor_style length
+        valid, vendor_style = validate_string_length(vendor_style, "Vendor Style", 50)
+        if not valid:
+            return jsonify({"error": vendor_style}), 400
         
         # Validate style_name length
         valid, style_name = validate_string_length(style_name, "Style Name", 200)
         if not valid:
             return jsonify({"error": style_name}), 400
        
-        # ===== STEP 2: CHECK FOR DUPLICATES =====
+        # ===== STEP 2: CHECK FOR DUPLICATES (Vendor Style only) =====
         style_id = s.get("style_id")
 
         # If style_id exists and is a number, this is an UPDATE
@@ -4086,19 +4087,19 @@ def api_style_save():
             existing_style = Style.query.get(int(style_id))
             if not existing_style:
                 return jsonify({"error": "Style not found"}), 404
-            is_new = False
-        else:
-            # CREATING NEW STYLE - check for duplicates
-            if vendor_style:
+            
+            # Check if vendor_style changed and conflicts with another style
+            if existing_style.vendor_style != vendor_style:
                 duplicate = Style.query.filter_by(vendor_style=vendor_style).first()
                 if duplicate:
-                    return jsonify({"error": f"Style '{vendor_style}' already exists! Search and load it to edit."}), 400
+                    return jsonify({"error": f"Vendor Style '{vendor_style}' already exists! Choose a different code."}), 400
             
-            duplicate_name = Style.query.filter(
-                func.lower(Style.style_name) == style_name.lower()
-            ).first()
-            if duplicate_name:
-                return jsonify({"error": f"Style name '{style_name}' already exists!"}), 400
+            is_new = False
+        else:
+            # CREATING NEW STYLE - check vendor_style uniqueness only
+            duplicate = Style.query.filter_by(vendor_style=vendor_style).first()
+            if duplicate:
+                return jsonify({"error": f"Vendor Style '{vendor_style}' already exists! Search and load it to edit."}), 400
             
             existing_style = Style()
             is_new = True
@@ -4142,6 +4143,11 @@ def api_style_save():
                     if error:
                         return jsonify({"error": error}), 400
                     n["qty"] = qty_val  # Update with validated value
+                    
+        # ===== STEP 5.5: VALIDATE FIRST FABRIC ROW REQUIRED =====
+        valid_fabrics = [f for f in fabrics_data if f.get("name") and f.get("yards")]
+        if not valid_fabrics:
+            return jsonify({"error": "First fabric row is required (Vendor, Fabric, and Yards)"}), 400
         
         # ===== STEP 6: UPDATE STYLE FIELDS =====
         style.style_name = style_name
@@ -4353,8 +4359,6 @@ def api_style_save():
         error_msg = str(e.orig).lower() if e.orig else str(e).lower()
         if 'vendor_style' in error_msg:
             return jsonify({"success": False, "error": "A style with this Vendor Style already exists. Please use a different code."}), 400
-        elif 'style_name' in error_msg:
-            return jsonify({"success": False, "error": "A style with this name already exists. Please use a different name."}), 400
         else:
             return jsonify({"success": False, "error": "This record already exists. Please check for duplicates."}), 400
     

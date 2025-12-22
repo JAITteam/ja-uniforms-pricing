@@ -197,7 +197,7 @@ class Style(db.Model):
     vendor_style = db.Column(db.String(50), unique=True, nullable=False, index=True)
     base_item_number = db.Column(db.String(20))
     variant_code = db.Column(db.String(20))
-    style_name = db.Column(db.String(200), unique=True, nullable=False, index=True)
+    style_name = db.Column(db.String(200), nullable=False, index=True)
     gender = db.Column(db.String(20), index=True)
     garment_type = db.Column(db.String(50), index=True)
     size_range = db.Column(db.String(50))
