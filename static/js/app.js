@@ -1173,21 +1173,129 @@ updateSizeRangeDisplay();
     // Run validation on page load
     validateFirstFabricRow();
     validateFirstNotionRow();
+    markClean(); // Style just loaded, no changes yet
     if ($('#saveBtn')) $('#saveBtn').disabled = false;
   }
 
-  const saveBtn = $('#saveBtn');  
-  function toggleSave(){ 
-    // Require style_name, vendor_style, AND base_item_number to enable save
-    const hasStyleName = $('#style_name')?.value.trim();
-    const hasVendorStyle = $('#vendor_style')?.value.trim();
-    const hasBaseItem = $('#base_item_number')?.value.trim();
-    if (saveBtn) saveBtn.disabled = !(hasStyleName && hasVendorStyle && hasBaseItem); 
+  // ============================================
+  // DIRTY FORM TRACKING - UNSAVED CHANGES
+  // ============================================
+  let isDirty = false;
+
+  const saveBtn = $('#saveBtn');
+
+  function updateSaveButtonState() {
+      if (!saveBtn) return;
+      
+      const hasStyleName = $('#style_name')?.value.trim();
+      const hasVendorStyle = $('#vendor_style')?.value.trim();
+      const hasBaseItem = $('#base_item_number')?.value.trim();
+      
+      // Disable if required fields missing
+      if (!(hasStyleName && hasVendorStyle && hasBaseItem)) {
+          saveBtn.disabled = true;
+          saveBtn.style.opacity = '0.5';
+          saveBtn.style.cursor = 'not-allowed';
+          return;
+      }
+      
+      // Enable button
+      saveBtn.disabled = false;
+      
+      // Style based on dirty state
+      if (isDirty) {
+          // Lit up - has unsaved changes
+          saveBtn.style.opacity = '1';
+          saveBtn.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
+          saveBtn.style.boxShadow = '0 0 15px rgba(34, 197, 94, 0.5)';
+          saveBtn.style.cursor = 'pointer';
+      } else {
+          // Dim - no unsaved changes
+          saveBtn.style.opacity = '0.7';
+          saveBtn.style.background = 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
+          saveBtn.style.boxShadow = 'none';
+          saveBtn.style.cursor = 'default';
+      }
   }
+
+  function markDirty() {
+      isDirty = true;
+      updateSaveButtonState();
+  }
+
+  function markClean() {
+      isDirty = false;
+      updateSaveButtonState();
+  }
+
+  // Track changes on all form inputs
+  function attachDirtyTracking() {
+      const inputs = document.querySelectorAll('input, select, textarea');
+      inputs.forEach(input => {
+          input.addEventListener('input', markDirty);
+          input.addEventListener('change', markDirty);
+      });
+  }
+
+  // Warn before leaving page with unsaved changes
+  window.addEventListener('beforeunload', function(e) {
+      if (isDirty) {
+          e.preventDefault();
+          e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+          return e.returnValue;
+      }
+  });
+
+  // Intercept navigation clicks
+  document.addEventListener('click', async function(e) {
+      const link = e.target.closest('a');
+      if (!link) return;
+      
+      const href = link.getAttribute('href');
+      if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+      
+      if (!isDirty) return;
+      
+      e.preventDefault();
+      
+      const shouldSave = await customConfirm(
+          'You have unsaved changes. Do you want to save before leaving?',
+          'warning'
+      );
+      
+      if (shouldSave) {
+          saveBtn?.click();
+          setTimeout(() => {
+              if (!isDirty) {
+                  window.location.href = href;
+              }
+          }, 1000);
+      } else {
+          isDirty = false;
+          window.location.href = href;
+      }
+  });
+
+  // Replace old toggleSave
+  function toggleSave() {
+      updateSaveButtonState();
+  }
+
   $('#style_name')?.addEventListener('input', toggleSave);
   $('#vendor_style')?.addEventListener('input', toggleSave);
   $('#base_item_number')?.addEventListener('input', toggleSave);
-  toggleSave();
+
+  // Attach dirty tracking after DOM loads
+  setTimeout(attachDirtyTracking, 500);
+
+  // Initial state
+  updateSaveButtonState();
+
+
+
+
+
+
   saveBtn?.addEventListener('click', async () => {
     // ========================================
     // ENHANCED SAVE VALIDATION
@@ -1449,6 +1557,7 @@ updateSizeRangeDisplay();
       const out = await res.json().catch(() => ({}));
   
       if (res.ok && out.success) {
+        markClean(); // Reset dirty state after successful save
         alert(out.new ? '✅ New style created successfully!' : '✅ Style updated successfully!');
         // Set current style ID and load images
         if (out.style_id) {
