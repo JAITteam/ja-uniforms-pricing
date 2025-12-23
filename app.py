@@ -151,6 +151,13 @@ app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
 # =========================================
 mail.init_app(app)
 
+@app.template_filter('fromjson')
+def fromjson_filter(value):
+    try:
+        return json.loads(value) if value else {}
+    except:
+        return {}
+
 
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
@@ -2225,7 +2232,14 @@ def delete_style(style_id):
     try:
         style = Style.query.get_or_404(style_id)
         
-        # ✅ NEW: Delete physical image files FIRST (before DB records)
+        # Save style info for audit log BEFORE deleting
+        style_info = {
+            "vendor_style": style.vendor_style,
+            "style_name": style.style_name,
+            "total_cost": str(style.get_total_cost())
+        }
+        
+        # Delete physical image files FIRST (before DB records)
         images = StyleImage.query.filter_by(style_id=style_id).all()
         for img in images:
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], img.filename)
@@ -2237,7 +2251,7 @@ def delete_style(style_id):
             except Exception as e:
                 app.logger.warning(f"Could not delete image file {filepath}: {e}")
                 # Continue anyway - don't fail the whole delete
-           
+        
         # Now delete database records
         StyleImage.query.filter_by(style_id=style_id).delete()
         StyleFabric.query.filter_by(style_id=style_id).delete()
@@ -2249,6 +2263,20 @@ def delete_style(style_id):
         # Delete the style itself
         db.session.delete(style)
         db.session.commit()
+        
+        # Log audit after successful deletion
+        try:
+            log_audit(
+                action="DELETE",
+                item_type="style",
+                item_id=style_id,
+                item_name=style_info["vendor_style"],
+                old_values=style_info,
+                new_values=None,
+                details=f"Deleted style: {style_info['style_name']}"
+            )
+        except Exception as e:
+            app.logger.error(f"Failed to log audit for style deletion: {e}")
         
         app.logger.info(f"Style {style_id} deleted successfully with {len(images)} image(s)")
         
@@ -4093,6 +4121,15 @@ def api_style_save():
             if not existing_style:
                 return jsonify({"error": "Style not found"}), 404
             
+            # Capture OLD values BEFORE any changes (for audit log)
+            old_style_values = {
+                "vendor_style": existing_style.vendor_style,
+                "style_name": existing_style.style_name,
+                "total_cost": str(existing_style.get_total_cost()),
+                "margin": str(existing_style.base_margin_percent),
+                "suggested_price": str(existing_style.suggested_price)
+            }
+            
             # Check if vendor_style changed and conflicts with another style
             if existing_style.vendor_style != vendor_style:
                 duplicate = Style.query.filter_by(vendor_style=vendor_style).first()
@@ -4107,6 +4144,7 @@ def api_style_save():
                 return jsonify({"error": f"Vendor Style '{vendor_style}' already exists! Search and load it to edit."}), 400
             
             existing_style = Style()
+            old_style_values = None  # No old values for new style
             is_new = True
 
         style = existing_style
@@ -4341,15 +4379,56 @@ def api_style_save():
             style.suggested_price = suggested_price if suggested_price else 0
 
         # ===== STEP 13: COMMIT ALL CHANGES =====
+
         db.session.commit()
-    
-        
+
+        # ===== STEP 14: LOG AUDIT =====
+        try:
+            if is_new:
+                # Log new style creation
+                new_values = {
+                    "vendor_style": style.vendor_style,
+                    "style_name": style.style_name,
+                    "total_cost": str(style.get_total_cost()),
+                    "fabrics": [f.get("name") for f in fabrics_data if f.get("name")],
+                    "notions": [n.get("name") for n in notions_data if n.get("name")]
+                }
+                log_audit(
+                    action="CREATE",
+                    item_type="style",
+                    item_id=style.id,
+                    item_name=style.vendor_style,
+                    old_values=None,
+                    new_values=new_values,
+                    details=f"Created style: {style.style_name}"
+                )
+            else:
+                # Log style update with changes
+                new_values = {
+                    "vendor_style": style.vendor_style,
+                    "style_name": style.style_name,
+                    "total_cost": str(style.get_total_cost()),
+                    "margin": str(style.base_margin_percent),
+                    "suggested_price": str(style.suggested_price)
+                }
+                log_audit(
+                    action="UPDATE",
+                    item_type="style",
+                    item_id=style.id,
+                    item_name=style.vendor_style,
+                    old_values=old_style_values,
+                    new_values=new_values,
+                    details=f"Updated style: {style.style_name}"
+                )
+        except Exception as e:
+            app.logger.error(f"Failed to log audit for style: {e}")
+
         # Return appropriate message
         if is_new:
             message = "✅ New style created successfully!"
         else:
             message = "✅ Style updated successfully!"
-    
+
         return jsonify({
             "success": True,
             "new": is_new,

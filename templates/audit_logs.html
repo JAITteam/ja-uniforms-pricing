@@ -16,7 +16,7 @@
                     </svg>
                     Audit Logs
                 </h1>
-                <p class="text-muted mb-0">Track all changes to fabrics, notions, and vendors</p>
+                <p class="text-muted mb-0">Track all changes to styles, fabrics, notions, and vendors</p>
             </div>
         </div>
     </div>
@@ -43,6 +43,7 @@
                                 <option value="notion" {% if current_item_type == 'notion' %}selected{% endif %}>Notions</option>
                                 <option value="fabric_vendor" {% if current_item_type == 'fabric_vendor' %}selected{% endif %}>Fabric Vendors</option>
                                 <option value="notion_vendor" {% if current_item_type == 'notion_vendor' %}selected{% endif %}>Notion Vendors</option>
+                                <option value="style" {% if current_item_type == 'style' %}selected{% endif %}>Styles</option>
                             </select>
                         </div>
                         
@@ -149,6 +150,8 @@
                                         <span class="badge bg-secondary">Fabric Vendor</span>
                                         {% elif log.item_type == 'notion_vendor' %}
                                         <span class="badge bg-dark">Notion Vendor</span>
+                                        {% elif log.item_type == 'style' %}
+                                        <span class="badge bg-success">Style</span>
                                         {% else %}
                                         <span class="badge bg-light text-dark">{{ log.item_type }}</span>
                                         {% endif %}
@@ -160,12 +163,45 @@
                                         {% endif %}
                                     </td>
                                     <td class="small">
-                                        {% if log.old_values or log.new_values %}
-                                            {% if log.action == 'CREATE' and log.new_values %}
+                                    {% if log.old_values or log.new_values %}
+                                        {% if log.action == 'CREATE' and log.new_values %}
+                                            {% set new_data = log.new_values | fromjson if log.new_values else {} %}
+                                            {% if new_data.total_cost %}
+                                                <span class="text-success">+ Created with cost: ${{ new_data.total_cost }}</span>
+                                            {% else %}
                                                 <span class="text-success">+ {{ log.new_values }}</span>
-                                            {% elif log.action == 'DELETE' and log.old_values %}
+                                            {% endif %}
+                                        {% elif log.action == 'DELETE' and log.old_values %}
+                                            {% set old_data = log.old_values | fromjson if log.old_values else {} %}
+                                            {% if old_data.total_cost %}
+                                                <span class="text-danger">- Deleted (was ${{ old_data.total_cost }})</span>
+                                            {% else %}
                                                 <span class="text-danger">- {{ log.old_values }}</span>
-                                            {% elif log.action == 'UPDATE' %}
+                                            {% endif %}
+                                        {% elif log.action == 'UPDATE' %}
+                                            {% set old_data = log.old_values | fromjson if log.old_values else {} %}
+                                            {% set new_data = log.new_values | fromjson if log.new_values else {} %}
+                                            
+                                            {% if log.item_type == 'style' and old_data and new_data %}
+                                                {% if old_data.vendor_style != new_data.vendor_style %}
+                                                    <div>• Vendor Style: <span class="text-muted">{{ old_data.vendor_style }}</span> → <span class="text-success">{{ new_data.vendor_style }}</span></div>
+                                                {% endif %}
+                                                {% if old_data.style_name != new_data.style_name %}
+                                                    <div>• Style Name: <span class="text-muted">{{ old_data.style_name }}</span> → <span class="text-success">{{ new_data.style_name }}</span></div>
+                                                {% endif %}
+                                                {% if old_data.total_cost != new_data.total_cost %}
+                                                    <div>• Total Cost: <span class="text-muted">${{ old_data.total_cost }}</span> → <span class="text-success">${{ new_data.total_cost }}</span></div>
+                                                {% endif %}
+                                                {% if old_data.margin != new_data.margin %}
+                                                    <div>• Margin: <span class="text-muted">{{ old_data.margin }}%</span> → <span class="text-success">{{ new_data.margin }}%</span></div>
+                                                {% endif %}
+                                                {% if old_data.suggested_price != new_data.suggested_price %}
+                                                    <div>• Suggested Price: <span class="text-muted">${{ old_data.suggested_price }}</span> → <span class="text-success">${{ new_data.suggested_price }}</span></div>
+                                                {% endif %}
+                                                {% if old_data.vendor_style == new_data.vendor_style and old_data.style_name == new_data.style_name and old_data.total_cost == new_data.total_cost and old_data.margin == new_data.margin and old_data.suggested_price == new_data.suggested_price %}
+                                                    <span class="text-muted">No visible changes</span>
+                                                {% endif %}
+                                            {% else %}
                                                 {% if log.old_values %}
                                                 <span class="text-muted">Old: {{ log.old_values }}</span><br>
                                                 {% endif %}
@@ -173,10 +209,11 @@
                                                 <span class="text-success">New: {{ log.new_values }}</span>
                                                 {% endif %}
                                             {% endif %}
-                                        {% else %}
-                                            <span class="text-muted">-</span>
                                         {% endif %}
-                                    </td>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
                                     <td class="text-center">
                                         {% if log.affected_styles_count > 0 %}
                                         <span class="badge bg-light text-dark border">{{ log.affected_styles_count }}</span>
