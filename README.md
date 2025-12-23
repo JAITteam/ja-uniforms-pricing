@@ -291,7 +291,7 @@ python run_production.py
 ### Automated Backups
 
 Backups run automatically at:
-- 9:30 AM daily
+- 12:00 AM daily
 - 4:40 PM daily
 
 ### Manual Backup
