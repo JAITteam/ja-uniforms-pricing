@@ -2,6 +2,7 @@ from database import db
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
+from flask import g
 
 class VerificationCode(db.Model):
     __tablename__ = 'verification_codes'
@@ -188,6 +189,15 @@ class SizeRange(db.Model):
     
     def __repr__(self):
         return f'<SizeRange {self.name}>'
+    
+def get_cached_global_settings():
+    if not hasattr(g, 'global_settings_cache'):
+        all_settings = GlobalSetting.query.all()
+        g.global_settings_cache = {
+            setting.setting_key: setting.setting_value 
+            for setting in all_settings
+        }
+    return g.global_settings_cache
 
 # ===== MAIN STYLE TABLE =====
 class Style(db.Model):
@@ -215,9 +225,10 @@ class Style(db.Model):
     
     
     def get_total_fabric_cost(self):
-        # Get sublimation cost from global settings
-        sublimation_setting = GlobalSetting.query.filter_by(setting_key='sublimation_cost').first()
-        sublimation_cost = sublimation_setting.setting_value if sublimation_setting else 6.00
+        """Calculate total fabric cost - OPTIMIZED (uses cached global settings)"""
+        # Get cached sublimation cost (no DB query per style)
+        settings = get_cached_global_settings()
+        sublimation_cost = settings.get('sublimation_cost', 6.00)
         
         total = 0
         for sf in self.style_fabrics:
@@ -261,15 +272,21 @@ class Style(db.Model):
         return round(total, 2)
     
     def get_total_cost(self):
-        # Always load label cost from global settings
-        label_setting = GlobalSetting.query.filter_by(setting_key='avg_label_cost').first()
-        label_cost = label_setting.setting_value if label_setting else 0.20
+        """Calculate total cost - OPTIMIZED (uses cached global settings)"""
+        # Get cached settings (only 1 DB query per request, not per style)
+        settings = get_cached_global_settings()
         
-        # Include shipping cost from global settings
-        shipping_setting = GlobalSetting.query.filter_by(setting_key='shipping_cost').first()
-        shipping_cost = shipping_setting.setting_value if shipping_setting else 0.00
-
-        return self.get_total_fabric_cost() + self.get_total_notion_cost() + self.get_total_labor_cost() + label_cost + shipping_cost
+        # Get settings with defaults
+        label_cost = settings.get('avg_label_cost', 0.20)
+        shipping_cost = settings.get('shipping_cost', 0.00)
+        
+        return (
+            self.get_total_fabric_cost() + 
+            self.get_total_notion_cost() + 
+            self.get_total_labor_cost() + 
+            label_cost + 
+            shipping_cost
+        )
     
     def get_retail_price(self, size_multiplier=1.0):
         base_cost = self.get_total_cost() * size_multiplier
