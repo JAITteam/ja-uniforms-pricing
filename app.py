@@ -1978,34 +1978,38 @@ def export_sap_single_style():
         app.logger.error(traceback.format_exc())
         return f"Error exporting: {html.escape(str(e))}", 500
 
-
-# ===== BULK EXPORT =====
+# ===== FINAL BULK EXPORT WITH STREAMING + DEFAULT HANDLING =====
 @app.route('/export-sap-format', methods=['POST'])
 @login_required
 def export_sap_format():
-    """Export selected styles in SAP B1 format - STRICT VALIDATION"""
+    """Export selected styles in SAP B1 format - STREAMING VERSION for large exports"""
     try:
         import json
         style_ids = json.loads(request.form.get('style_ids', '[]'))
         include_empty_vars = request.form.get('include_empty_vars', '0') == '1'
+        
         if not style_ids:
             return "No styles selected", 400
 
-        styles = Style.query.filter(Style.id.in_(style_ids)).all()
-        
         # ========================================
-        # STRICT VALIDATION - ALL STYLES
+        # STEP 1: VALIDATION IN BATCHES
         # ========================================
+        BATCH_SIZE = 100  # Process 100 styles at a time
         invalid_styles = []
         
-        for style in styles:
-            is_valid, missing = validate_style_for_export(style)
-            if not is_valid:
-                invalid_styles.append({
-                    'vendor_style': style.vendor_style or 'UNKNOWN',
-                    'style_name': style.style_name or 'UNKNOWN',
-                    'missing': missing
-                })
+        # Validate in batches to avoid memory overload
+        for i in range(0, len(style_ids), BATCH_SIZE):
+            batch_ids = style_ids[i:i + BATCH_SIZE]
+            batch_styles = Style.query.filter(Style.id.in_(batch_ids)).all()
+            
+            for style in batch_styles:
+                is_valid, missing = validate_style_for_export(style)
+                if not is_valid:
+                    invalid_styles.append({
+                        'vendor_style': style.vendor_style or 'UNKNOWN',
+                        'style_name': style.style_name or 'UNKNOWN',
+                        'missing': missing
+                    })
         
         # If ANY style is invalid, block export and show errors
         if invalid_styles:
@@ -2045,6 +2049,8 @@ def export_sap_format():
                         background: #f8f9fa;
                         padding: 20px;
                         border-radius: 4px;
+                        max-height: 500px;
+                        overflow-y: auto;
                     }}
                     .style-error {{
                         margin-bottom: 20px;
@@ -2097,7 +2103,7 @@ def export_sap_format():
                     <h1>❌ Export Blocked - Validation Failed</h1>
                     
                     <div class="summary">
-                        {len(invalid_styles)} of {len(styles)} selected style(s) are missing required fields
+                        {len(invalid_styles)} of {len(style_ids)} selected style(s) are missing required fields
                     </div>
                     
                     <div class="error-list">
@@ -2136,61 +2142,106 @@ def export_sap_format():
             return error_html, 400
         
         # ========================================
-        # ALL VALIDATED - EXPORT (NO FALLBACKS)
+        # STEP 2: STREAMING CSV GENERATION WITH APP CONTEXT
         # ========================================
-        output = StringIO()
-        writer = csv.writer(output)
-
-        headers = ['Code', 'Name', 'U_COLOR', 'U_SIZE', 'U_VARIABLE',
-                   'U_PRICE', 'U_SHIP_COST', 'U_STYLE', 'U_CardCode', 'U_PROD_NAME']
-        writer.writerow(headers)
-        writer.writerow(headers)
-
-        for style in styles:
-            base_cost = style.get_total_cost()
-            from models import SizeRange
-            size_range_obj = SizeRange.query.filter_by(name=style.size_range).first()
-
-            extended_pct = (size_range_obj.extended_markup_percent
-                            if (size_range_obj and size_range_obj.extended_markup_percent is not None)
-                            else 15.0)
-            extended_mult = 1.0 + (float(extended_pct) / 100.0)
-
-            regular_list = expand_sizes_string(getattr(size_range_obj, 'regular_sizes', '') or '')
-            extended_list = expand_sizes_string(getattr(size_range_obj, 'extended_sizes', '') or '')
-            all_sizes = regular_list + [s for s in extended_list if s not in regular_list]
-
-            # NO FALLBACKS - validation ensures these exist
-            colors = [sc.color.name.upper() for sc in style.colors]
+        def generate_csv():
+            """Generator function that yields CSV data in chunks"""
+            import csv
+            from io import StringIO
+            from flask import copy_current_request_context
             
-            variables = [sv.variable.name.upper() for sv in style.style_variables] if hasattr(style, 'style_variables') else []
-            vendor_code = 'V100'
+            # Write headers first
+            buffer = StringIO()
+            writer = csv.writer(buffer)
+            
+            headers = ['Code', 'Name', 'U_COLOR', 'U_SIZE', 'U_VARIABLE',
+                       'U_PRICE', 'U_SHIP_COST', 'U_STYLE', 'U_CardCode', 'U_PROD_NAME']
+            writer.writerow(headers)
+            writer.writerow(headers)
+            
+            yield buffer.getvalue()
+            
+            # Process styles in batches
+            # We need to use app context for database queries in generator
+            with app.app_context():
+                for i in range(0, len(style_ids), BATCH_SIZE):
+                    batch_ids = style_ids[i:i + BATCH_SIZE]
+                    batch_styles = Style.query.filter(Style.id.in_(batch_ids)).all()
+                    
+                    # Clear buffer for this batch
+                    buffer = StringIO()
+                    writer = csv.writer(buffer)
+                    
+                    for style in batch_styles:
+                        base_cost = style.get_total_cost()
+                        from models import SizeRange
+                        size_range_obj = SizeRange.query.filter_by(name=style.size_range).first()
 
-            u_style = style.vendor_style.replace('-', '')
-            shipping_cost = style.shipping_cost if hasattr(style, 'shipping_cost') else 0.00
+                        extended_pct = (size_range_obj.extended_markup_percent
+                                        if (size_range_obj and size_range_obj.extended_markup_percent is not None)
+                                        else 15.0)
+                        extended_mult = 1.0 + (float(extended_pct) / 100.0)
 
-            for color in colors:
-                for size in all_sizes:
-                    price = round(base_cost * extended_mult, 2) if is_extended_size_for_range(size, size_range_obj) else round(base_cost, 2)
-                    if variables:
-                        for variable in variables:
-                            writer.writerow(['', '', color, size, variable, price, shipping_cost, u_style, vendor_code, style.style_name])
-                        # Only add empty variable row if include_empty_vars is True
-                        if include_empty_vars:
-                            writer.writerow(['', '', color, size, '', price, shipping_cost, u_style, vendor_code, style.style_name])
-                    else:
-                        writer.writerow(['', '', color, size, '', price, shipping_cost, u_style, vendor_code, style.style_name])
+                        regular_list = expand_sizes_string(getattr(size_range_obj, 'regular_sizes', '') or '')
+                        extended_list = expand_sizes_string(getattr(size_range_obj, 'extended_sizes', '') or '')
+                        all_sizes = regular_list + [s for s in extended_list if s not in regular_list]
 
-        output.seek(0)
+                        colors = [sc.color.name.upper() for sc in style.colors]
+                        
+                        # ============================================
+                        # FILTER OUT "DEFAULT" - It means empty/null
+                        # ============================================
+                        all_variables = [sv.variable.name.upper() for sv in style.style_variables] if hasattr(style, 'style_variables') else []
+                        # Remove "DEFAULT" from the list - it represents no variable (empty)
+                        variables = [v for v in all_variables if v != 'DEFAULT']
+                        
+                        # Check if DEFAULT was present (means we need an empty variable row)
+                        has_default = 'DEFAULT' in all_variables
+                        
+                        vendor_code = 'V100'
+
+                        u_style = style.vendor_style.replace('-', '')
+                        shipping_cost = style.shipping_cost if hasattr(style, 'shipping_cost') else 0.00
+
+                        for color in colors:
+                            for size in all_sizes:
+                                price = round(base_cost * extended_mult, 2) if is_extended_size_for_range(size, size_range_obj) else round(base_cost, 2)
+                                
+                                # Write rows for actual variables (non-DEFAULT)
+                                if variables:
+                                    for variable in variables:
+                                        writer.writerow(['', '', color, size, variable, price, shipping_cost, u_style, vendor_code, style.style_name])
+                                
+                                # Write empty variable row if:
+                                # 1. DEFAULT was explicitly added, OR
+                                # 2. include_empty_vars checkbox is checked, OR
+                                # 3. No variables exist at all
+                                if has_default or include_empty_vars or not variables:
+                                    writer.writerow(['', '', color, size, '', price, shipping_cost, u_style, vendor_code, style.style_name])
+                    
+                    # Yield this batch's CSV data
+                    yield buffer.getvalue()
+                    
+                    # Important: Clear the batch from memory
+                    del batch_styles
+                    db.session.expunge_all()
+        
+        # Return streaming response
         filename = f"SAP_Export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-        return Response(output.getvalue(), mimetype='text/csv',
-                        headers={'Content-Disposition': f'attachment; filename={filename}'})
+        
+        return Response(
+            generate_csv(),
+            mimetype='text/csv',
+            headers={
+                'Content-Disposition': f'attachment; filename={filename}',
+                'X-Export-Count': str(len(style_ids))
+            }
+        )
 
     except Exception as e:
         import traceback
         app.logger.error(traceback.format_exc())
         return f"Error exporting: {html.escape(str(e))}", 500
-
 
 @app.route('/view-all-styles')
 @role_required('admin', 'user')
