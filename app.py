@@ -31,6 +31,8 @@ from sqlalchemy import func
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash
 from sqlalchemy.orm import joinedload
+from apscheduler.schedulers.background import BackgroundScheduler
+import atexit
 
 # ===== LOCAL IMPORTS =====
 from config import Config
@@ -42,8 +44,6 @@ from models import (
     StyleLabor, Color, StyleColor, Variable, StyleVariable,
     SizeRange, GlobalSetting, StyleImage, VerificationCode, AuditLog
 )
-
-
 
 # ===== HELPER FUNCTIONS =====
 def validate_password(password):
@@ -163,6 +163,10 @@ def fromjson_filter(value):
 csrf = CSRFProtect(app)
 
 init_auth(app)
+
+# ===== DATABASE CLEANUP CONFIGURATION =====
+AUDIT_LOG_RETENTION_DAYS = 90  # Keep audit logs for 90 days
+VERIFICATION_CODE_CLEANUP_HOURS = 24  # Clean expired codes after 24 hours
 
 @app.context_processor
 def inject_permissions():
@@ -468,6 +472,83 @@ def log_audit(action, item_type, item_id=None, item_name=None,
     except Exception as e:
         db.session.rollback()
         app.logger.error(f"Audit log error: {e}")
+
+# =============================================================================
+# DATABASE CLEANUP FUNCTIONS
+# =============================================================================
+
+def cleanup_old_audit_logs():
+    """Delete audit logs older than AUDIT_LOG_RETENTION_DAYS"""
+    try:
+        cutoff_date = datetime.now() - timedelta(days=AUDIT_LOG_RETENTION_DAYS)
+        old_logs = AuditLog.query.filter(AuditLog.timestamp < cutoff_date).count()
+        
+        if old_logs > 0:
+            AuditLog.query.filter(AuditLog.timestamp < cutoff_date).delete()
+            db.session.commit()
+            app.logger.info(f"✅ Audit cleanup: Deleted {old_logs} logs older than {AUDIT_LOG_RETENTION_DAYS} days")
+            print(f"✅ Audit cleanup: Deleted {old_logs} old logs")
+        else:
+            print(f"ℹ️ Audit cleanup: No old logs to delete")
+    except Exception as e:
+        app.logger.error(f"❌ Error during audit log cleanup: {str(e)}")
+        db.session.rollback()
+
+
+def cleanup_expired_verification_codes():
+    """Delete expired verification codes older than 24 hours"""
+    try:
+        cutoff_time = datetime.now() - timedelta(hours=VERIFICATION_CODE_CLEANUP_HOURS)
+        expired_codes = VerificationCode.query.filter(
+            VerificationCode.expires_at < cutoff_time
+        ).count()
+        
+        if expired_codes > 0:
+            VerificationCode.query.filter(
+                VerificationCode.expires_at < cutoff_time
+            ).delete()
+            db.session.commit()
+            app.logger.info(f"✅ Verification cleanup: Deleted {expired_codes} expired codes")
+            print(f"✅ Verification cleanup: Deleted {expired_codes} expired codes")
+        else:
+            print(f"ℹ️ Verification cleanup: No expired codes to delete")
+    except Exception as e:
+        app.logger.error(f"❌ Error during verification code cleanup: {str(e)}")
+        db.session.rollback()
+
+
+def init_cleanup_scheduler():
+    """Initialize background scheduler for database cleanup tasks"""
+    scheduler = BackgroundScheduler()
+    
+    # Clean audit logs daily at 2 AM
+    scheduler.add_job(
+        func=cleanup_old_audit_logs,
+        trigger="cron",
+        hour=2,
+        minute=0,
+        id='cleanup_audit_logs',
+        name='Delete old audit logs',
+        replace_existing=True
+    )
+    
+    # Clean expired verification codes every 6 hours
+    scheduler.add_job(
+        func=cleanup_expired_verification_codes,
+        trigger="cron",
+        hour='*/6',
+        minute=0,
+        id='cleanup_verification_codes',
+        name='Delete expired verification codes',
+        replace_existing=True
+    )
+    
+    scheduler.start()
+    atexit.register(lambda: scheduler.shutdown())
+    
+    print(f"\n🕐 Database cleanup scheduler started:")
+    print(f"  ✅ Audit logs: Daily at 2 AM (keeps {AUDIT_LOG_RETENTION_DAYS} days)")
+    print(f"  ✅ Verification codes: Every 6 hours (removes expired)")
 
 @app.route('/audit-logs')
 @login_required
@@ -1117,6 +1198,85 @@ def index():
                          new_this_week=new_this_week)
 
 
+@app.route('/admin/database-stats')
+@login_required
+def database_stats():
+    """View database cleanup statistics"""
+    if not current_user.is_admin():
+        return "Unauthorized", 403
+    
+    try:
+        total_logs = AuditLog.query.count()
+        now = datetime.now()
+        last_90_days = AuditLog.query.filter(AuditLog.timestamp >= now - timedelta(days=90)).count()
+        older_than_90 = total_logs - last_90_days
+        
+        total_codes = VerificationCode.query.count()
+        expired_codes = VerificationCode.query.filter(VerificationCode.expires_at < now).count()
+        
+        return f"""
+        <html>
+        <head><title>Database Stats</title>
+        <style>
+            body {{ font-family: Arial; padding: 40px; background: #f5f5f5; }}
+            .container {{ max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; }}
+            .stat {{ padding: 15px; margin: 10px 0; background: #f8f9fa; border-radius: 4px; border-left: 4px solid #007bff; }}
+            .value {{ font-size: 2em; font-weight: bold; color: #007bff; }}
+            .btn {{ display: inline-block; padding: 10px 20px; margin: 10px 5px 0 0; background: #007bff; color: white; text-decoration: none; border-radius: 4px; }}
+            .btn-danger {{ background: #dc3545; }}
+        </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>📊 Database Statistics</h1>
+                <h2>🗄️ Audit Logs</h2>
+                <div class="stat"><div class="value">{total_logs:,}</div>Total Records</div>
+                <div class="stat"><div class="value">{older_than_90:,}</div>Can Be Deleted (>90 days)</div>
+                <h2>📧 Verification Codes</h2>
+                <div class="stat"><div class="value">{total_codes:,}</div>Total Codes</div>
+                <div class="stat"><div class="value">{expired_codes:,}</div>Expired Codes</div>
+                <a href="/admin/cleanup-now" class="btn btn-danger" onclick="return confirm('Run cleanup?')">🧹 Run Cleanup</a>
+                <a href="/admin-panel" class="btn">← Back</a>
+            </div>
+        </body>
+        </html>
+        """
+    except Exception as e:
+        return f"Error: {str(e)}", 500
+
+
+@app.route('/admin/cleanup-now')
+@login_required
+def cleanup_now():
+    """Manually trigger cleanup"""
+    if not current_user.is_admin():
+        return "Unauthorized", 403
+    
+    cutoff_date = datetime.now() - timedelta(days=AUDIT_LOG_RETENTION_DAYS)
+    old_logs = AuditLog.query.filter(AuditLog.timestamp < cutoff_date).count()
+    
+    cutoff_time = datetime.now() - timedelta(hours=VERIFICATION_CODE_CLEANUP_HOURS)
+    expired_codes = VerificationCode.query.filter(VerificationCode.expires_at < cutoff_time).count()
+    
+    if old_logs > 0:
+        AuditLog.query.filter(AuditLog.timestamp < cutoff_date).delete()
+    if expired_codes > 0:
+        VerificationCode.query.filter(VerificationCode.expires_at < cutoff_time).delete()
+    
+    db.session.commit()
+    
+    return f"""
+    <html>
+    <body style="font-family: Arial; padding: 40px;">
+        <h2>✅ Cleanup Complete</h2>
+        <p>Deleted {old_logs} audit logs</p>
+        <p>Deleted {expired_codes} verification codes</p>
+        <a href="/admin/database-stats">View Stats</a> | <a href="/admin-panel">Back</a>
+    </body>
+    </html>
+    """
+
+
 @app.route('/style/<vendor_style>')
 @login_required
 def view_style(vendor_style):
@@ -1140,15 +1300,65 @@ def api_recent_styles():
 @app.route('/api/all-styles-for-export')
 @login_required
 def api_all_styles_for_export():
-    """Get all styles for export modal"""
-    styles = Style.query.order_by(Style.vendor_style).all()
-    return jsonify([{
-        'id': s.id,
-        'vendor_style': s.vendor_style,
-        'style_name': s.style_name,
-        'gender': s.gender or 'N/A',
-        'cost': s.get_total_cost()
-    } for s in styles])
+    """
+    Get styles for export modal - PAGINATED & OPTIMIZED
+    
+    Returns lightweight data for search/filter in export modal.
+    Uses pagination to avoid loading all styles at once.
+    """
+    # Get pagination parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 100, type=int)
+    search = request.args.get('search', '', type=str).lower()
+    
+    # Limit per_page
+    if per_page > 200:
+        per_page = 200
+    
+    # Build query
+    query = Style.query.filter(Style.is_active == True)
+    
+    # Apply search filter if provided
+    if search:
+        query = query.filter(
+            db.or_(
+                Style.vendor_style.ilike(f'%{search}%'),
+                Style.style_name.ilike(f'%{search}%'),
+                Style.gender.ilike(f'%{search}%')
+            )
+        )
+    
+    # Get paginated results
+    pagination = query.order_by(Style.vendor_style).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+    
+    # Get cached global settings for cost calculation
+    from models import get_cached_global_settings
+    settings = get_cached_global_settings()
+    
+    # Build lightweight response (no expensive calculations)
+    styles_data = []
+    for s in pagination.items:
+        styles_data.append({
+            'id': s.id,
+            'vendor_style': s.vendor_style,
+            'style_name': s.style_name,
+            'gender': s.gender or 'N/A',
+            # Don't calculate cost here - too expensive!
+            # Frontend doesn't need it for the modal list
+        })
+    
+    return jsonify({
+        'styles': styles_data,
+        'total': pagination.total,
+        'pages': pagination.pages,
+        'current_page': pagination.page,
+        'has_next': pagination.has_next,
+        'has_prev': pagination.has_prev
+    })
 
 @app.route('/api/dashboard-stats')
 @login_required
@@ -2011,7 +2221,7 @@ def export_sap_single_style():
 @app.route('/export-sap-format', methods=['POST'])
 @login_required
 def export_sap_format():
-    """Export selected styles in SAP B1 format - STREAMING VERSION for large exports"""
+    """Export selected styles in SAP B1 format - OPTIMIZED VERSION"""
     try:
         import json
         style_ids = json.loads(request.form.get('style_ids', '[]'))
@@ -2021,12 +2231,14 @@ def export_sap_format():
             return "No styles selected", 400
 
         # ========================================
-        # STEP 1: VALIDATION IN BATCHES
+        # OPTIMIZED VALIDATION - EARLY EXIT
         # ========================================
-        BATCH_SIZE = 100  # Process 100 styles at a time
+        BATCH_SIZE = 100
+        MAX_ERRORS_TO_SHOW = 50  # Limit errors shown to prevent memory issues
         invalid_styles = []
+        total_invalid = 0
         
-        # Validate in batches to avoid memory overload
+        # Validate in batches with early exit
         for i in range(0, len(style_ids), BATCH_SIZE):
             batch_ids = style_ids[i:i + BATCH_SIZE]
             batch_styles = Style.query.filter(Style.id.in_(batch_ids)).all()
@@ -2034,14 +2246,28 @@ def export_sap_format():
             for style in batch_styles:
                 is_valid, missing = validate_style_for_export(style)
                 if not is_valid:
-                    invalid_styles.append({
-                        'vendor_style': style.vendor_style or 'UNKNOWN',
-                        'style_name': style.style_name or 'UNKNOWN',
-                        'missing': missing
-                    })
+                    total_invalid += 1
+                    
+                    # Only store first 50 errors to prevent memory issues
+                    if len(invalid_styles) < MAX_ERRORS_TO_SHOW:
+                        invalid_styles.append({
+                            'vendor_style': style.vendor_style or 'UNKNOWN',
+                            'style_name': style.style_name or 'UNKNOWN',
+                            'missing': missing
+                        })
         
-        # If ANY style is invalid, block export and show errors
+        # If ANY style is invalid, block export
         if invalid_styles:
+            # Show warning if there are more errors than we're displaying
+            more_errors_message = ""
+            if total_invalid > MAX_ERRORS_TO_SHOW:
+                more_errors_message = f"""
+                <div class="warning-box" style="background: #fff3cd; border: 2px solid #ffc107; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+                    <strong>⚠️ Note:</strong> Showing first {MAX_ERRORS_TO_SHOW} errors. 
+                    There are {total_invalid - MAX_ERRORS_TO_SHOW} more styles with validation errors.
+                </div>
+                """
+            
             error_html = f"""
             <!DOCTYPE html>
             <html>
@@ -2073,6 +2299,13 @@ def export_sap_format():
                         border-radius: 4px;
                         font-weight: bold;
                         text-align: center;
+                    }}
+                    .warning-box {{
+                        background: #fff3cd;
+                        border: 2px solid #ffc107;
+                        padding: 15px;
+                        margin-bottom: 20px;
+                        border-radius: 4px;
                     }}
                     .error-list {{
                         background: #f8f9fa;
@@ -2132,8 +2365,10 @@ def export_sap_format():
                     <h1>❌ Export Blocked - Validation Failed</h1>
                     
                     <div class="summary">
-                        {len(invalid_styles)} of {len(style_ids)} selected style(s) are missing required fields
+                        {total_invalid} of {len(style_ids)} selected style(s) are missing required fields
                     </div>
+                    
+                    {more_errors_message}
                     
                     <div class="error-list">
             """
@@ -2171,15 +2406,12 @@ def export_sap_format():
             return error_html, 400
         
         # ========================================
-        # STEP 2: STREAMING CSV GENERATION WITH APP CONTEXT
+        # STREAMING CSV GENERATION (Already optimized)
         # ========================================
         def generate_csv():
-            """Generator function that yields CSV data in chunks"""
             import csv
             from io import StringIO
-            from flask import copy_current_request_context
             
-            # Write headers first
             buffer = StringIO()
             writer = csv.writer(buffer)
             
@@ -2190,14 +2422,11 @@ def export_sap_format():
             
             yield buffer.getvalue()
             
-            # Process styles in batches
-            # We need to use app context for database queries in generator
             with app.app_context():
                 for i in range(0, len(style_ids), BATCH_SIZE):
                     batch_ids = style_ids[i:i + BATCH_SIZE]
                     batch_styles = Style.query.filter(Style.id.in_(batch_ids)).all()
                     
-                    # Clear buffer for this batch
                     buffer = StringIO()
                     writer = csv.writer(buffer)
                     
@@ -2217,18 +2446,11 @@ def export_sap_format():
 
                         colors = [sc.color.name.upper() for sc in style.colors]
                         
-                        # ============================================
-                        # FILTER OUT "DEFAULT" - It means empty/null
-                        # ============================================
                         all_variables = [sv.variable.name.upper() for sv in style.style_variables] if hasattr(style, 'style_variables') else []
-                        # Remove "DEFAULT" from the list - it represents no variable (empty)
                         variables = [v for v in all_variables if v != 'DEFAULT']
-                        
-                        # Check if DEFAULT was present (means we need an empty variable row)
                         has_default = 'DEFAULT' in all_variables
                         
                         vendor_code = 'V100'
-
                         u_style = style.vendor_style.replace('-', '')
                         shipping_cost = style.shipping_cost if hasattr(style, 'shipping_cost') else 0.00
 
@@ -2236,26 +2458,18 @@ def export_sap_format():
                             for size in all_sizes:
                                 price = round(base_cost * extended_mult, 2) if is_extended_size_for_range(size, size_range_obj) else round(base_cost, 2)
                                 
-                                # Write rows for actual variables (non-DEFAULT)
                                 if variables:
                                     for variable in variables:
                                         writer.writerow(['', '', color, size, variable, price, shipping_cost, u_style, vendor_code, style.style_name])
                                 
-                                # Write empty variable row if:
-                                # 1. DEFAULT was explicitly added, OR
-                                # 2. include_empty_vars checkbox is checked, OR
-                                # 3. No variables exist at all
                                 if has_default or include_empty_vars or not variables:
                                     writer.writerow(['', '', color, size, '', price, shipping_cost, u_style, vendor_code, style.style_name])
                     
-                    # Yield this batch's CSV data
                     yield buffer.getvalue()
                     
-                    # Important: Clear the batch from memory
                     del batch_styles
                     db.session.expunge_all()
         
-        # Return streaming response
         filename = f"SAP_Export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         
         return Response(
@@ -2271,7 +2485,6 @@ def export_sap_format():
         import traceback
         app.logger.error(traceback.format_exc())
         return f"Error exporting: {html.escape(str(e))}", 500
-    
 
 @app.route('/view-all-styles')
 @role_required('admin', 'user')
@@ -2336,9 +2549,6 @@ def view_all_styles():
                          permissions=permissions,
                          current_user=current_user,
                          per_page=per_page)
-
-
-
     
 @app.route('/api/style/delete/<int:style_id>', methods=['DELETE'])
 @limiter.limit("10 per minute")
@@ -5216,7 +5426,10 @@ def import_excel():
 
 
 
-
+# Initialize cleanup scheduler (works for both dev and production)
+if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    init_cleanup_scheduler()
+    
 # ===== APPLICATION STARTUP =====
 if __name__ == '__main__':
     with app.app_context():
