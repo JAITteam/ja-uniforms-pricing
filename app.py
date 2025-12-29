@@ -1034,13 +1034,12 @@ def check_password_change_required():
     
 
 # ===== MAIN APPLICATION ROUTES =====
-
 @app.route('/')
 @login_required
 def index():
-    """Dashboard with real-time stats"""
+    """Dashboard with real-time stats - OPTIMIZED VERSION"""
     
-    # Get real counts
+    # Get real counts (these are fast single queries)
     total_styles = Style.query.count()
     total_fabrics = Fabric.query.count()
     total_notions = Notion.query.count()
@@ -1048,28 +1047,41 @@ def index():
     total_notion_vendors = NotionVendor.query.count()
     
     # New styles this week
-    
     one_week_ago = datetime.now() - timedelta(days=7)
     new_this_week = Style.query.filter(Style.created_at >= one_week_ago).count()
     
+    # Recent styles (only 4) - still use eager loading, it's fine for small numbers
     recent_styles = Style.query.order_by(Style.updated_at.desc()).limit(4).all()
 
-    # Calculate analytics with eager loading (faster!)
-    styles = Style.query.options(
-        joinedload(Style.style_fabrics).joinedload(StyleFabric.fabric),
-        joinedload(Style.style_notions).joinedload(StyleNotion.notion),
-        joinedload(Style.style_labor).joinedload(StyleLabor.labor_operation)
-    ).all()
-
-    # Cache label cost (1 query instead of N)
-    label_setting = GlobalSetting.query.filter_by(setting_key='avg_label_cost').first()
-    label_cost = label_setting.setting_value if label_setting else 0.20
-
-    # Average cost per style
-    if styles:
-        costs = [s.get_total_fabric_cost() + s.get_total_notion_cost() + s.get_total_labor_cost() + label_cost for s in styles]
-        total_cost = sum(costs)
-        avg_cost = total_cost / len(styles)
+    # ========================================
+    # OPTIMIZED: Sample-based analytics
+    # ========================================
+    from sqlalchemy.sql.expression import func as sql_func
+    
+    # Get 100 random styles for analytics (or all if less than 100)
+    sample_size = min(100, total_styles) if total_styles > 0 else 0
+    
+    if sample_size > 0:
+        sampled_styles = Style.query.options(
+            joinedload(Style.style_fabrics).joinedload(StyleFabric.fabric),
+            joinedload(Style.style_notions).joinedload(StyleNotion.notion),
+            joinedload(Style.style_labor).joinedload(StyleLabor.labor_operation)
+        ).order_by(sql_func.random()).limit(sample_size).all()
+        
+        # Cache label cost
+        label_setting = GlobalSetting.query.filter_by(setting_key='avg_label_cost').first()
+        label_cost = label_setting.setting_value if label_setting else 0.20
+        
+        # Calculate stats from sample
+        costs = [
+            s.get_total_fabric_cost() + 
+            s.get_total_notion_cost() + 
+            s.get_total_labor_cost() + 
+            label_cost 
+            for s in sampled_styles
+        ]
+        
+        avg_cost = sum(costs) / len(costs) if costs else 0
         min_cost = min(costs) if costs else 0
         max_cost = max(costs) if costs else 0
         price_range = f"${min_cost:.0f}-${max_cost:.0f}"
@@ -1077,7 +1089,7 @@ def index():
         avg_cost = 0
         price_range = "$0-$0"
 
-    # Top fabric (most used)
+    # Top fabric (this query is already optimized)
     from sqlalchemy import func
     top_fabric_query = db.session.query(
         Fabric.name, 
@@ -1141,28 +1153,45 @@ def api_all_styles_for_export():
 @app.route('/api/dashboard-stats')
 @login_required
 def api_dashboard_stats():
+    """API endpoint for dashboard stats - OPTIMIZED VERSION"""
+    
     total_styles = Style.query.count()
     
-    # Eager load to avoid N+1 queries
-    styles = Style.query.options(
+    if total_styles == 0:
+        return jsonify({
+            'total_styles': 0,
+            'avg_cost': 0
+        })
+    
+    # ========================================
+    # OPTIMIZED: Sample-based calculation
+    # ========================================
+    from sqlalchemy.sql.expression import func as sql_func
+    
+    sample_size = min(100, total_styles)
+    
+    sampled_styles = Style.query.options(
         joinedload(Style.style_fabrics).joinedload(StyleFabric.fabric),
         joinedload(Style.style_notions).joinedload(StyleNotion.notion),
         joinedload(Style.style_labor).joinedload(StyleLabor.labor_operation)
-    ).all()
+    ).order_by(sql_func.random()).limit(sample_size).all()
     
     # Cache label cost
     label_setting = GlobalSetting.query.filter_by(setting_key='avg_label_cost').first()
     label_cost = label_setting.setting_value if label_setting else 0.20
     
-    if styles:
-        total_cost = sum(s.get_total_fabric_cost() + s.get_total_notion_cost() + s.get_total_labor_cost() + label_cost for s in styles)
-        avg_cost = total_cost / len(styles)
-    else:
-        avg_cost = 0
+    total_cost = sum(
+        s.get_total_fabric_cost() + 
+        s.get_total_notion_cost() + 
+        s.get_total_labor_cost() + 
+        label_cost 
+        for s in sampled_styles
+    )
+    avg_cost = total_cost / len(sampled_styles) if sampled_styles else 0
 
     return jsonify({
         'total_styles': total_styles,
-         'avg_cost': round(avg_cost, 2)
+        'avg_cost': round(avg_cost, 2)
     })
 
 @app.route('/api/style/<int:style_id>/upload-image', methods=['POST'])
@@ -2242,37 +2271,73 @@ def export_sap_format():
         import traceback
         app.logger.error(traceback.format_exc())
         return f"Error exporting: {html.escape(str(e))}", 500
+    
 
 @app.route('/view-all-styles')
 @role_required('admin', 'user')
 def view_all_styles():
-    """View all styles with filters - RBAC enabled (Admin and User only)"""
-    # Eager load to avoid N+1 queries
-    styles = Style.query.options(
-        joinedload(Style.style_fabrics).joinedload(StyleFabric.fabric),
-        joinedload(Style.style_notions).joinedload(StyleNotion.notion),
-        joinedload(Style.style_labor).joinedload(StyleLabor.labor_operation)
-    ).all()
-
+    """View all styles with pagination - OPTIMIZED VERSION"""
+    
+    # Get pagination parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 50, type=int)
+    
+    # Limit per_page to reasonable values
+    if per_page not in [25, 50, 100, 200]:
+        per_page = 50
+    
+    # ========================================
+    # LIGHTWEIGHT STATS (No eager loading)
+    # ========================================
+    total_styles = Style.query.count()
+    
     # Cache label cost
     label_setting = GlobalSetting.query.filter_by(setting_key='avg_label_cost').first()
     label_cost = label_setting.setting_value if label_setting else 0.20
-
-    # Calculate stats
-    total_styles = len(styles)
-    total_value = sum(s.get_total_fabric_cost() + s.get_total_notion_cost() + s.get_total_labor_cost() + label_cost for s in styles)
-    avg_cost = total_value / total_styles if total_styles > 0 else 0
+    
+    # ========================================
+    # PAGINATED QUERY WITH EAGER LOADING
+    # ========================================
+    # Only load what's needed for the current page
+    pagination = Style.query.options(
+        joinedload(Style.style_fabrics).joinedload(StyleFabric.fabric),
+        joinedload(Style.style_notions).joinedload(StyleNotion.notion),
+        joinedload(Style.style_labor).joinedload(StyleLabor.labor_operation),
+        joinedload(Style.colors),
+        joinedload(Style.style_variables)
+    ).order_by(Style.updated_at.desc()).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+    
+    styles = pagination.items
+    
+    # Calculate stats from CURRENT PAGE only (fast)
+    page_total_value = sum(
+        s.get_total_fabric_cost() + 
+        s.get_total_notion_cost() + 
+        s.get_total_labor_cost() + 
+        label_cost 
+        for s in styles
+    ) if styles else 0
+    
+    avg_cost = page_total_value / len(styles) if styles else 0
     
     # Get user permissions for frontend
     permissions = get_user_permissions()
     
     return render_template('view_all_styles.html', 
                          styles=styles,
+                         pagination=pagination,
                          total_styles=total_styles,
-                         total_value=total_value,
+                         total_value=page_total_value,
                          avg_cost=avg_cost,
                          permissions=permissions,
-                         current_user=current_user)
+                         current_user=current_user,
+                         per_page=per_page)
+
+
 
     
 @app.route('/api/style/delete/<int:style_id>', methods=['DELETE'])
