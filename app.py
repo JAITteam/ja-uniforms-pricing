@@ -128,19 +128,24 @@ def setup_logging(app):
     
     app.logger.info('=== J.A. Uniforms Application Started ===')
 
-
 # Initialize Flask app
 app = Flask(__name__)
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)  # 30 days instead of 365
 setup_logging(app)
 # Rate Limiter - prevents abuse
+# Redis configuration for rate limiting
+REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379')
+
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
     default_limits=["2000 per day", "500 per hour"],
-    storage_uri="memory://"
+    storage_uri=REDIS_URL,
+    storage_options={"socket_connect_timeout": 30},
+    strategy="fixed-window",
 )
 app.config.from_object(Config)
+
 
 app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
@@ -1195,7 +1200,7 @@ def index():
                          avg_cost=avg_cost,
                          price_range=price_range,
                          top_fabric=top_fabric,
-                         new_this_week=new_this_week)
+                         new_this_week=new_this_week) 
 
 
 @app.route('/admin/database-stats')
@@ -5429,7 +5434,7 @@ def import_excel():
 # Initialize cleanup scheduler (works for both dev and production)
 if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
     init_cleanup_scheduler()
-    
+
 # ===== APPLICATION STARTUP =====
 if __name__ == '__main__':
     with app.app_context():

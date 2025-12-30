@@ -19,6 +19,15 @@ class Config:
     # Database configuration
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///uniforms.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # ===== DATABASE CONNECTION POOLING =====
+    # Optimized for production with multiple concurrent users
+    SQLALCHEMY_POOL_SIZE = 20              # Keep 20 persistent connections ready
+    SQLALCHEMY_MAX_OVERFLOW = 10           # Allow 10 extra connections (total = 30)
+    SQLALCHEMY_POOL_TIMEOUT = 30           # Wait 30 seconds for available connection
+    SQLALCHEMY_POOL_RECYCLE = 3600         # Recycle connections every 1 hour (prevents stale connections)
+    SQLALCHEMY_POOL_PRE_PING = True        # Test connections before use (prevents "server has gone away" errors)
+    SQLALCHEMY_ECHO_POOL = False           # Disable connection logging in production (set True for debugging)
     
     # Upload folder for Excel files and images
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or 'uploads'
