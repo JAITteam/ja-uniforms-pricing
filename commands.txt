@@ -17,3 +17,12 @@ git push origin main
 cd "C:\Program Files\Redis"
 .\redis-cli.exe
 KEYS *
+
+Quick Commands to Remember:
+redis-cli pingTest connection
+redis-cli info Show Redis info
+redis-cli flushall  Clear all data
+redis-cli shutdownStop Redis
+
+If Redis Won't Start:
+Open Services (Windows + R → services.msc) → Find "Redis" → Right-click → Start

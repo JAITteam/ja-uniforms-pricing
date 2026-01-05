@@ -130,20 +130,35 @@ def setup_logging(app):
 
 # Initialize Flask app
 app = Flask(__name__)
-app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)  # 30 days instead of 365
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)
 setup_logging(app)
-# Rate Limiter - prevents abuse
-# Redis configuration for rate limiting
-REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379')
+
+# Rate Limiter - Redis with automatic fallback
+def get_limiter_storage():
+    """Use Redis if available, otherwise fallback to memory"""
+    redis_url = os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379')
+    
+    try:
+        import redis
+        r = redis.from_url(redis_url, socket_connect_timeout=1)
+        r.ping()
+        print("✅ Rate limiter: Using Redis")
+        return redis_url, {"socket_connect_timeout": 1, "socket_timeout": 1}
+    except:
+        print("⚠️ Rate limiter: Redis not available, using memory")
+        return "memory://", {}
+
+LIMITER_STORAGE, LIMITER_OPTIONS = get_limiter_storage()
 
 limiter = Limiter(
     app=app,
     key_func=get_remote_address,
     default_limits=["2000 per day", "500 per hour"],
-    storage_uri=REDIS_URL,
-    storage_options={"socket_connect_timeout": 30},
+    storage_uri=LIMITER_STORAGE,
+    storage_options=LIMITER_OPTIONS,
     strategy="fixed-window",
 )
+
 app.config.from_object(Config)
 
 
@@ -484,42 +499,44 @@ def log_audit(action, item_type, item_id=None, item_name=None,
 
 def cleanup_old_audit_logs():
     """Delete audit logs older than AUDIT_LOG_RETENTION_DAYS"""
-    try:
-        cutoff_date = datetime.now() - timedelta(days=AUDIT_LOG_RETENTION_DAYS)
-        old_logs = AuditLog.query.filter(AuditLog.timestamp < cutoff_date).count()
-        
-        if old_logs > 0:
-            AuditLog.query.filter(AuditLog.timestamp < cutoff_date).delete()
-            db.session.commit()
-            app.logger.info(f"✅ Audit cleanup: Deleted {old_logs} logs older than {AUDIT_LOG_RETENTION_DAYS} days")
-            print(f"✅ Audit cleanup: Deleted {old_logs} old logs")
-        else:
-            print(f"ℹ️ Audit cleanup: No old logs to delete")
-    except Exception as e:
-        app.logger.error(f"❌ Error during audit log cleanup: {str(e)}")
-        db.session.rollback()
+    with app.app_context():
+        try:
+            cutoff_date = datetime.now() - timedelta(days=AUDIT_LOG_RETENTION_DAYS)
+            old_logs = AuditLog.query.filter(AuditLog.timestamp < cutoff_date).count()
+            
+            if old_logs > 0:
+                AuditLog.query.filter(AuditLog.timestamp < cutoff_date).delete()
+                db.session.commit()
+                app.logger.info(f"✅ Audit cleanup: Deleted {old_logs} logs older than {AUDIT_LOG_RETENTION_DAYS} days")
+                print(f"✅ Audit cleanup: Deleted {old_logs} old logs")
+            else:
+                print(f"ℹ️ Audit cleanup: No old logs to delete")
+        except Exception as e:
+            app.logger.error(f"❌ Error during audit log cleanup: {str(e)}")
+            db.session.rollback()
 
 
 def cleanup_expired_verification_codes():
     """Delete expired verification codes older than 24 hours"""
-    try:
-        cutoff_time = datetime.now() - timedelta(hours=VERIFICATION_CODE_CLEANUP_HOURS)
-        expired_codes = VerificationCode.query.filter(
-            VerificationCode.expires_at < cutoff_time
-        ).count()
-        
-        if expired_codes > 0:
-            VerificationCode.query.filter(
+    with app.app_context():
+        try:
+            cutoff_time = datetime.now() - timedelta(hours=VERIFICATION_CODE_CLEANUP_HOURS)
+            expired_codes = VerificationCode.query.filter(
                 VerificationCode.expires_at < cutoff_time
-            ).delete()
-            db.session.commit()
-            app.logger.info(f"✅ Verification cleanup: Deleted {expired_codes} expired codes")
-            print(f"✅ Verification cleanup: Deleted {expired_codes} expired codes")
-        else:
-            print(f"ℹ️ Verification cleanup: No expired codes to delete")
-    except Exception as e:
-        app.logger.error(f"❌ Error during verification code cleanup: {str(e)}")
-        db.session.rollback()
+            ).count()
+            
+            if expired_codes > 0:
+                VerificationCode.query.filter(
+                    VerificationCode.expires_at < cutoff_time
+                ).delete()
+                db.session.commit()
+                app.logger.info(f"✅ Verification cleanup: Deleted {expired_codes} expired codes")
+                print(f"✅ Verification cleanup: Deleted {expired_codes} expired codes")
+            else:
+                print(f"ℹ️ Verification cleanup: No expired codes to delete")
+        except Exception as e:
+            app.logger.error(f"❌ Error during verification code cleanup: {str(e)}")
+            db.session.rollback()
 
 
 def init_cleanup_scheduler():
@@ -549,7 +566,7 @@ def init_cleanup_scheduler():
     )
     
     scheduler.start()
-    atexit.register(lambda: scheduler.shutdown())
+    atexit.register(lambda: scheduler.shutdown(wait=False))
     
     print(f"\n🕐 Database cleanup scheduler started:")
     print(f"  ✅ Audit logs: Daily at 2 AM (keeps {AUDIT_LOG_RETENTION_DAYS} days)")
@@ -2201,7 +2218,7 @@ def export_sap_single_style():
         if not variables:
             variables = ['']  # Fallback if no variables at all
         
-        vendor_code = 'V100'
+        vendor_code = 'V999'
 
         u_style = style.vendor_style.replace('-', '')
         shipping_cost = style.shipping_cost if hasattr(style, 'shipping_cost') else 0.00
@@ -2455,7 +2472,7 @@ def export_sap_format():
                         variables = [v for v in all_variables if v != 'DEFAULT']
                         has_default = 'DEFAULT' in all_variables
                         
-                        vendor_code = 'V100'
+                        vendor_code = 'V999'
                         u_style = style.vendor_style.replace('-', '')
                         shipping_cost = style.shipping_cost if hasattr(style, 'shipping_cost') else 0.00
 
