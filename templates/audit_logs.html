@@ -37,16 +37,34 @@
                                        value="{{ current_search or '' }}" onchange="this.form.submit()">
                             </div>
                             
-                            <!-- Item Type -->
+                            <!-- Item Type - UPDATED WITH ALL TYPES -->
                             <div class="col-md-2">
                                 <label class="form-label small text-muted">Item Type</label>
                                 <select name="item_type" class="form-select" onchange="this.form.submit()">
                                     <option value="">All Types</option>
-                                    <option value="fabric" {% if current_item_type == 'fabric' %}selected{% endif %}>Fabrics</option>
-                                    <option value="notion" {% if current_item_type == 'notion' %}selected{% endif %}>Notions</option>
-                                    <option value="fabric_vendor" {% if current_item_type == 'fabric_vendor' %}selected{% endif %}>Fabric Vendors</option>
-                                    <option value="notion_vendor" {% if current_item_type == 'notion_vendor' %}selected{% endif %}>Notion Vendors</option>
-                                    <option value="style" {% if current_item_type == 'style' %}selected{% endif %}>Styles</option>
+                                    <optgroup label="Styles">
+                                        <option value="style" {% if current_item_type == 'style' %}selected{% endif %}>Styles</option>
+                                    </optgroup>
+                                    <optgroup label="Materials">
+                                        <option value="fabric" {% if current_item_type == 'fabric' %}selected{% endif %}>Fabrics</option>
+                                        <option value="notion" {% if current_item_type == 'notion' %}selected{% endif %}>Notions</option>
+                                    </optgroup>
+                                    <optgroup label="Vendors">
+                                        <option value="fabric_vendor" {% if current_item_type == 'fabric_vendor' %}selected{% endif %}>Fabric Vendors</option>
+                                        <option value="notion_vendor" {% if current_item_type == 'notion_vendor' %}selected{% endif %}>Notion Vendors</option>
+                                    </optgroup>
+                                    <optgroup label="Operations">
+                                        <option value="labor_operation" {% if current_item_type == 'labor_operation' %}selected{% endif %}>Labor Operations</option>
+                                        <option value="cleaning_cost" {% if current_item_type == 'cleaning_cost' %}selected{% endif %}>Cleaning Costs</option>
+                                    </optgroup>
+                                    <optgroup label="Attributes">
+                                        <option value="color" {% if current_item_type == 'color' %}selected{% endif %}>Colors</option>
+                                        <option value="variable" {% if current_item_type == 'variable' %}selected{% endif %}>Variables</option>
+                                        <option value="size_range" {% if current_item_type == 'size_range' %}selected{% endif %}>Size Ranges</option>
+                                    </optgroup>
+                                    <optgroup label="Settings">
+                                        <option value="global_setting" {% if current_item_type == 'global_setting' %}selected{% endif %}>Global Settings</option>
+                                    </optgroup>
                                 </select>
                             </div>
                             
@@ -118,7 +136,7 @@
                                     <th style="width: 140px;">Time</th>
                                     <th style="width: 160px;">User</th>
                                     <th style="width: 90px;">Action</th>
-                                    <th style="width: 110px;">Type</th>
+                                    <th style="width: 120px;">Type</th>
                                     <th style="width: 150px;">Item</th>
                                     <th>Changes</th>
                                     <th style="width: 70px;" class="text-center">Styles</th>
@@ -146,16 +164,29 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if log.item_type == 'fabric' %}
-                                        <span class="badge bg-info text-dark">Fabric</span>
+                                        <!-- UPDATED BADGE STYLING FOR ALL ITEM TYPES -->
+                                        {% if log.item_type == 'style' %}
+                                        <span class="badge badge-style">Style</span>
+                                        {% elif log.item_type == 'fabric' %}
+                                        <span class="badge badge-fabric">Fabric</span>
                                         {% elif log.item_type == 'notion' %}
-                                        <span class="badge" style="background-color: #9333ea; color: white;">Notion</span>
+                                        <span class="badge badge-notion">Notion</span>
                                         {% elif log.item_type == 'fabric_vendor' %}
-                                        <span class="badge bg-secondary">Fabric Vendor</span>
+                                        <span class="badge badge-fabric-vendor">Fabric Vendor</span>
                                         {% elif log.item_type == 'notion_vendor' %}
-                                        <span class="badge bg-dark">Notion Vendor</span>
-                                        {% elif log.item_type == 'style' %}
-                                        <span class="badge bg-success">Style</span>
+                                        <span class="badge badge-notion-vendor">Notion Vendor</span>
+                                        {% elif log.item_type == 'labor_operation' %}
+                                        <span class="badge badge-labor">Labor Op</span>
+                                        {% elif log.item_type == 'cleaning_cost' %}
+                                        <span class="badge badge-cleaning">Cleaning</span>
+                                        {% elif log.item_type == 'color' %}
+                                        <span class="badge badge-color">Color</span>
+                                        {% elif log.item_type == 'variable' %}
+                                        <span class="badge badge-variable">Variable</span>
+                                        {% elif log.item_type == 'size_range' %}
+                                        <span class="badge badge-size">Size Range</span>
+                                        {% elif log.item_type == 'global_setting' %}
+                                        <span class="badge badge-setting">Setting</span>
                                         {% else %}
                                         <span class="badge bg-light text-dark">{{ log.item_type }}</span>
                                         {% endif %}
@@ -187,22 +218,28 @@
                                             {% set new_data = log.new_values | fromjson %}
                                             
                                             {% if log.item_type == 'style' and old_data and new_data %}
+                                                {% set has_changes = false %}
                                                 {% if old_data.vendor_style != new_data.vendor_style %}
+                                                    {% set has_changes = true %}
                                                     <div>• Vendor Style: <span class="text-muted">{{ old_data.vendor_style }}</span> → <span class="text-success">{{ new_data.vendor_style }}</span></div>
                                                 {% endif %}
                                                 {% if old_data.style_name != new_data.style_name %}
+                                                    {% set has_changes = true %}
                                                     <div>• Style Name: <span class="text-muted">{{ old_data.style_name }}</span> → <span class="text-success">{{ new_data.style_name }}</span></div>
                                                 {% endif %}
                                                 {% if old_data.total_cost != new_data.total_cost %}
+                                                    {% set has_changes = true %}
                                                     <div>• Total Cost: <span class="text-muted">${{ old_data.total_cost }}</span> → <span class="text-success">${{ new_data.total_cost }}</span></div>
                                                 {% endif %}
                                                 {% if old_data.margin != new_data.margin %}
+                                                    {% set has_changes = true %}
                                                     <div>• Margin: <span class="text-muted">{{ old_data.margin }}%</span> → <span class="text-success">{{ new_data.margin }}%</span></div>
                                                 {% endif %}
                                                 {% if old_data.suggested_price != new_data.suggested_price %}
+                                                    {% set has_changes = true %}
                                                     <div>• Suggested Price: <span class="text-muted">${{ old_data.suggested_price }}</span> → <span class="text-success">${{ new_data.suggested_price }}</span></div>
                                                 {% endif %}
-                                                {% if old_data.vendor_style == new_data.vendor_style and old_data.style_name == new_data.style_name and old_data.total_cost == new_data.total_cost and old_data.margin == new_data.margin and old_data.suggested_price == new_data.suggested_price %}
+                                                {% if not has_changes %}
                                                     <span class="text-muted">No visible changes</span>
                                                 {% endif %}
                                             {% else %}
@@ -219,7 +256,7 @@
                                     {% endif %}
                                 </td>
                                     <td class="text-center">
-                                        {% if log.affected_styles_count > 0 %}
+                                        {% if log.affected_styles_count and log.affected_styles_count > 0 %}
                                         <span class="badge bg-light text-dark border">{{ log.affected_styles_count }}</span>
                                         {% else %}
                                         <span class="text-muted">-</span>
@@ -285,7 +322,7 @@
                             {% if current_item_type or current_action or current_search or current_date_from or current_date_to %}
                             Try adjusting your filters.
                             {% else %}
-                            Changes to fabrics, notions, and vendors will appear here.
+                            Changes to styles, fabrics, notions, and other items will appear here.
                             {% endif %}
                         </p>
                     </div>
@@ -333,6 +370,52 @@
 }
 .form-control, .form-select {
     font-size: 0.875rem;
+}
+
+/* Custom Badge Colors for Item Types */
+.badge-style {
+    background-color: #10b981;
+    color: white;
+}
+.badge-fabric {
+    background-color: #0ea5e9;
+    color: white;
+}
+.badge-notion {
+    background-color: #8b5cf6;
+    color: white;
+}
+.badge-fabric-vendor {
+    background-color: #64748b;
+    color: white;
+}
+.badge-notion-vendor {
+    background-color: #334155;
+    color: white;
+}
+.badge-labor {
+    background-color: #f59e0b;
+    color: white;
+}
+.badge-cleaning {
+    background-color: #06b6d4;
+    color: white;
+}
+.badge-color {
+    background-color: #ec4899;
+    color: white;
+}
+.badge-variable {
+    background-color: #6366f1;
+    color: white;
+}
+.badge-size {
+    background-color: #84cc16;
+    color: white;
+}
+.badge-setting {
+    background-color: #78716c;
+    color: white;
 }
 </style>
 {% endblock %}

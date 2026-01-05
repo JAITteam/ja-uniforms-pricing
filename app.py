@@ -1632,7 +1632,7 @@ def api_size_range_get(size_range_id):
         'description': size_range.description
     })
 
-
+ 
 @app.route('/api/size-ranges/<int:size_range_id>', methods=['PUT', 'DELETE'])
 @login_required
 @role_required('admin')
@@ -1643,6 +1643,14 @@ def api_size_range_modify(size_range_id):
     if request.method == 'PUT':
         try:
             data = request.get_json()
+            
+            # Capture old values
+            old_values = {
+                'name': size_range.name,
+                'regular_sizes': size_range.regular_sizes,
+                'extended_sizes': size_range.extended_sizes,
+                'extended_markup_percent': float(size_range.extended_markup_percent) if size_range.extended_markup_percent else None
+            }
             
             if 'name' in data:
                 name, error = validate_required_string(data.get('name'), 'Size range name', max_length=50)
@@ -1669,6 +1677,26 @@ def api_size_range_modify(size_range_id):
                 size_range.description = data.get('description', '').strip() if data.get('description') else None
             
             db.session.commit()
+            
+            # Count affected styles
+            affected_count = Style.query.filter_by(size_range=size_range.name).count()
+            
+            # Log the update
+            log_audit(
+                action='UPDATE',
+                item_type='size_range',
+                item_id=size_range.id,
+                item_name=size_range.name,
+                old_values=old_values,
+                new_values={
+                    'name': size_range.name,
+                    'regular_sizes': size_range.regular_sizes,
+                    'extended_sizes': size_range.extended_sizes,
+                    'extended_markup_percent': float(size_range.extended_markup_percent) if size_range.extended_markup_percent else None
+                },
+                affected_styles_count=affected_count
+            )
+            
             return jsonify({'success': True})
         except Exception as e:
             db.session.rollback()
@@ -1693,8 +1721,27 @@ def api_size_range_modify(size_range_id):
                     'styles_using': styles_using
                 }), 400
             
+            # Capture info BEFORE delete
+            size_range_name = size_range.name
+            size_range_id_val = size_range.id
+            old_values = {
+                'name': size_range.name,
+                'regular_sizes': size_range.regular_sizes,
+                'extended_sizes': size_range.extended_sizes
+            }
+            
             db.session.delete(size_range)
             db.session.commit()
+            
+            # Log the delete
+            log_audit(
+                action='DELETE',
+                item_type='size_range',
+                item_id=size_range_id_val,
+                item_name=size_range_name,
+                old_values=old_values
+            )
+            
             return jsonify({'success': True})
         except Exception as e:
             db.session.rollback()
@@ -1732,6 +1779,15 @@ def api_global_setting_detail(setting_id):
         try:
             data = request.get_json()
             
+            # ✅ ADD THIS - Capture old values BEFORE any changes
+            old_values = {
+                'setting_key': setting.setting_key,
+                'setting_value': float(setting.setting_value) if setting.setting_value else None,
+                'description': setting.description
+            }
+            
+            affected_count = 0  # ✅ ADD THIS - Track affected items
+            
             if 'setting_value' in data:
                 value, error = validate_positive_number(data.get('setting_value'), 'Setting value', allow_zero=True)
                 if error:
@@ -1743,11 +1799,11 @@ def api_global_setting_detail(setting_id):
                     cleaning_costs = CleaningCost.query.all()
                     for cc in cleaning_costs:
                         cc.fixed_cost = cc.avg_minutes * value
+                    affected_count = len(cleaning_costs)  # ✅ ADD THIS
                     app.logger.info(f"Updated {len(cleaning_costs)} cleaning costs with new rate ${value}/min")
                 
                 # Auto-update all styles when sublimation cost changes
                 if setting.setting_key == 'sublimation_cost':
-                    # Find all styles that use sublimation
                     affected_style_ids = db.session.query(StyleFabric.style_id).filter(
                         StyleFabric.is_sublimation == True
                     ).distinct().all()
@@ -1760,6 +1816,7 @@ def api_global_setting_detail(setting_id):
                             if margin < 1:
                                 style.suggested_price = round(new_cost / (1 - margin), 2)
                     
+                    affected_count = len(affected_style_ids)  # ✅ ADD THIS
                     app.logger.info(f"Updated {len(affected_style_ids)} styles after sublimation cost change to ${value}")
                 
                 # Auto-update all styles when label cost changes
@@ -1771,6 +1828,7 @@ def api_global_setting_detail(setting_id):
                             margin = style.base_margin_percent / 100.0
                             if margin < 1:
                                 style.suggested_price = round(new_cost / (1 - margin), 2)
+                    affected_count = len(all_styles)  # ✅ ADD THIS
                     app.logger.info(f"Updated {len(all_styles)} styles after label cost change to ${value}")
                 
                 # Auto-update all styles when shipping cost changes
@@ -1782,12 +1840,29 @@ def api_global_setting_detail(setting_id):
                             margin = style.base_margin_percent / 100.0
                             if margin < 1:
                                 style.suggested_price = round(new_cost / (1 - margin), 2)
+                    affected_count = len(all_styles)  # ✅ ADD THIS
                     app.logger.info(f"Updated {len(all_styles)} styles after shipping cost change to ${value}")
 
             if 'description' in data:
                 setting.description = data.get('description', '').strip() if data.get('description') else None
 
             db.session.commit()
+            
+            # ✅ ADD THIS ENTIRE BLOCK - Log the update
+            log_audit(
+                action='UPDATE',
+                item_type='global_setting',
+                item_id=setting.id,
+                item_name=setting.setting_key,
+                old_values=old_values,
+                new_values={
+                    'setting_key': setting.setting_key,
+                    'setting_value': float(setting.setting_value) if setting.setting_value else None,
+                    'description': setting.description
+                },
+                affected_styles_count=affected_count
+            )
+            
             return jsonify({'success': True})
         except Exception as e:
             db.session.rollback()
@@ -1872,6 +1947,15 @@ def api_colors_create():
         )
         db.session.add(color)
         db.session.commit()
+        
+        # Log the create
+        log_audit(
+            action='CREATE',
+            item_type='color',
+            item_id=color.id,
+            item_name=color.name,
+            new_values={'name': color.name, 'color_code': color.color_code}
+        )
 
         return jsonify({'success': True, 'id': color.id, 'name': color.name})
     except Exception as e:
@@ -1903,6 +1987,9 @@ def api_color_modify(color_id):
         try:
             data = request.get_json()
             
+            # Capture old values
+            old_values = {'name': color.name, 'color_code': color.color_code}
+            
             if 'name' in data:
                 name, error = validate_required_string(data.get('name'), 'Color name', max_length=100)
                 if error:
@@ -1913,6 +2000,17 @@ def api_color_modify(color_id):
                 color.color_code = data.get('color_code', '').strip() if data.get('color_code') else None
             
             db.session.commit()
+            
+            # Log the update
+            log_audit(
+                action='UPDATE',
+                item_type='color',
+                item_id=color.id,
+                item_name=color.name,
+                old_values=old_values,
+                new_values={'name': color.name, 'color_code': color.color_code}
+            )
+            
             return jsonify({'success': True})
         except Exception as e:
             db.session.rollback()
@@ -1941,8 +2039,23 @@ def api_color_modify(color_id):
                     'styles_using': styles_using
                 }), 400
             
+            # Capture info BEFORE delete
+            color_name = color.name
+            color_id_val = color.id
+            old_values = {'name': color.name, 'color_code': color.color_code}
+            
             db.session.delete(color)
             db.session.commit()
+            
+            # Log the delete
+            log_audit(
+                action='DELETE',
+                item_type='color',
+                item_id=color_id_val,
+                item_name=color_name,
+                old_values=old_values
+            )
+            
             return jsonify({'success': True})
         except Exception as e:
             db.session.rollback()
@@ -3668,6 +3781,15 @@ def api_labor_detail(labor_id):
         try:
             data = request.get_json()
             
+            # Capture old values BEFORE update
+            old_values = {
+                'name': labor.name,
+                'cost_type': labor.cost_type,
+                'fixed_cost': float(labor.fixed_cost) if labor.fixed_cost else None,
+                'cost_per_hour': float(labor.cost_per_hour) if labor.cost_per_hour else None,
+                'cost_per_piece': float(labor.cost_per_piece) if labor.cost_per_piece else None
+            }
+            
             if 'name' in data:
                 name, error = validate_required_string(data.get('name'), 'Labor operation name', max_length=100)
                 if error:
@@ -3718,6 +3840,27 @@ def api_labor_detail(labor_id):
                 labor.cost_per_piece = cost
             
             db.session.commit()
+            
+            # Count affected styles
+            affected_count = StyleLabor.query.filter_by(labor_operation_id=labor.id).count()
+            
+            # Log the update
+            log_audit(
+                action='UPDATE',
+                item_type='labor_operation',
+                item_id=labor.id,
+                item_name=labor.name,
+                old_values=old_values,
+                new_values={
+                    'name': labor.name,
+                    'cost_type': labor.cost_type,
+                    'fixed_cost': float(labor.fixed_cost) if labor.fixed_cost else None,
+                    'cost_per_hour': float(labor.cost_per_hour) if labor.cost_per_hour else None,
+                    'cost_per_piece': float(labor.cost_per_piece) if labor.cost_per_piece else None
+                },
+                affected_styles_count=affected_count
+            )
+            
             return jsonify({'success': True})
         except Exception as e:
             db.session.rollback()
@@ -3729,7 +3872,6 @@ def api_labor_detail(labor_id):
             # Check if labor operation is used in any styles
             style_labors = StyleLabor.query.filter_by(labor_operation_id=labor_id).all()
             if style_labors:
-                # Get the list of styles using this labor operation
                 styles_using = []
                 for sl in style_labors:
                     style = Style.query.get(sl.style_id)
@@ -3746,15 +3888,35 @@ def api_labor_detail(labor_id):
                     'error': f'Cannot delete: This labor operation is used in {len(styles_using)} style(s): {style_list}',
                     'styles_using': styles_using
                 }), 400
-        
+            
+            # Capture info BEFORE delete
+            labor_name = labor.name
+            labor_id_val = labor.id
+            old_values = {
+                'name': labor.name,
+                'cost_type': labor.cost_type,
+                'fixed_cost': float(labor.fixed_cost) if labor.fixed_cost else None
+            }
             
             db.session.delete(labor)
             db.session.commit()
+            
+            # Log the delete
+            log_audit(
+                action='DELETE',
+                item_type='labor_operation',
+                item_id=labor_id_val,
+                item_name=labor_name,
+                old_values=old_values
+            )
+            
             return jsonify({'success': True})
         except Exception as e:
             db.session.rollback()
             app.logger.error(f"Error deleting labor: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete labor operation'}), 500
+        
+
 @app.route('/api/labors', methods=['POST'])
 @role_required('admin')
 def api_add_labor():
@@ -3801,6 +3963,21 @@ def api_add_labor():
         )
         db.session.add(labor)
         db.session.commit()
+
+        # Log the create
+        log_audit(
+            action='CREATE',
+            item_type='labor_operation',
+            item_id=labor.id,
+            item_name=labor.name,
+            new_values={
+                'name': labor.name,
+                'cost_type': labor.cost_type,
+                'fixed_cost': float(fixed_cost) if fixed_cost else None,
+                'cost_per_hour': float(cost_per_hour) if cost_per_hour else None,
+                'cost_per_piece': float(cost_per_piece) if cost_per_piece else None
+            }
+        )
         
         return jsonify({'success': True, 'id': labor.id})
     except Exception as e:
@@ -3826,6 +4003,13 @@ def api_cleaning_detail(cleaning_id):
     elif request.method == 'PUT':
         try:
             data = request.get_json()
+            
+            # ✅ Capture old values FIRST, before any changes
+            old_values = {
+                'garment_type': cleaning.garment_type,
+                'fixed_cost': float(cleaning.fixed_cost) if cleaning.fixed_cost else None,
+                'avg_minutes': cleaning.avg_minutes
+            }
             
             if 'garment_type' in data:
                 garment_type, error = validate_required_string(data.get('garment_type'), 'Garment type', max_length=50)
@@ -3859,6 +4043,24 @@ def api_cleaning_detail(cleaning_id):
                 cleaning.avg_minutes = minutes
             
             db.session.commit()
+
+            # Count affected styles
+            affected_count = Style.query.filter_by(garment_type=cleaning.garment_type).count()
+            
+            # Log the update
+            log_audit(
+                action='UPDATE',
+                item_type='cleaning_cost',
+                item_id=cleaning.id,
+                item_name=cleaning.garment_type,
+                old_values=old_values,
+                new_values={
+                    'garment_type': cleaning.garment_type,
+                    'fixed_cost': float(cleaning.fixed_cost) if cleaning.fixed_cost else None,
+                    'avg_minutes': cleaning.avg_minutes
+                },
+                affected_styles_count=affected_count
+            )
             return jsonify({'success': True})
         except Exception as e:
             db.session.rollback()
@@ -3867,8 +4069,27 @@ def api_cleaning_detail(cleaning_id):
     
     elif request.method == 'DELETE':
         try:
+            # ✅ Capture info BEFORE delete
+            cleaning_name = cleaning.garment_type
+            cleaning_id_val = cleaning.id
+            old_values = {
+                'garment_type': cleaning.garment_type,
+                'fixed_cost': float(cleaning.fixed_cost) if cleaning.fixed_cost else None,
+                'avg_minutes': cleaning.avg_minutes
+            }
+            
             db.session.delete(cleaning)
             db.session.commit()
+            
+            # ✅ Log the delete
+            log_audit(
+                action='DELETE',
+                item_type='cleaning_cost',
+                item_id=cleaning_id_val,
+                item_name=cleaning_name,
+                old_values=old_values
+            )
+            
             return jsonify({'success': True})
         except Exception as e:
             db.session.rollback()
@@ -3921,11 +4142,25 @@ def api_add_cleaning():
         db.session.add(cleaning)
         db.session.commit()
         
+        # Log the create
+        log_audit(
+            action='CREATE',
+            item_type='cleaning_cost',
+            item_id=cleaning.id,
+            item_name=cleaning.garment_type,
+            new_values={
+                'garment_type': garment_type,
+                'fixed_cost': float(fixed_cost),
+                'avg_minutes': avg_minutes
+            }
+        )
+        
         return jsonify({'success': True, 'id': cleaning.id})
     except Exception as e:
         db.session.rollback()
         app.logger.error(f"Error adding cleaning cost: {e}")
         return jsonify({'success': False, 'error': 'Failed to add cleaning cost'}), 500
+    
 # ===== PLACEHOLDER ROUTES FOR FUTURE FEATURES =====
 @app.route("/style/new")
 @login_required
@@ -4171,6 +4406,16 @@ def api_variables_create():
         variable = Variable(name=name)
         db.session.add(variable)
         db.session.commit()
+        
+        # Log the create
+        log_audit(
+            action='CREATE',
+            item_type='variable',
+            item_id=variable.id,
+            item_name=variable.name,
+            new_values={'name': variable.name}
+        )
+        
         return jsonify({'success': True, 'id': variable.id, 'name': variable.name})
     except Exception as e:
         db.session.rollback()
@@ -4188,7 +4433,7 @@ def api_variable_get(variable_id):
         'name': variable.name
     })
 
-
+        
 @app.route('/api/variables/<int:variable_id>', methods=['PUT', 'DELETE'])
 @login_required
 @role_required('admin')
@@ -4200,6 +4445,9 @@ def api_variable_modify(variable_id):
         try:
             data = request.get_json()
             
+            # Capture old values
+            old_values = {'name': variable.name}
+            
             if 'name' in data:
                 name, error = validate_required_string(data.get('name'), 'Variable name', max_length=100)
                 if error:
@@ -4207,6 +4455,17 @@ def api_variable_modify(variable_id):
                 variable.name = name
             
             db.session.commit()
+            
+            # Log the update
+            log_audit(
+                action='UPDATE',
+                item_type='variable',
+                item_id=variable.id,
+                item_name=variable.name,
+                old_values=old_values,
+                new_values={'name': variable.name}
+            )
+            
             return jsonify({'success': True})
         except Exception as e:
             db.session.rollback()
@@ -4235,8 +4494,23 @@ def api_variable_modify(variable_id):
                     'styles_using': styles_using
                 }), 400
             
+            # Capture info BEFORE delete
+            variable_name = variable.name
+            variable_id_val = variable.id
+            old_values = {'name': variable.name}
+            
             db.session.delete(variable)
             db.session.commit()
+            
+            # Log the delete
+            log_audit(
+                action='DELETE',
+                item_type='variable',
+                item_id=variable_id_val,
+                item_name=variable_name,
+                old_values=old_values
+            )
+            
             return jsonify({'success': True})
         except Exception as e:
             db.session.rollback()
