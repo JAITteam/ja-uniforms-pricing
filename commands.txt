@@ -11,3 +11,9 @@ git commit -m "Describe your changes here"
 git push origin main
 
 .\.venv\Scripts\Activate.ps1    
+
+.\restore_database.ps1
+
+cd "C:\Program Files\Redis"
+.\redis-cli.exe
+KEYS *
