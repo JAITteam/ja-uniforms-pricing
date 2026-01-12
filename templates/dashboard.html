@@ -278,16 +278,23 @@
                 </div>
             </div>
             
-            <!-- Compare Styles -->
+            <!-- Compare Styles - WITH SELECTORS -->
             <div class="analytics-widget">
                 <div class="widget-header">
                     <span class="widget-icon">🔄</span>
                     <h3>Compare Styles</h3>
                 </div>
-                <div class="widget-content">
-                    <div class="chart-placeholder">
-                        Interactive comparison table
-                        <br><small>(Feature coming soon)</small>
+                <div class="widget-content" id="compareStylesWidget">
+                    <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+                        <select id="compareStyle1" style="flex: 1; padding: 6px; border: 1px solid #E5E7EB; border-radius: 6px; font-size: 11px; background: white;">
+                            <option value="">Style 1...</option>
+                        </select>
+                        <select id="compareStyle2" style="flex: 1; padding: 6px; border: 1px solid #E5E7EB; border-radius: 6px; font-size: 11px; background: white;">
+                            <option value="">Style 2...</option>
+                        </select>
+                    </div>
+                    <div id="compareChartContainer" style="height: 195px;">
+                        <canvas id="compareStylesChart"></canvas>
                     </div>
                 </div>
             </div>

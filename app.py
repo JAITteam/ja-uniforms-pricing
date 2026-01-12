@@ -1571,6 +1571,55 @@ def cleanup_now():
     </html>
     """
 
+@app.route('/api/compare-styles')
+@login_required
+def api_compare_styles():
+    """API endpoint for comparing multiple styles"""
+    try:
+        style_ids = request.args.get('style_ids', '')
+        if not style_ids:
+            return jsonify({'error': 'No styles selected'}), 400
+        
+        ids = [int(id.strip()) for id in style_ids.split(',') if id.strip()]
+        
+        if len(ids) < 1 or len(ids) > 3:
+            return jsonify({'error': 'Select 1-3 styles to compare'}), 400
+        
+        # Get label cost
+        label_setting = GlobalSetting.query.filter_by(setting_key='avg_label_cost').first()
+        label_cost = label_setting.setting_value if label_setting else 0.20
+        
+        styles_data = []
+        for style_id in ids:
+            style = Style.query.options(
+                joinedload(Style.style_fabrics).joinedload(StyleFabric.fabric),
+                joinedload(Style.style_notions).joinedload(StyleNotion.notion),
+                joinedload(Style.style_labor).joinedload(StyleLabor.labor_operation)
+            ).get(style_id)
+            
+            if style:
+                fabric_cost = style.get_total_fabric_cost()
+                labor_cost = style.get_total_labor_cost()
+                notion_cost = style.get_total_notion_cost()
+                total_cost = fabric_cost + labor_cost + notion_cost + label_cost
+                
+                styles_data.append({
+                    'id': style.id,
+                    'name': style.vendor_style,
+                    'full_name': f"{style.vendor_style} - {style.style_name}",
+                    'fabric': round(fabric_cost, 2),
+                    'labor': round(labor_cost, 2),
+                    'notions': round(notion_cost, 2),
+                    'labels': round(label_cost, 2),
+                    'total': round(total_cost, 2)
+                })
+        
+        return jsonify({'styles': styles_data})
+        
+    except Exception as e:
+        app.logger.error(f"Compare styles API error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/style/<vendor_style>')
 @login_required

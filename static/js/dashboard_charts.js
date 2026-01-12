@@ -7,10 +7,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Store chart instances for updates
     let costBreakdownChart = null;
+    let compareStylesChart = null;
     
     // Load chart data from API
     loadChartData();
     loadStylesDropdown();
+    loadCompareStylesDropdowns();
     
     async function loadChartData() {
         try {
@@ -31,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // ===== LOAD STYLES FOR DROPDOWN =====
+    // ===== LOAD STYLES FOR COST BREAKDOWN DROPDOWN =====
     async function loadStylesDropdown() {
         try {
             const response = await fetch('/api/styles-list-simple');
@@ -57,6 +59,158 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Error loading styles dropdown:', error);
         }
+    }
+    
+    // ===== LOAD STYLES FOR COMPARE DROPDOWNS =====
+    async function loadCompareStylesDropdowns() {
+        try {
+            const response = await fetch('/api/styles-list-simple');
+            if (!response.ok) return;
+            
+            const styles = await response.json();
+            const dropdown1 = document.getElementById('compareStyle1');
+            const dropdown2 = document.getElementById('compareStyle2');
+            
+            if (!dropdown1 || !dropdown2) return;
+            
+            // Populate both dropdowns
+            [dropdown1, dropdown2].forEach((dropdown, index) => {
+                dropdown.innerHTML = '<option value="">Select Style ' + (index + 1) + '...</option>';
+                styles.forEach(style => {
+                    const option = document.createElement('option');
+                    option.value = style.id;
+                    option.textContent = style.vendor_style;
+                    dropdown.appendChild(option);
+                });
+            });
+            
+            // Add change event listeners
+            dropdown1.addEventListener('change', updateCompareChart);
+            dropdown2.addEventListener('change', updateCompareChart);
+            
+            // Initialize with empty chart message
+            renderCompareStylesPlaceholder();
+            
+        } catch (error) {
+            console.error('Error loading compare dropdowns:', error);
+        }
+    }
+    
+    // ===== UPDATE COMPARE STYLES CHART =====
+    async function updateCompareChart() {
+        const style1 = document.getElementById('compareStyle1').value;
+        const style2 = document.getElementById('compareStyle2').value;
+        
+        // Need at least one style selected
+        if (!style1 && !style2) {
+            renderCompareStylesPlaceholder();
+            return;
+        }
+        
+        const selectedIds = [style1, style2].filter(id => id).join(',');
+        
+        try {
+            const response = await fetch('/api/compare-styles?style_ids=' + selectedIds);
+            if (!response.ok) throw new Error('Failed to load comparison');
+            
+            const data = await response.json();
+            renderCompareStylesChart(data.styles);
+            
+        } catch (error) {
+            console.error('Error updating compare chart:', error);
+        }
+    }
+    
+    // ===== RENDER COMPARE STYLES PLACEHOLDER =====
+    function renderCompareStylesPlaceholder() {
+        const container = document.getElementById('compareChartContainer');
+        if (!container) return;
+        
+        if (compareStylesChart) {
+            compareStylesChart.destroy();
+            compareStylesChart = null;
+        }
+        
+        container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #9CA3AF; font-size: 13px; text-align: center;">Select styles above<br>to compare costs</div>';
+    }
+    
+    // ===== RENDER COMPARE STYLES CHART =====
+    function renderCompareStylesChart(styles) {
+        const container = document.getElementById('compareChartContainer');
+        if (!container || !styles || styles.length === 0) return;
+        
+        // Destroy existing chart
+        if (compareStylesChart) {
+            compareStylesChart.destroy();
+        }
+        
+        // Create canvas
+        container.innerHTML = '<canvas id="compareStylesCanvas"></canvas>';
+        const ctx = document.getElementById('compareStylesCanvas').getContext('2d');
+        
+        // Prepare data
+        const labels = ['Fabric', 'Labor', 'Notions', 'Total'];
+        const colors = [
+            { bg: 'rgba(102, 126, 234, 0.8)', border: 'rgba(102, 126, 234, 1)' },
+            { bg: 'rgba(17, 153, 142, 0.8)', border: 'rgba(17, 153, 142, 1)' },
+            { bg: 'rgba(240, 147, 251, 0.8)', border: 'rgba(240, 147, 251, 1)' }
+        ];
+        
+        const datasets = styles.map((style, index) => ({
+            label: style.name,
+            data: [style.fabric, style.labor, style.notions, style.total],
+            backgroundColor: colors[index].bg,
+            borderColor: colors[index].border,
+            borderWidth: 2,
+            borderRadius: 4
+        }));
+        
+        compareStylesChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 8,
+                            usePointStyle: true,
+                            font: { size: 10 }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(30, 41, 59, 0.9)',
+                        padding: 10,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': $' + context.parsed.y.toFixed(2);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { 
+                            font: { size: 10 },
+                            callback: function(value) {
+                                return '$' + value;
+                            }
+                        },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: {
+                        ticks: { font: { size: 10 } },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
     }
     
     // ===== UPDATE COST BREAKDOWN FOR SELECTED STYLE =====
