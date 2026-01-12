@@ -2702,22 +2702,15 @@ def view_all_styles():
     label_cost = label_setting.setting_value if label_setting else 0.20
     
     # ========================================
-    # PAGINATED QUERY WITH EAGER LOADING
+    # LOAD ALL STYLES (JavaScript handles pagination)
     # ========================================
-    # Only load what's needed for the current page
-    pagination = Style.query.options(
+    styles = Style.query.options(
         joinedload(Style.style_fabrics).joinedload(StyleFabric.fabric),
         joinedload(Style.style_notions).joinedload(StyleNotion.notion),
         joinedload(Style.style_labor).joinedload(StyleLabor.labor_operation),
         joinedload(Style.colors),
         joinedload(Style.style_variables)
-    ).order_by(Style.updated_at.desc()).paginate(
-        page=page,
-        per_page=per_page,
-        error_out=False
-    )
-    
-    styles = pagination.items
+    ).order_by(Style.updated_at.desc()).all()
     
     # Calculate stats from CURRENT PAGE only (fast)
     page_total_value = sum(
@@ -2735,7 +2728,6 @@ def view_all_styles():
     
     return render_template('view_all_styles.html', 
                          styles=styles,
-                         pagination=pagination,
                          total_styles=total_styles,
                          total_value=page_total_value,
                          avg_cost=avg_cost,
@@ -5297,7 +5289,7 @@ def api_style_save():
             style.suggested_price = suggested_price if suggested_price else 0
 
         # ===== STEP 13: COMMIT ALL CHANGES =====
-
+        style.updated_at = datetime.now()
         db.session.commit()
 
         # ===== STEP 14: LOG AUDIT =====
