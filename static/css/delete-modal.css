@@ -93,6 +93,10 @@
     background: linear-gradient(135deg, #A18CD1 0%, #FBC2EB 100%);
 }
 
+.delete-modal-content[data-type="client"] .delete-modal-header {
+    background: linear-gradient(135deg, #4FACFE 0%, #00F2FE 100%);
+}
+
 .delete-modal-header::after {
     content: '';
     position: absolute;

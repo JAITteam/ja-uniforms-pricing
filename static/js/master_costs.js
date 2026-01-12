@@ -206,6 +206,24 @@ function openModal(type, id = null) {
                 <textarea id="description" rows="2" placeholder="Notes about this size range"></textarea>
             </div>
         `;
+    } else if (type === 'client') {
+        formHtml = `
+            <div class="form-group">
+                <label>BP Code *</label>
+                <input type="text" id="bp_code" required placeholder="e.g., C00001" style="text-transform: uppercase;">
+            </div>
+            <div class="form-group">
+                <label>Client Name *</label>
+                <input type="text" id="bp_name" required placeholder="e.g., ACME CORPORATION">
+            </div>
+            <div class="form-group">
+                <label>Status</label>
+                <select id="is_active">
+                    <option value="true" selected>Active</option>
+                    <option value="false">Inactive</option>
+                </select>
+            </div>
+        `;
     } else if (type === 'global_setting') {
         formHtml = `
             <div class="form-group">
@@ -650,6 +668,7 @@ setupTableFilter('cleaningSearch', 'cleaning-row', 'cleaningCount');
 setupTableFilter('colorSearch', 'color-row', 'colorCount');
 setupTableFilter('variableSearch', 'variable-row', 'variableCount');
 setupTableFilter('sizeRangeSearch', 'size-range-row', 'sizeRangeCount');
+setupTableFilter('clientSearch', 'client-row', 'clientCount');
 
 // Close modal on outside click
 window.addEventListener('click', function(event) {

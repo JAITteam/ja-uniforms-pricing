@@ -1068,6 +1068,16 @@ tbody tr:hover .row-actions {
     background: linear-gradient(135deg, #4FACFE 0%, #00F2FE 100%);
 }
 
+/* Client - Cyan/Blue */
+.modal[data-type="client"] .modal-header {
+    background: linear-gradient(135deg, #4FACFE 0%, #00F2FE 100%);
+}
+
+.modal[data-type="client"] .btn-primary {
+    background: linear-gradient(135deg, #4FACFE 0%, #00F2FE 100%);
+    box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
+}
+
 /* Size Range - Indigo/Pink */
 .modal[data-type="size_range"] .modal-header {
     background: linear-gradient(135deg, #A18CD1 0%, #FBC2EB 100%);

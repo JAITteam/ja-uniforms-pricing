@@ -239,6 +239,50 @@
                                                     {% set has_changes = true %}
                                                     <div>• Suggested Price: <span class="text-muted">${{ old_data.suggested_price }}</span> → <span class="text-success">${{ new_data.suggested_price }}</span></div>
                                                 {% endif %}
+                                                {% if old_data.colors != new_data.colors %}
+                                                    {% set has_changes = true %}
+                                                    <div>• Colors: <span class="text-muted">{{ old_data.colors | join(', ') if old_data.colors else 'None' }}</span> → <span class="text-success">{{ new_data.colors | join(', ') if new_data.colors else 'None' }}</span></div>
+                                                {% endif %}
+                                                {% if old_data.variables != new_data.variables %}
+                                                    {% set has_changes = true %}
+                                                    <div>• Variables: <span class="text-muted">{{ old_data.variables | join(', ') if old_data.variables else 'None' }}</span> → <span class="text-success">{{ new_data.variables | join(', ') if new_data.variables else 'None' }}</span></div>
+                                                {% endif %}
+                                                {% if old_data.clients != new_data.clients %}
+                                                    {% set has_changes = true %}
+                                                    <div>• Clients: <span class="text-muted">{{ old_data.clients | join(', ') if old_data.clients else 'None' }}</span> → <span class="text-success">{{ new_data.clients | join(', ') if new_data.clients else 'None' }}</span></div>
+                                                {% endif %}
+                                                {% if old_data.fabrics != new_data.fabrics %}
+                                                    {% set has_changes = true %}
+                                                    <div>• Fabrics: <span class="text-muted">{{ old_data.fabrics | join(', ') if old_data.fabrics else 'None' }}</span> → <span class="text-success">{{ new_data.fabrics | join(', ') if new_data.fabrics else 'None' }}</span></div>
+                                                {% endif %}
+                                                {% if old_data.notions != new_data.notions %}
+                                                    {% set has_changes = true %}
+                                                    <div>• Notions: <span class="text-muted">{{ old_data.notions | join(', ') if old_data.notions else 'None' }}</span> → <span class="text-success">{{ new_data.notions | join(', ') if new_data.notions else 'None' }}</span></div>
+                                                {% endif %}
+                                                {% if old_data.labor != new_data.labor %}
+                                                    {% set has_changes = true %}
+                                                    <div>• Labor: <span class="text-muted">{{ old_data.labor | join(', ') if old_data.labor else 'None' }}</span> → <span class="text-success">{{ new_data.labor | join(', ') if new_data.labor else 'None' }}</span></div>
+                                                {% endif %}
+                                                {% if old_data.base_item_number != new_data.base_item_number %}
+                                                    {% set has_changes = true %}
+                                                    <div>• Base Item #: <span class="text-muted">{{ old_data.base_item_number or 'None' }}</span> → <span class="text-success">{{ new_data.base_item_number or 'None' }}</span></div>
+                                                {% endif %}
+                                                {% if old_data.gender != new_data.gender %}
+                                                    {% set has_changes = true %}
+                                                    <div>• Gender: <span class="text-muted">{{ old_data.gender or 'None' }}</span> → <span class="text-success">{{ new_data.gender or 'None' }}</span></div>
+                                                {% endif %}
+                                                {% if old_data.garment_type != new_data.garment_type %}
+                                                    {% set has_changes = true %}
+                                                    <div>• Garment Type: <span class="text-muted">{{ old_data.garment_type or 'None' }}</span> → <span class="text-success">{{ new_data.garment_type or 'None' }}</span></div>
+                                                {% endif %}
+                                                {% if old_data.size_range != new_data.size_range %}
+                                                    {% set has_changes = true %}
+                                                    <div>• Size Range: <span class="text-muted">{{ old_data.size_range or 'None' }}</span> → <span class="text-success">{{ new_data.size_range or 'None' }}</span></div>
+                                                {% endif %}
+                                                {% if old_data.notes != new_data.notes %}
+                                                    {% set has_changes = true %}
+                                                    <div>• Notes: <span class="text-muted">{{ (old_data.notes or 'None')[:50] }}{% if old_data.notes and old_data.notes|length > 50 %}...{% endif %}</span> → <span class="text-success">{{ (new_data.notes or 'None')[:50] }}{% if new_data.notes and new_data.notes|length > 50 %}...{% endif %}</span></div>
+                                                {% endif %}
                                                 {% if not has_changes %}
                                                     <span class="text-muted">No visible changes</span>
                                                 {% endif %}

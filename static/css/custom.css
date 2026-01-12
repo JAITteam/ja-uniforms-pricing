@@ -1407,3 +1407,35 @@ textarea {
     border-left: none !important;
     background: transparent !important;
 }
+
+/* Fix: User dropdown menu z-index - must be higher than everything */
+.navbar {
+    z-index: 10000 !important;
+    position: relative !important;
+}
+
+.navbar .dropdown,
+.navbar .dropdown-menu,
+.dropdown-menu.show,
+.navbar .dropdown-menu.show {
+    z-index: 10001 !important;
+}
+
+/* Force dropdown to be on top of sticky elements */
+.dropdown-menu {
+    z-index: 10001 !important;
+}
+
+/* Reduce snapshot panel z-index */
+.right-sticky {
+    z-index: 50 !important;
+}
+
+.snapshot {
+    z-index: 50 !important;
+}
+
+/* Ensure toolbar doesn't interfere */
+.toolbar {
+    z-index: 100 !important;
+}

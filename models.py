@@ -351,6 +351,35 @@ class Variable(db.Model):
     
     def __repr__(self):
         return f'<Variable {self.name}>'
+    
+# ===== CLIENT MODEL =====
+class Client(db.Model):
+    """Business Partner / Client from SAP B1"""
+    __tablename__ = 'clients'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    bp_code = db.Column(db.String(20), unique=True, nullable=False, index=True)
+    bp_name = db.Column(db.String(200), nullable=False, index=True)
+    is_active = db.Column(db.Boolean, default=True, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    def __repr__(self):
+        return f'<Client {self.bp_code} - {self.bp_name}>'
+
+
+class StyleClient(db.Model):
+    """Many-to-many relationship between Styles and Clients"""
+    __tablename__ = 'style_clients'
+    __table_args__ = (db.UniqueConstraint('style_id', 'client_id', name='uq_style_client'),)
+    
+    id = db.Column(db.Integer, primary_key=True)
+    style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False, index=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id', ondelete='CASCADE'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    
+    style = db.relationship('Style', backref=db.backref('style_clients', cascade='all, delete-orphan'))
+    client = db.relationship('Client')
 
 
 class StyleVariable(db.Model):

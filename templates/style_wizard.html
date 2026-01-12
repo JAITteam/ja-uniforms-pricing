@@ -258,40 +258,56 @@
       <div class="pb">
         <div class="row g-3 mb-3">
           <!-- Colors Section -->
-          <div class="col-md-6">
+          <div class="col-md-4">
             <label class="form-label fw-bold" style="font-size: 0.875rem;">Color</label>
             <div class="d-flex gap-2 mb-2">
-              <select id="color_dropdown" class="form-select" style="flex: 1;">
+              <select id="color_dropdown" class="form-select form-select-sm" style="flex: 1;">
                 <option value="">Select Color</option>
               </select>
               <button class="btn btn-primary btn-sm" type="button" onclick="addSelectedColor()">Add</button>
             </div>
-            <select multiple class="form-select mb-2" style="height:120px" id="color_list"></select>
+            <select multiple class="form-select mb-2" style="height:100px; font-size: 0.8rem;" id="color_list"></select>
             <button class="btn btn-sm btn-danger" onclick="removeSelectedColors()">Remove Selected</button>
-            <div class="input-group mt-2">
+            <div class="input-group input-group-sm mt-2">
               <input id="new_color_input" class="form-control form-control-sm" placeholder="Or type new color...">
               <button class="btn btn-success btn-sm" type="button" onclick="addNewColor()">Create & Add</button>
             </div>
           </div>
 
           <!-- Variables Section -->
-          <div class="col-md-6">
+          <div class="col-md-4">
             <label class="form-label fw-bold" style="font-size: 0.875rem;">Variable</label>
             <div class="d-flex gap-2 mb-2">
-              <select id="variable_dropdown" class="form-select" style="flex: 1;">
+              <select id="variable_dropdown" class="form-select form-select-sm" style="flex: 1;">
                 <option value="">Select Variable</option>
               </select>
               <button class="btn btn-primary btn-sm" type="button" onclick="addSelectedVariable()">Add</button>
             </div>
-            <select multiple class="form-select mb-2" style="height:120px" id="variable_list"></select>
+            <select multiple class="form-select mb-2" style="height:100px; font-size: 0.8rem;" id="variable_list"></select>
             <button class="btn btn-sm btn-danger" onclick="removeSelectedVariables()">Remove Selected</button>
-            <div class="input-group mt-2">
+            <div class="input-group input-group-sm mt-2">
               <input id="new_variable_input" class="form-control form-control-sm" placeholder="Or type new variable...">
               <button class="btn btn-success btn-sm" type="button" onclick="addNewVariable()">Create & Add</button>
             </div>
           </div>
+        <!-- Clients Section -->
+          <div class="col-md-4">
+            <label class="form-label fw-bold" style="font-size: 0.875rem;">Client</label>
+            <div class="d-flex gap-2 mb-2">
+              <select id="client_dropdown" class="form-select form-select-sm" style="flex: 1;">
+                <option value="">Select Client</option>
+              </select>
+              <button class="btn btn-primary btn-sm" type="button" onclick="addSelectedClient()">Add</button>
+            </div>
+            <select multiple class="form-select mb-2" style="height:100px; font-size: 0.8rem;" id="client_list"></select>
+            <button class="btn btn-sm btn-danger" onclick="removeSelectedClients()">Remove Selected</button>
+            <div class="input-group input-group-sm mt-2">
+              <input id="new_client_code" class="form-control form-control-sm" placeholder="Code" style="width: 80px;">
+              <input id="new_client_name" class="form-control form-control-sm" placeholder="Client name...">
+              <button class="btn btn-success btn-sm" type="button" onclick="addNewClient()">Create</button>
+            </div>
+          </div>
         </div>
-
         <!-- Pricing Section - ULTRA COMPACT -->
         <div class="kv mb-3" style="background: #f8f9fa; padding: 0.5rem 0.75rem; border-radius: 4px;">
           <strong style="font-size: 0.8rem; color: #555;">Pricing:</strong>

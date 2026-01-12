@@ -641,9 +641,69 @@
                 </table>
             </div>
         </section>
-
-    </div>
-
+        
+        <!-- Clients Section -->
+        <section class="section-card" id="clients-section">
+            <div class="card-header gradient-cyan">
+                <div class="card-title">
+                    <i data-feather="users"></i>
+                    <h2>Clients</h2>
+                    <span class="item-count" id="clientCount">{{ clients|length }} items</span>
+                </div>
+                <div class="header-actions">
+                    <div class="search-box">
+                        <i data-feather="search"></i>
+                        <input type="text" id="clientSearch" placeholder="Search clients..." autocomplete="off">
+                    </div>
+                    {% if current_user.is_admin() %}
+                    <button class="btn-add" data-type="client">
+                        <i data-feather="plus"></i>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="table-container scrollable">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="code">BP Code <i data-feather="arrow-up-down" class="sort-icon"></i></th>
+                            <th data-sort="name">Client Name <i data-feather="arrow-up-down" class="sort-icon"></i></th>
+                            <th>Status</th>
+                            {% if current_user.is_admin() %}
+                            <th class="actions-col">Actions</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody id="clientTable">
+                        {% for client in clients %}
+                        <tr data-id="{{ client.id }}" class="client-row">
+                            <td><strong>{{ client.bp_code }}</strong></td>
+                            <td>{{ client.bp_name }}</td>
+                            <td>
+                                {% if client.is_active %}
+                                <span class="badge badge-flat_rate">Active</span>
+                                {% else %}
+                                <span class="badge badge-hourly">Inactive</span>
+                                {% endif %}
+                            </td>
+                            {% if current_user.is_admin() %}
+                            <td class="actions-cell">
+                                <div class="row-actions">
+                                    <button class="icon-btn icon-edit" data-type="client" data-id="{{ client.id }}" title="Edit">
+                                        <i data-feather="edit-2"></i>
+                                    </button>
+                                    <button class="icon-btn icon-delete" data-type="client" data-id="{{ client.id }}" title="Delete">
+                                        <i data-feather="trash-2"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
     <!-- Modal -->
     <div id="modal" class="modal">
         <div class="modal-overlay"></div>

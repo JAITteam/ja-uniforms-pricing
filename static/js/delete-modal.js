@@ -125,6 +125,8 @@ class DeleteModal {
             modalContent.setAttribute('data-type', 'variable');
         } else if (titleLower.includes('size')) {
             modalContent.setAttribute('data-type', 'size_range');
+        } else if (titleLower.includes('client')) {
+            modalContent.setAttribute('data-type', 'client');
         } else {
             modalContent.setAttribute('data-type', 'default');
         }

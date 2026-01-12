@@ -42,7 +42,8 @@ from models import (
     Style, Fabric, User, FabricVendor, Notion, NotionVendor,
     LaborOperation, CleaningCost, StyleFabric, StyleNotion,
     StyleLabor, Color, StyleColor, Variable, StyleVariable,
-    SizeRange, GlobalSetting, StyleImage, VerificationCode, AuditLog
+    SizeRange, GlobalSetting, StyleImage, VerificationCode, AuditLog,
+    Client, StyleClient
 )
 
 # ===== HELPER FUNCTIONS =====
@@ -1914,6 +1915,63 @@ def import_colors():
     except Exception as e:
         return f"<h1>Error importing colors:</h1><p>{str(e)}</p>"
     
+@app.route('/import-clients')
+@admin_required
+def import_clients():
+    """One-time import of clients from Excel file"""
+    import pandas as pd
+    try:
+        df = pd.read_excel('CLIENTS_LIST.xlsx')
+        
+        imported = 0
+        skipped = 0
+        
+        for index, row in df.iterrows():
+            bp_code = str(row['BP Code']).strip().upper()
+            bp_name = str(row['BP Name']).strip()
+            
+            if not bp_code or bp_code == 'NAN':
+                continue
+                
+            # Check if client already exists
+            existing = Client.query.filter(func.upper(Client.bp_code) == bp_code).first()
+            if existing:
+                skipped += 1
+                continue
+            
+            # Create new client
+            client = Client(bp_code=bp_code, bp_name=bp_name)
+            db.session.add(client)
+            imported += 1
+        
+        db.session.commit()
+        
+        return f"""
+        <div style="max-width: 600px; margin: 50px auto; padding: 20px; font-family: Arial;">
+            <h1>✅ Client Import Complete</h1>
+            <div style="background: #d4edda; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <p><strong>✓ Imported: {imported} new clients</strong></p>
+                <p>⊙ Skipped: {skipped} existing clients</p>
+            </div>
+            <a href="/master-costs" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Master Costs</a>
+            <a href="/" style="background: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-left: 10px;">Back to Dashboard</a>
+        </div>
+        """
+    except FileNotFoundError:
+        return f"""
+        <div style="max-width: 600px; margin: 50px auto; padding: 20px; font-family: Arial;">
+            <h1>❌ File Not Found</h1>
+            <div style="background: #f8d7da; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <p>Please place <strong>CLIENTS_LIST.xlsx</strong> in the project root folder:</p>
+                <code>C:\\Users\\it2\\ja_uniforms_pricing\\CLIENTS_LIST.xlsx</code>
+            </div>
+            <a href="/" style="background: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Back to Dashboard</a>
+        </div>
+        """
+    except Exception as e:
+        db.session.rollback()
+        return f"<h1>Error importing clients:</h1><p>{str(e)}</p>"
+    
 # COLOR ENDPOINTS
 @app.route('/api/colors', methods=['GET'])
 @login_required
@@ -3073,6 +3131,7 @@ def master_costs():
     colors = Color.query.order_by(Color.name).all()
     variables = Variable.query.order_by(Variable.name).all()
     size_ranges = SizeRange.query.order_by(SizeRange.name).all()
+    clients = Client.query.order_by(Client.bp_code).all()  # ADD THIS
     
     global_settings = GlobalSetting.query.all()
     
@@ -3091,7 +3150,8 @@ def master_costs():
                          variables=variables,
                          size_ranges=size_ranges,
                          global_settings=global_settings,
-                         cleaning_cost_per_minute=cleaning_cost_per_minute)
+                         cleaning_cost_per_minute=cleaning_cost_per_minute,
+                         clients=clients)
 
 # ===== API ENDPOINTS FOR MASTER COSTS =====
 
@@ -4516,6 +4576,178 @@ def api_variable_modify(variable_id):
             db.session.rollback()
             app.logger.error(f"Error deleting variable: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete variable'}), 500
+        
+
+# =============================================================================
+# CLIENT ENDPOINTS
+# =============================================================================
+
+@app.route('/api/clients', methods=['GET'])
+@login_required
+def api_clients_get():
+    """Get all clients - searchable by code or name"""
+    search = request.args.get('search', '').strip()
+    
+    query = Client.query.filter(Client.is_active == True)
+    
+    if search:
+        sanitized, search_pattern = sanitize_search_query(search)
+        if sanitized:
+            query = query.filter(
+                db.or_(
+                    Client.bp_code.ilike(search_pattern, escape='\\'),
+                    Client.bp_name.ilike(search_pattern, escape='\\')
+                )
+            )
+        clients = query.order_by(Client.bp_code).limit(50).all()
+    else:
+        # Return ALL clients when no search (for dropdown)
+        clients = query.order_by(Client.bp_code).all()
+    
+    return jsonify([{
+        'id': c.id, 
+        'bp_code': c.bp_code, 
+        'bp_name': c.bp_name,
+        'display': f"{c.bp_code} - {c.bp_name}"
+    } for c in clients])
+
+@app.route('/api/clients', methods=['POST'])
+@login_required
+@role_required('admin')
+def api_clients_create():
+    """Create new client - admin only"""
+    try:
+        data = request.get_json()
+        
+        bp_code, error = validate_required_string(data.get('bp_code'), 'BP Code', max_length=20)
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
+        
+        bp_name, error = validate_required_string(data.get('bp_name'), 'BP Name', max_length=200)
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
+        
+        existing = Client.query.filter(func.upper(Client.bp_code) == bp_code.upper()).first()
+        if existing:
+            return jsonify({'success': False, 'error': f'Client code {bp_code} already exists'}), 400
+        
+        client = Client(bp_code=bp_code.upper(), bp_name=bp_name)
+        db.session.add(client)
+        db.session.commit()
+        
+        log_audit(
+            action='CREATE',
+            item_type='client',
+            item_id=client.id,
+            item_name=f"{client.bp_code} - {client.bp_name}",
+            new_values={'bp_code': client.bp_code, 'bp_name': client.bp_name}
+        )
+        
+        return jsonify({
+            'success': True, 
+            'id': client.id, 
+            'bp_code': client.bp_code,
+            'bp_name': client.bp_name,
+            'display': f"{client.bp_code} - {client.bp_name}"
+        })
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error adding client: {e}")
+        return jsonify({'success': False, 'error': 'Failed to add client'}), 500
+    
+@app.route('/api/clients/<int:client_id>', methods=['GET'])
+@login_required
+def api_clients_get_single(client_id):
+    """Get single client for editing"""
+    client = Client.query.get_or_404(client_id)
+    return jsonify({
+        'id': client.id,
+        'bp_code': client.bp_code,
+        'bp_name': client.bp_name,
+        'is_active': client.is_active
+    })
+
+
+@app.route('/api/clients/<int:client_id>', methods=['PUT'])
+@login_required
+@role_required('admin')
+def api_clients_update(client_id):
+    """Update client"""
+    try:
+        client = Client.query.get_or_404(client_id)
+        data = request.get_json()
+        
+        old_values = {'bp_code': client.bp_code, 'bp_name': client.bp_name}
+        
+        bp_code = data.get('bp_code', '').strip().upper()
+        bp_name = data.get('bp_name', '').strip()
+        
+        if not bp_code or not bp_name:
+            return jsonify({'success': False, 'error': 'Code and Name are required'}), 400
+        
+        # Check for duplicate code (excluding self)
+        existing = Client.query.filter(
+            Client.bp_code == bp_code,
+            Client.id != client_id
+        ).first()
+        if existing:
+            return jsonify({'success': False, 'error': f'Client code {bp_code} already exists'}), 400
+        
+        client.bp_code = bp_code
+        client.bp_name = bp_name
+        client.is_active = str(data.get('is_active', 'true')).lower() == 'true'
+        
+        db.session.commit()
+        
+        log_audit(
+            action='UPDATE',
+            item_type='client',
+            item_id=client.id,
+            item_name=f"{client.bp_code} - {client.bp_name}",
+            old_values=old_values,
+            new_values={'bp_code': client.bp_code, 'bp_name': client.bp_name}
+        )
+        
+        return jsonify({'success': True, 'id': client.id})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/clients/<int:client_id>', methods=['DELETE'])
+@login_required
+@role_required('admin')
+def api_clients_delete(client_id):
+    """Delete client"""
+    try:
+        client = Client.query.get_or_404(client_id)
+        
+        # Check if client is used in any styles
+        style_count = StyleClient.query.filter_by(client_id=client_id).count()
+        if style_count > 0:
+            return jsonify({
+                'success': False, 
+                'error': f'Cannot delete: Client is used in {style_count} style(s)'
+            }), 400
+        
+        old_values = {'bp_code': client.bp_code, 'bp_name': client.bp_name}
+        
+        db.session.delete(client)
+        db.session.commit()
+        
+        log_audit(
+            action='DELETE',
+            item_type='client',
+            item_id=client_id,
+            item_name=f"{old_values['bp_code']} - {old_values['bp_name']}",
+            old_values=old_values,
+            new_values=None
+        )
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
     
 
 @app.route('/api/styles/search', methods=['GET'])
@@ -4633,7 +4865,7 @@ def api_style_by_vendor_style():
                 "cost": float(cc.fixed_cost or 0),
             }
 
-    # Colors - NEW SECTION
+    # Colors
     colors_payload = []
     color_rows = (
         db.session.query(StyleColor, Color)
@@ -4648,7 +4880,7 @@ def api_style_by_vendor_style():
             "name": color.name
         })
     
-    # Variables - NEW SECTION - ADD THIS ENTIRE BLOCK
+    # Variables
     variables_payload = []
     variable_rows = (
         db.session.query(StyleVariable, Variable)
@@ -4662,6 +4894,24 @@ def api_style_by_vendor_style():
             "variable_id": variable.id,
             "name": variable.name
         })
+    
+    # Clients - NEW
+    clients_payload = []
+    client_rows = (
+        db.session.query(StyleClient, Client)
+        .join(Client, StyleClient.client_id == Client.id)
+        .filter(StyleClient.style_id == style.id)
+        .order_by(Client.bp_code.asc())
+        .all()
+    )
+    for sc, client in client_rows:
+        clients_payload.append({
+            "client_id": client.id,
+            "bp_code": client.bp_code,
+            "bp_name": client.bp_name,
+            "display": f"{client.bp_code} - {client.bp_name}"
+        })
+    
     # Load from global settings instead of style record
     label_setting = GlobalSetting.query.filter_by(setting_key='avg_label_cost').first()
     shipping_setting = GlobalSetting.query.filter_by(setting_key='shipping_cost').first()
@@ -4677,10 +4927,10 @@ def api_style_by_vendor_style():
             "gender": style.gender,
             "garment_type": style.garment_type,
             "size_range": style.size_range,
-            "margin": float(style.base_margin_percent or 60.0),  # NEW
+            "margin": float(style.base_margin_percent or 60.0),
             "label_cost": float(label_setting.setting_value) if label_setting else 0.20,
             "shipping_cost": float(shipping_setting.setting_value) if shipping_setting else 0.00,
-            "suggested_price": float(style.suggested_price or 0) if style.suggested_price else None,  # NEW
+            "suggested_price": float(style.suggested_price or 0) if style.suggested_price else None,
             "notes": style.notes or '', 
         },
         "fabrics": fabrics_payload,
@@ -4688,8 +4938,9 @@ def api_style_by_vendor_style():
         "labor": labor_payload,
         "cleaning": cleaning_payload,
         "colors": colors_payload,
-        "variables": variables_payload,  # NEW
-}), 200
+        "variables": variables_payload,
+        "clients": clients_payload,
+    }), 200
 
 
 # ===== ENHANCED /api/style/save WITH FULL VALIDATION =====
@@ -4744,14 +4995,47 @@ def api_style_save():
                 return jsonify({"error": "Style not found"}), 404
             
             # Capture OLD values BEFORE any changes (for audit log)
+            # Get old colors
+            old_colors = [sc.color.name for sc in StyleColor.query.filter_by(style_id=existing_style.id).all()]
+            # Get old variables
+            old_variables = [sv.variable.name for sv in StyleVariable.query.filter_by(style_id=existing_style.id).all()]
+            # Get old clients
+            old_clients = [sc.client.bp_code for sc in StyleClient.query.filter_by(style_id=existing_style.id).all()]
+            # Get old fabrics
+            old_fabrics = []
+            for sf in StyleFabric.query.filter_by(style_id=existing_style.id).all():
+                yards = round(float(sf.yards_required), 2) if sf.yards_required else 0
+                old_fabrics.append(f"{sf.fabric.name} ({yards}yd)")
+            # Get old notions
+            old_notions = []
+            for sn in StyleNotion.query.filter_by(style_id=existing_style.id).all():
+                qty = round(float(sn.quantity_required), 2) if sn.quantity_required else 0
+                old_notions.append(f"{sn.notion.name} (x{qty})")
+            # Get old labor
+            old_labor = []
+            for sl in StyleLabor.query.filter_by(style_id=existing_style.id).all():
+                if sl.labor_operation:
+                    old_labor.append(sl.labor_operation.name)
+            
             old_style_values = {
                 "vendor_style": existing_style.vendor_style,
                 "style_name": existing_style.style_name,
+                "base_item_number": existing_style.base_item_number,
+                "gender": existing_style.gender,
+                "garment_type": existing_style.garment_type,
+                "size_range": existing_style.size_range,
                 "total_cost": str(existing_style.get_total_cost()),
                 "margin": str(existing_style.base_margin_percent),
-                "suggested_price": str(existing_style.suggested_price)
+                "suggested_price": str(existing_style.suggested_price),
+                "colors": old_colors if old_colors else None,
+                "variables": old_variables if old_variables else None,
+                "clients": old_clients if old_clients else None,
+                "fabrics": old_fabrics if old_fabrics else None,
+                "notions": old_notions if old_notions else None,
+                "labor": old_labor if old_labor else None,
+                "notes": existing_style.notes
             }
-            
+
             # Check if vendor_style changed and conflicts with another style
             if existing_style.vendor_style != vendor_style:
                 duplicate = Style.query.filter_by(vendor_style=vendor_style).first()
@@ -4833,6 +5117,7 @@ def api_style_save():
         StyleLabor.query.filter_by(style_id=style.id).delete()
         StyleColor.query.filter_by(style_id=style.id).delete()
         StyleVariable.query.filter_by(style_id=style.id).delete()
+        StyleClient.query.filter_by(style_id=style.id).delete()
         db.session.flush()
         
         # ===== STEP 8: ADD FABRICS =====
@@ -4982,8 +5267,19 @@ def api_style_save():
                 
                 sv = StyleVariable(style_id=style.id, variable_id=variable.id)
                 db.session.add(sv)
+
+        # ===== STEP 12.1: ADD CLIENTS =====
+        new_client_names = []
+        for c in data.get("clients") or []:
+            client_id = c.get("client_id")
+            if client_id:
+                client = Client.query.get(client_id)
+                if client:
+                    sc = StyleClient(style_id=style.id, client_id=client.id)
+                    db.session.add(sc)
+                    new_client_names.append(client.bp_code)
         
-        # ===== STEP 12.5: RECALCULATE MARGIN WITH ACTUAL COSTS =====
+        # ===== STEP 12.2: RECALCULATE MARGIN WITH ACTUAL COSTS =====
         db.session.flush()  # Ensure all relationships are saved
         total_cost = style.get_total_cost()
         
@@ -5005,6 +5301,7 @@ def api_style_save():
         db.session.commit()
 
         # ===== STEP 14: LOG AUDIT =====
+        # ===== STEP 14: LOG AUDIT =====
         try:
             if is_new:
                 # Log new style creation
@@ -5013,7 +5310,8 @@ def api_style_save():
                     "style_name": style.style_name,
                     "total_cost": str(style.get_total_cost()),
                     "fabrics": [f.get("name") for f in fabrics_data if f.get("name")],
-                    "notions": [n.get("name") for n in notions_data if n.get("name")]
+                    "notions": [n.get("name") for n in notions_data if n.get("name")],
+                    "clients": new_client_names if new_client_names else None
                 }
                 log_audit(
                     action="CREATE",
@@ -5025,13 +5323,42 @@ def api_style_save():
                     details=f"Created style: {style.style_name}"
                 )
             else:
+                # Get new colors and variables for comparison
+                new_color_names = [c.get("name") for c in data.get("colors") or [] if c.get("name")]
+                new_variable_names = [v.get("name") for v in data.get("variables") or [] if v.get("name")]
+                # Get new fabrics
+                new_fabrics = []
+                for f in fabrics_data:
+                    if f.get("name"):
+                        yards = round(float(f.get('yards', 0)), 2)
+                        new_fabrics.append(f"{f.get('name')} ({yards}yd)")
+                # Get new notions
+                new_notions = []
+                for n in notions_data:
+                    if n.get("name"):
+                        qty = round(float(n.get('qty', 0)), 2)
+                        new_notions.append(f"{n.get('name')} (x{qty})")
+                # Get new labor
+                new_labor = [l.get("name") for l in data.get("labor") or [] if l.get("name")]
+                
                 # Log style update with changes
                 new_values = {
                     "vendor_style": style.vendor_style,
                     "style_name": style.style_name,
+                    "base_item_number": style.base_item_number,
+                    "gender": style.gender,
+                    "garment_type": style.garment_type,
+                    "size_range": style.size_range,
                     "total_cost": str(style.get_total_cost()),
                     "margin": str(style.base_margin_percent),
-                    "suggested_price": str(style.suggested_price)
+                    "suggested_price": str(style.suggested_price),
+                    "colors": new_color_names if new_color_names else None,
+                    "variables": new_variable_names if new_variable_names else None,
+                    "clients": new_client_names if new_client_names else None,
+                    "fabrics": new_fabrics if new_fabrics else None,
+                    "notions": new_notions if new_notions else None,
+                    "labor": new_labor if new_labor else None,
+                    "notes": style.notes
                 }
                 log_audit(
                     action="UPDATE",
@@ -5044,6 +5371,7 @@ def api_style_save():
                 )
         except Exception as e:
             app.logger.error(f"Failed to log audit for style: {e}")
+
 
         # Return appropriate message
         if is_new:

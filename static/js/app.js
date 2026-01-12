@@ -1163,6 +1163,22 @@ updateSizeRangeDisplay();
       }
     }
 
+    // Load clients
+    const clientList = $('#client_list');
+    if (clientList) {
+      clientList.innerHTML = '';
+      if (data.clients && data.clients.length > 0) {
+        data.clients.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.client_id;
+          opt.text = `${c.bp_code} - ${c.bp_name}`;
+          opt.dataset.code = c.bp_code;
+          opt.dataset.name = c.bp_name;
+          clientList.add(opt);
+        });
+      }
+    }
+
     // Load images - ADD THIS
     if (data.style && data.style.id) {
       currentStyleId = data.style.id;
@@ -1544,7 +1560,8 @@ updateSizeRangeDisplay();
       notions: notions,
       labor: labor,
       colors: colors,
-      variables: variables
+      variables: variables,
+      clients: getClientsData()
     };
     console.log('📦 Full payload:', JSON.stringify(payload, null, 2));
 
@@ -2015,6 +2032,163 @@ updateSizeRangeDisplay();
     
     selected.forEach(opt => opt.remove());
   };
+
+  // =============================================================================
+  // CLIENT MANAGEMENT FUNCTIONS
+  // =============================================================================
+
+  // Load clients on page load
+  loadClients();
+
+  async function loadClients() {
+    try {
+      const res = await fetch('/api/clients');
+      const clients = await res.json();
+      
+      const dropdown = $('#client_dropdown');
+      if (dropdown) {
+        dropdown.innerHTML = '<option value="">Select Client</option>';
+        clients.forEach(client => {
+          const opt = document.createElement('option');
+          opt.value = client.id;
+          opt.textContent = `${client.bp_code} - ${client.bp_name}`;
+          opt.dataset.code = client.bp_code;
+          opt.dataset.name = client.bp_name;
+          dropdown.appendChild(opt);
+        });
+      }
+    } catch (e) {
+      console.error('Failed to load clients:', e);
+    }
+  }
+
+  window.addSelectedClient = function() {
+    const dropdown = $('#client_dropdown');
+    if (!dropdown || !dropdown.value) return;
+    
+    const selectedOption = dropdown.options[dropdown.selectedIndex];
+    const clientId = selectedOption.value;
+    const clientCode = selectedOption.dataset.code;
+    const clientName = selectedOption.dataset.name;
+    
+    const clientList = $('#client_list');
+    const existing = Array.from(clientList.options).find(opt => opt.value === clientId);
+    if (existing) {
+      alert('Client already added');
+      return;
+    }
+    
+    const option = document.createElement('option');
+    option.text = `${clientCode} - ${clientName}`;
+    option.value = clientId;
+    option.dataset.code = clientCode;
+    option.dataset.name = clientName;
+    clientList.add(option);
+    
+    dropdown.value = '';
+    if (typeof markDirty === 'function') markDirty();
+  };
+
+  window.removeSelectedClients = function() {
+    const clientList = $('#client_list');
+    if (!clientList) return;
+    
+    const selected = Array.from(clientList.selectedOptions);
+    if (selected.length === 0) {
+      alert('Please select clients to remove');
+      return;
+    }
+    
+    selected.forEach(opt => opt.remove());
+    if (typeof markDirty === 'function') markDirty();
+  };
+
+  window.addNewClient = async function() {
+    const codeInput = document.getElementById('new_client_code');
+    const nameInput = document.getElementById('new_client_name');
+    
+    const code = codeInput.value.trim().toUpperCase();
+    const name = nameInput.value.trim();
+    
+    if (!code) {
+      alert('Please enter a client code');
+      codeInput.focus();
+      return;
+    }
+    
+    if (!name) {
+      alert('Please enter a client name');
+      nameInput.focus();
+      return;
+    }
+    
+    try {
+      const res = await fetch('/api/clients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        },
+        body: JSON.stringify({ bp_code: code, bp_name: name })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        // Add to dropdown
+        const dropdown = $('#client_dropdown');
+        const opt = document.createElement('option');
+        opt.value = data.id;
+        opt.textContent = `${data.bp_code} - ${data.bp_name}`;
+        opt.dataset.code = data.bp_code;
+        opt.dataset.name = data.bp_name;
+        dropdown.appendChild(opt);
+        
+        // Add to list
+        const clientList = $('#client_list');
+        const listOpt = document.createElement('option');
+        listOpt.text = `${data.bp_code} - ${data.bp_name}`;
+        listOpt.value = data.id;
+        listOpt.dataset.code = data.bp_code;
+        listOpt.dataset.name = data.bp_name;
+        clientList.add(listOpt);
+        
+        codeInput.value = '';
+        nameInput.value = '';
+        
+        if (typeof markDirty === 'function') markDirty();
+        
+        if (data.existed) {
+          alert('Client already existed - added to selection');
+        } else {
+          alert('New client created and added!');
+        }
+      } else {
+        alert(data.error || 'Failed to create client');
+      }
+    } catch (err) {
+      console.error('Error creating client:', err);
+      alert('Failed to create client');
+    }
+  };
+
+  function getClientsData() {
+    const list = document.getElementById('client_list');
+    const clients = [];
+    
+    if (list) {
+      for (let opt of list.options) {
+        clients.push({
+          client_id: parseInt(opt.value),
+          bp_code: opt.dataset.code,
+          bp_name: opt.dataset.name
+        });
+      }
+    }
+    
+    return clients;
+  }
+
 
   // ============================================
   // IMAGE MANAGEMENT - BACKEND INTEGRATION
