@@ -939,3 +939,11 @@
     padding: 2rem;
     color: #64748b;
 }
+.chart-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: #6B7280;
+    font-size: 14px;
+}

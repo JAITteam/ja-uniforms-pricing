@@ -1220,7 +1220,279 @@ def index():
                          top_fabric=top_fabric,
                          new_this_week=new_this_week) 
 
+# ============================================
+# DASHBOARD CHARTS API ENDPOINT
+# Add this to app.py after the other API routes
+# ============================================
 
+@app.route('/api/dashboard-charts')
+@login_required
+def api_dashboard_charts():
+    """API endpoint for dashboard chart data"""
+    try:
+        from sqlalchemy import func
+        from datetime import datetime, timedelta
+        
+        # Get label cost setting
+        label_setting = GlobalSetting.query.filter_by(setting_key='avg_label_cost').first()
+        label_cost = label_setting.setting_value if label_setting else 0.20
+        
+        # ========================================
+        # 1. COST DISTRIBUTION (styles per price range)
+        # ========================================
+        styles = Style.query.options(
+            joinedload(Style.style_fabrics).joinedload(StyleFabric.fabric),
+            joinedload(Style.style_notions).joinedload(StyleNotion.notion),
+            joinedload(Style.style_labor).joinedload(StyleLabor.labor_operation)
+        ).all()
+        
+        # Calculate costs and bucket them
+        cost_buckets = {
+            '$0-20': 0,
+            '$20-40': 0,
+            '$40-60': 0,
+            '$60-80': 0,
+            '$80-100': 0,
+            '$100+': 0
+        }
+        
+        total_fabric_cost = 0
+        total_labor_cost = 0
+        total_notion_cost = 0
+        total_label_cost = 0
+        style_count = 0
+        
+        for s in styles:
+            fabric_cost = s.get_total_fabric_cost()
+            labor_cost = s.get_total_labor_cost()
+            notion_cost = s.get_total_notion_cost()
+            total_cost = fabric_cost + labor_cost + notion_cost + label_cost
+            
+            total_fabric_cost += fabric_cost
+            total_labor_cost += labor_cost
+            total_notion_cost += notion_cost
+            total_label_cost += label_cost
+            style_count += 1
+            
+            if total_cost < 20:
+                cost_buckets['$0-20'] += 1
+            elif total_cost < 40:
+                cost_buckets['$20-40'] += 1
+            elif total_cost < 60:
+                cost_buckets['$40-60'] += 1
+            elif total_cost < 80:
+                cost_buckets['$60-80'] += 1
+            elif total_cost < 100:
+                cost_buckets['$80-100'] += 1
+            else:
+                cost_buckets['$100+'] += 1
+        
+        cost_distribution = {
+            'labels': list(cost_buckets.keys()),
+            'values': list(cost_buckets.values())
+        }
+        
+        # ========================================
+        # 2. TOP FABRICS (most used)
+        # ========================================
+        top_fabrics_query = db.session.query(
+            Fabric.name,
+            func.count(StyleFabric.fabric_id).label('count')
+        ).join(
+            StyleFabric, Fabric.id == StyleFabric.fabric_id
+        ).group_by(
+            Fabric.name
+        ).order_by(
+            func.count(StyleFabric.fabric_id).desc()
+        ).limit(6).all()
+        
+        top_fabrics = {
+            'labels': [f[0][:15] + '...' if len(f[0]) > 15 else f[0] for f in top_fabrics_query],
+            'values': [f[1] for f in top_fabrics_query]
+        }
+        
+        # ========================================
+        # 3. COST BREAKDOWN (avg per category)
+        # ========================================
+        if style_count > 0:
+            avg_fabric = total_fabric_cost / style_count
+            avg_labor = total_labor_cost / style_count
+            avg_notion = total_notion_cost / style_count
+            avg_label = label_cost
+        else:
+            avg_fabric = avg_labor = avg_notion = avg_label = 0
+        
+        cost_breakdown = {
+            'labels': ['Fabric', 'Labor', 'Notions', 'Labels'],
+            'values': [round(avg_fabric, 2), round(avg_labor, 2), round(avg_notion, 2), round(avg_label, 2)]
+        }
+        
+        # ========================================
+        # 4. ACTIVITY TREND (styles created over time)
+        # ========================================
+        # Get styles created in the last 6 months
+        six_months_ago = datetime.now() - timedelta(days=180)
+        
+        monthly_counts = db.session.query(
+            func.date_trunc('month', Style.created_at).label('month'),
+            func.count(Style.id).label('count')
+        ).filter(
+            Style.created_at >= six_months_ago
+        ).group_by(
+            func.date_trunc('month', Style.created_at)
+        ).order_by(
+            func.date_trunc('month', Style.created_at)
+        ).all()
+        
+        activity_trend = {
+            'labels': [m[0].strftime('%b %Y') if m[0] else 'Unknown' for m in monthly_counts],
+            'values': [m[1] for m in monthly_counts]
+        }
+        
+        # If no data, show placeholder
+        if not activity_trend['labels']:
+            activity_trend = {
+                'labels': ['No Data'],
+                'values': [0]
+            }
+        
+        # ========================================
+        # 5. QUICK INSIGHTS
+        # ========================================
+        one_week_ago = datetime.now() - timedelta(days=7)
+        new_this_week = Style.query.filter(Style.created_at >= one_week_ago).count()
+        
+        # Calculate average margin
+        avg_margin = 60  # Default
+        if styles:
+            margins = [s.base_margin_percent for s in styles if s.base_margin_percent]
+            if margins:
+                avg_margin = sum(margins) / len(margins)
+        
+        # Most active day
+        most_active_query = db.session.query(
+            func.date(Style.created_at).label('date'),
+            func.count(Style.id).label('count')
+        ).group_by(
+            func.date(Style.created_at)
+        ).order_by(
+            func.count(Style.id).desc()
+        ).first()
+        
+        most_active = most_active_query[0].strftime('%b %d') if most_active_query and most_active_query[0] else 'N/A'
+        
+        # Price sweet spot (most common price range)
+        max_bucket = max(cost_buckets, key=cost_buckets.get)
+        
+        insights = [
+            f"📈 Trending: +{new_this_week} styles this week",
+            f"💹 Avg profit margin: {avg_margin:.0f}%",
+            f"🔥 Most active: {most_active}",
+            f"💰 Price sweet spot: {max_bucket}",
+            f"📦 Total styles: {style_count}"
+        ]
+        
+        return jsonify({
+            'cost_distribution': cost_distribution,
+            'top_fabrics': top_fabrics,
+            'cost_breakdown': cost_breakdown,
+            'activity_trend': activity_trend,
+            'insights': insights
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Dashboard charts API error: {e}")
+        return jsonify({'error': str(e)}), 500
+    
+# ============================================
+# ADD THIS NEW API ENDPOINT TO app.py
+# Place it after the /api/dashboard-charts route
+# ============================================
+
+@app.route('/api/style-cost-breakdown')
+@login_required
+def api_style_cost_breakdown():
+    """API endpoint for individual style cost breakdown"""
+    try:
+        style_id = request.args.get('style_id')
+        
+        # Get label cost setting
+        label_setting = GlobalSetting.query.filter_by(setting_key='avg_label_cost').first()
+        label_cost = label_setting.setting_value if label_setting else 0.20
+        
+        if style_id and style_id != 'all':
+            # Get specific style
+            style = Style.query.options(
+                joinedload(Style.style_fabrics).joinedload(StyleFabric.fabric),
+                joinedload(Style.style_notions).joinedload(StyleNotion.notion),
+                joinedload(Style.style_labor).joinedload(StyleLabor.labor_operation)
+            ).get(int(style_id))
+            
+            if not style:
+                return jsonify({'error': 'Style not found'}), 404
+            
+            fabric_cost = style.get_total_fabric_cost()
+            labor_cost = style.get_total_labor_cost()
+            notion_cost = style.get_total_notion_cost()
+            
+            return jsonify({
+                'labels': ['Fabric', 'Labor', 'Notions', 'Labels'],
+                'values': [round(fabric_cost, 2), round(labor_cost, 2), round(notion_cost, 2), round(label_cost, 2)],
+                'style_name': f"{style.vendor_style} - {style.style_name}",
+                'total_cost': round(fabric_cost + labor_cost + notion_cost + label_cost, 2)
+            })
+        else:
+            # Return average of all styles
+            styles = Style.query.options(
+                joinedload(Style.style_fabrics).joinedload(StyleFabric.fabric),
+                joinedload(Style.style_notions).joinedload(StyleNotion.notion),
+                joinedload(Style.style_labor).joinedload(StyleLabor.labor_operation)
+            ).all()
+            
+            if not styles:
+                return jsonify({
+                    'labels': ['Fabric', 'Labor', 'Notions', 'Labels'],
+                    'values': [0, 0, 0, 0],
+                    'style_name': 'All Styles (Average)',
+                    'total_cost': 0
+                })
+            
+            total_fabric = sum(s.get_total_fabric_cost() for s in styles)
+            total_labor = sum(s.get_total_labor_cost() for s in styles)
+            total_notion = sum(s.get_total_notion_cost() for s in styles)
+            count = len(styles)
+            
+            return jsonify({
+                'labels': ['Fabric', 'Labor', 'Notions', 'Labels'],
+                'values': [
+                    round(total_fabric / count, 2),
+                    round(total_labor / count, 2),
+                    round(total_notion / count, 2),
+                    round(label_cost, 2)
+                ],
+                'style_name': f'All Styles (Average of {count})',
+                'total_cost': round((total_fabric + total_labor + total_notion) / count + label_cost, 2)
+            })
+            
+    except Exception as e:
+        app.logger.error(f"Style cost breakdown API error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/styles-list-simple')
+@login_required  
+def api_styles_list_simple():
+    """Get simple list of styles for dropdown"""
+    try:
+        styles = Style.query.order_by(Style.vendor_style).all()
+        return jsonify([{
+            'id': s.id,
+            'vendor_style': s.vendor_style,
+            'style_name': s.style_name
+        } for s in styles])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    
 @app.route('/admin/database-stats')
 @login_required
 def database_stats():
@@ -5292,7 +5564,6 @@ def api_style_save():
         style.updated_at = datetime.now()
         db.session.commit()
 
-        # ===== STEP 14: LOG AUDIT =====
         # ===== STEP 14: LOG AUDIT =====
         try:
             if is_new:

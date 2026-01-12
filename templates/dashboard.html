@@ -3,6 +3,16 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard_modern.css') }}">
+<style>
+    .chart-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 200px;
+        color: #6B7280;
+        font-size: 14px;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -235,7 +245,7 @@
         
     </div>
     
-    <!-- ANALYTICS SECTION -->
+    <!-- ANALYTICS SECTION WITH CHART.JS -->
     <div class="analytics-section" id="analytics-section">
         <div class="analytics-header">
             <h2>
@@ -252,11 +262,8 @@
                     <span class="widget-icon">💰</span>
                     <h3>Cost Distribution</h3>
                 </div>
-                <div class="widget-content">
-                    <div class="chart-placeholder">
-                        Bar chart showing style count per price range
-                        <br><small>(Chart.js integration coming soon)</small>
-                    </div>
+                <div class="widget-content" id="costDistributionChart">
+                    <div class="chart-loading">Loading chart...</div>
                 </div>
             </div>
             
@@ -266,11 +273,8 @@
                     <span class="widget-icon">🧵</span>
                     <h3>Top Fabrics</h3>
                 </div>
-                <div class="widget-content">
-                    <div class="chart-placeholder">
-                        Horizontal bar chart of most-used fabrics
-                        <br><small>(Chart.js integration coming soon)</small>
-                    </div>
+                <div class="widget-content" id="topFabricsChart">
+                    <div class="chart-loading">Loading chart...</div>
                 </div>
             </div>
             
@@ -288,16 +292,24 @@
                 </div>
             </div>
             
-            <!-- Cost Breakdown -->
+            <!-- Cost Breakdown - WITH STYLE SELECTOR -->
             <div class="analytics-widget">
                 <div class="widget-header">
                     <span class="widget-icon">🥧</span>
                     <h3>Cost Breakdown</h3>
                 </div>
-                <div class="widget-content">
-                    <div class="chart-placeholder">
-                        Pie chart: Fabric, Labor, Notions, Labels
-                        <br><small>(Chart.js integration coming soon)</small>
+                <div class="widget-content" id="costBreakdownChart">
+                    <div style="margin-bottom: 10px;">
+                        <select id="costBreakdownStyleSelect" style="width: 100%; padding: 8px 12px; border: 1px solid #E5E7EB; border-radius: 6px; font-size: 13px; background: white; cursor: pointer;">
+                            <option value="all">All Styles (Average)</option>
+                        </select>
+                    </div>
+                    <div style="text-align: center; margin-bottom: 8px;">
+                        <div id="costBreakdownTitle" style="font-size: 12px; color: #6B7280; font-weight: 500;"></div>
+                        <div id="costBreakdownTotal" style="font-size: 14px; color: #1F2937; font-weight: 700;"></div>
+                    </div>
+                    <div style="height: 180px;">
+                        <canvas id="costBreakdownChartCanvas"></canvas>
                     </div>
                 </div>
             </div>
@@ -308,11 +320,8 @@
                     <span class="widget-icon">📈</span>
                     <h3>Activity Trend</h3>
                 </div>
-                <div class="widget-content">
-                    <div class="chart-placeholder">
-                        Line graph: Styles created over time
-                        <br><small>(Chart.js integration coming soon)</small>
-                    </div>
+                <div class="widget-content" id="activityTrendChart">
+                    <div class="chart-loading">Loading chart...</div>
                 </div>
             </div>
             
@@ -323,12 +332,8 @@
                     <h3>Quick Insights</h3>
                 </div>
                 <div class="widget-content">
-                    <ul class="insight-list">
-                        <li>Trending: +3 styles this week</li>
-                        <li>Avg profit margin: 60%</li>
-                        <li>Most active: This week</li>
-                        <li>Price sweet spot: $35-$45</li>
-                        <li>Review high-cost styles</li>
+                    <ul class="insight-list" id="quickInsightsList">
+                        <li>Loading insights...</li>
                     </ul>
                 </div>
             </div>
@@ -384,5 +389,7 @@ function scrollToAnalytics() {
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/dashboard_charts.js') }}"></script>
 <script src="{{ url_for('static', filename='js/dashboard_modern.js') }}"></script>
 {% endblock %}
