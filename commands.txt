@@ -19,10 +19,10 @@ cd "C:\Program Files\Redis"
 KEYS *
 
 Quick Commands to Remember:
-redis-cli pingTest connection
-redis-cli info Show Redis info
+redis-cli ping      Test connection
+redis-cli info      Show Redis info
 redis-cli flushall  Clear all data
-redis-cli shutdownStop Redis
+redis-cli shutdown  Stop Redis
 
 If Redis Won't Start:
 Open Services (Windows + R → services.msc) → Find "Redis" → Right-click → Start
