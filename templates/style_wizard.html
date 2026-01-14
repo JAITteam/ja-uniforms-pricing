@@ -290,18 +290,16 @@
               <button class="btn btn-success btn-sm" type="button" onclick="addNewVariable()">Create & Add</button>
             </div>
           </div>
-        <!-- Clients Section -->
+          <!-- Clients Section -->
           <div class="col-md-4">
             <label class="form-label fw-bold" style="font-size: 0.875rem;">Client</label>
             <div class="d-flex gap-2 mb-2">
-              <select id="client_dropdown" class="form-select form-select-sm" style="flex: 1;">
-                <option value="">Select Client</option>
-              </select>
+              <input type="text" id="client_input" class="form-control form-control-sm" list="client_datalist" placeholder="Type to search..." style="flex: 1;" autocomplete="off">
+              <datalist id="client_datalist"></datalist>
               <button class="btn btn-primary btn-sm" type="button" onclick="addSelectedClient()">Add</button>
             </div>
             <select multiple class="form-select mb-2" style="height:100px; font-size: 0.8rem;" id="client_list"></select>
             <button class="btn btn-sm btn-danger" onclick="removeSelectedClients()">Remove Selected</button>
-
           </div>
         </div>
         <!-- Pricing Section - ULTRA COMPACT -->

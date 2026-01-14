@@ -461,8 +461,8 @@ git pull origin main
 # View commit history
 git log --oneline
 
-# Push to both remotes (if configured)
-git push origin main && git push personal main
+# Push to both remotes 
+git push origin main 
 ```
 
 ---
@@ -472,7 +472,6 @@ git push origin main && git push personal main
 | Role | Name | Contact |
 |------|------|---------|
 | Developer | JAY | it@jauniforms.com |
-| Organization | JAIT Team | - |
 
 ---
 
@@ -491,6 +490,6 @@ For issues or questions, contact the IT department:
 
 <p align="center">
   <strong>J.A. Uniforms</strong><br>
-  Pricing Management System v1.1.0<br>
-  © 2025 J.A. Uniforms. All rights reserved.
+  Pricing Management System v2.1.0<br>
+  © 2026 J.A. Uniforms. All rights reserved.
 </p>

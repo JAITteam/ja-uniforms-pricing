@@ -2045,47 +2045,51 @@ updateSizeRangeDisplay();
       const res = await fetch('/api/clients');
       const clients = await res.json();
       
-      const dropdown = $('#client_dropdown');
-      if (dropdown) {
-        dropdown.innerHTML = '<option value="">Select Client</option>';
+      const datalist = $('#client_datalist');
+      if (datalist) {
+        datalist.innerHTML = '';
         clients.forEach(client => {
           const opt = document.createElement('option');
-          opt.value = client.id;
-          opt.textContent = `${client.bp_code} - ${client.bp_name}`;
+          opt.value = `${client.bp_code} - ${client.bp_name}`;
+          opt.dataset.id = client.id;
           opt.dataset.code = client.bp_code;
           opt.dataset.name = client.bp_name;
-          dropdown.appendChild(opt);
+          datalist.appendChild(opt);
         });
       }
+      window.clientsData = clients;
     } catch (e) {
       console.error('Failed to load clients:', e);
     }
   }
 
   window.addSelectedClient = function() {
-    const dropdown = $('#client_dropdown');
-    if (!dropdown || !dropdown.value) return;
+    const input = $('#client_input');
+    if (!input || !input.value.trim()) return;
     
-    const selectedOption = dropdown.options[dropdown.selectedIndex];
-    const clientId = selectedOption.value;
-    const clientCode = selectedOption.dataset.code;
-    const clientName = selectedOption.dataset.name;
+    const inputVal = input.value.trim();
+    const client = window.clientsData?.find(c => `${c.bp_code} - ${c.bp_name}` === inputVal);
+    
+    if (!client) {
+      alert('Please select a valid client from the list');
+      return;
+    }
     
     const clientList = $('#client_list');
-    const existing = Array.from(clientList.options).find(opt => opt.value === clientId);
+    const existing = Array.from(clientList.options).find(opt => opt.value === String(client.id));
     if (existing) {
       alert('Client already added');
       return;
     }
     
     const option = document.createElement('option');
-    option.text = `${clientCode} - ${clientName}`;
-    option.value = clientId;
-    option.dataset.code = clientCode;
-    option.dataset.name = clientName;
+    option.text = `${client.bp_code} - ${client.bp_name}`;
+    option.value = client.id;
+    option.dataset.code = client.bp_code;
+    option.dataset.name = client.bp_name;
     clientList.add(option);
     
-    dropdown.value = '';
+    input.value = '';
     if (typeof markDirty === 'function') markDirty();
   };
 
