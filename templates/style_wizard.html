@@ -339,31 +339,51 @@
 
   </div>
 
-  <!-- RIGHT: Snapshot Panel (1 column) - STICKY ON RIGHT -->
+  <!-- RIGHT: Snapshot Panel -->
   <div class="col-lg-4">
     <div class="right-sticky panel snapshot">
-      <div class="ph">SNAPSHOT</div>
+      <div class="ph">
+        <span>SNAPSHOT</span>
+        <button type="button" class="copy-btn" id="copySnapshotBtn">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+          </svg>
+          Copy
+        </button>
+      </div>
       <div class="pb">
-        <div class="mb-3">
-          <strong id="snap_vendor_style" class="d-block">(vendor style)</strong>
-          <span id="snap_style" class="text-muted small"></span>
+        <div class="snapshot-row">
+          <span class="snapshot-label">Vendor Code:</span>
+          <span class="snapshot-value" id="snap_vendor_code">V999</span>
         </div>
-        <div class="sumline">
-          <span>Materials</span>
-          <strong id="snap_mat">$0.00</strong>
+        
+        <div class="snapshot-row">
+          <span class="snapshot-label">Vendor Style:</span>
+          <span class="snapshot-value" id="snap_vendor_style">(vendor style)</span>
         </div>
-        <div class="sumline">
-          <span>Labor</span>
-          <strong id="snap_lab">$0.00</strong>
+        
+        <div class="snapshot-row">
+          <span class="snapshot-label">Style Name:</span>
+          <span class="snapshot-value" id="snap_style_name">(style name)</span>
         </div>
-        <div class="sumline">
-          <span>Shipping</span>
-          <strong id="snap_ship">$0.00</strong>
-        </div>
+        
         <hr>
-        <div class="sumline">
-          <span>TOTAL COST</span>
-          <strong id="snap_total" style="font-size: 1.5rem;">$0.00</strong>
+        
+        <div class="snapshot-row" id="snap_reg_row">
+          <span class="snapshot-label" id="snap_reg_label">Sizes:</span>
+          <span class="snapshot-value snapshot-cost" id="snap_reg_cost">$0.00</span>
+        </div>
+        
+        <div class="snapshot-row" id="snap_ext_row" style="display: none;">
+          <span class="snapshot-label" id="snap_ext_label">Sizes:</span>
+          <span class="snapshot-value snapshot-cost" id="snap_ext_cost">$0.00</span>
+        </div>
+        
+        <hr>
+        
+        <div class="snapshot-row snapshot-colors-row">
+          <span class="snapshot-label">Color:</span>
+          <span class="snapshot-value" id="snap_colors"></span>
         </div>
       </div>
     </div>
@@ -375,183 +395,6 @@
   <span class="close-modal" onclick="closeImageModal()">&times;</span>
   <img id="modalImage" src="" alt="Zoomed image">
 </div>
-
-<script>
-// Global sublimation cost from settings
-window.SUBLIMATION_COST = parseFloat("{{ default_sublimation_cost }}") || 6.00;
-// Export current style to SAP B1 format
-function exportCurrentStyle() {
-    // ========================================
-    // EXPORT VALIDATION - 4 REQUIREMENTS
-    // ========================================
-    
-    const vendorStyle = document.getElementById('vendor_style')?.value.trim();
-    const styleName = document.getElementById('style_name')?.value.trim();
-    
-    // Build error message for missing requirements
-    const missing = [];
-    
-    // 1. Vendor Style
-    if (!vendorStyle) {
-        missing.push('• VENDOR STYLE (Base Item #)');
-    }
-    
-    // 2. Style Name
-    if (!styleName) {
-        missing.push('• STYLE NAME');
-    }
-    
-    // 3. At least one COLOR
-    const colorList = document.getElementById('color_list');
-    const hasColors = colorList && colorList.options.length > 0;
-    if (!hasColors) {
-        missing.push('• At least ONE COLOR');
-    }
-    
-    // 4. Size Range selected
-    const sizeRange = document.getElementById('size_range_id');
-    const hasSizeRange = sizeRange && sizeRange.value;
-    if (!hasSizeRange) {
-        missing.push('• SIZE RANGE');
-    }
-    
-    // Show error if anything is missing
-    if (missing.length > 0) {
-        alert('⚠️ Cannot export! Missing required fields:\n\n' + missing.join('\n') + '\n\nPlease complete these fields and SAVE the style first.');
-        
-        // Focus on first missing field
-        if (!vendorStyle) {
-            document.getElementById('base_item_number')?.focus();
-        } else if (!styleName) {
-            document.getElementById('style_name')?.focus();
-        } else if (!hasColors) {
-            document.getElementById('color_dropdown')?.focus();
-        } else if (!hasSizeRange) {
-            document.getElementById('size_range_id')?.focus();
-        }
-        
-        return;
-    }
-    
-    // Check if style is saved (has URL parameter)
-    const urlParams = new URLSearchParams(window.location.search);
-    const currentVendorStyle = urlParams.get('vendor_style');
-    
-    if (!currentVendorStyle) {
-        alert('⚠️ Style not saved yet!\n\nPlease click "Save Style" button first, then try exporting again.');
-        return;
-    }
-    
-    // Verify the saved vendor_style matches current vendor_style
-    if (currentVendorStyle !== vendorStyle) {
-        alert('⚠️ Style has been modified!\n\nPlease SAVE the style again before exporting.');
-        return;
-    }
-    
-    // ========================================
-    // PROCEED WITH EXPORT
-    // ========================================
-    
-    // Get CSRF token
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    
-    if (!csrfToken) {
-        alert('❌ Security token not found. Please refresh the page and try again.');
-        return;
-    }
-    
-    // Create a form and submit to the export endpoint
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '/export-sap-single-style';
-    
-    // Add CSRF token
-    const csrfInput = document.createElement('input');
-    csrfInput.type = 'hidden';
-    csrfInput.name = 'csrf_token';
-    csrfInput.value = csrfToken;
-    form.appendChild(csrfInput);
-    
-    // Add vendor_style as form data
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'vendor_style';
-    input.value = currentVendorStyle;
-    form.appendChild(input);
-    
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
-}
-
-</script>
-{% if view_mode %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Function to disable all form elements
-    function disableAllInputs() {
-        document.querySelectorAll('input, select, textarea').forEach(function(el) {
-            el.disabled = true;
-            el.style.backgroundColor = '#f3f4f6';
-            el.style.cursor = 'not-allowed';
-        });
-    }
-    
-    // Initial disable
-    disableAllInputs();
-    
-    // Hide all add/remove buttons
-    document.querySelectorAll('button').forEach(function(el) {
-        var text = el.textContent.toLowerCase();
-        if (text.includes('add') || text.includes('remove') || text.includes('delete')) {
-            el.style.display = 'none';
-        }
-    });
-    
-    // Hide add links
-    document.querySelectorAll('.linklike').forEach(function(el) {
-        el.style.display = 'none';
-    });
-    
-    // Disable image upload
-    var imageUpload = document.getElementById('imageUpload');
-    if (imageUpload) imageUpload.disabled = true;
-    
-    var addImageBox = document.getElementById('addImageBox');
-    if (addImageBox) addImageBox.style.display = 'none';
-    
-    // Watch for dynamically added rows and disable them too
-    const observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            mutation.addedNodes.forEach(function(node) {
-                if (node.nodeType === 1) { // Element node
-                    // Disable any inputs in the new node
-                    node.querySelectorAll?.('input, select, textarea').forEach(function(el) {
-                        el.disabled = true;
-                        el.style.backgroundColor = '#f3f4f6';
-                        el.style.cursor = 'not-allowed';
-                    });
-                    // Hide remove buttons
-                    node.querySelectorAll?.('button').forEach(function(el) {
-                        if (el.textContent.toLowerCase().includes('remove')) {
-                            el.style.display = 'none';
-                        }
-                    });
-                }
-            });
-        });
-    });
-    
-    // Observe the materials panel for changes
-    const materialsPanel = document.getElementById('materialsPanel');
-    if (materialsPanel) {
-        observer.observe(materialsPanel, { childList: true, subtree: true });
-    }
-    
-    console.log('View mode enabled - all inputs disabled');
-});
-</script>
-{% endif %}
 
 <!-- Quick Add Fabric Modal -->
 <div id="quickAddFabricModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
@@ -622,5 +465,275 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 </div>
 
-{% endblock %}
+<script>
+// Global sublimation cost from settings
+window.SUBLIMATION_COST = parseFloat("{{ default_sublimation_cost }}") || 6.00;
 
+// ============================================
+// UPDATE SNAPSHOT DISPLAY
+// ============================================
+function updateSnapshotDisplay() {
+    var vendorCode = document.getElementById('vendor_code');
+    var snapVendorCode = document.getElementById('snap_vendor_code');
+    if (vendorCode && snapVendorCode) {
+        snapVendorCode.textContent = vendorCode.value || 'V999';
+    }
+    
+    var vendorStyle = document.getElementById('vendor_style');
+    var snapVendorStyle = document.getElementById('snap_vendor_style');
+    if (vendorStyle && snapVendorStyle) {
+        snapVendorStyle.textContent = vendorStyle.value || '(vendor style)';
+    }
+    
+    var styleName = document.getElementById('style_name');
+    var snapStyleName = document.getElementById('snap_style_name');
+    if (styleName && snapStyleName) {
+        snapStyleName.textContent = styleName.value || '(style name)';
+    }
+    
+    var sizeRangeSelect = document.getElementById('size_range_id');
+    var regRow = document.getElementById('snap_reg_row');
+    var extRow = document.getElementById('snap_ext_row');
+    
+    if (sizeRangeSelect && sizeRangeSelect.value) {
+        var selectedOption = sizeRangeSelect.options[sizeRangeSelect.selectedIndex];
+        var regularSizes = selectedOption ? (selectedOption.dataset.regular || '') : '';
+        var extendedSizes = selectedOption ? (selectedOption.dataset.extended || '') : '';
+        
+        var totalReg = document.getElementById('total_reg');
+        var snapRegLabel = document.getElementById('snap_reg_label');
+        var snapRegCost = document.getElementById('snap_reg_cost');
+        
+        if (snapRegLabel) snapRegLabel.textContent = 'Sizes ' + regularSizes + ' Cost:';
+        if (snapRegCost && totalReg) snapRegCost.textContent = totalReg.value || '$0.00';
+        if (regRow) regRow.style.display = 'flex';
+        
+        if (extendedSizes && extendedSizes.trim() !== '') {
+            var totalExt = document.getElementById('total_ext');
+            var snapExtLabel = document.getElementById('snap_ext_label');
+            var snapExtCost = document.getElementById('snap_ext_cost');
+            
+            if (snapExtLabel) snapExtLabel.textContent = 'Sizes ' + extendedSizes + ' Cost:';
+            if (snapExtCost && totalExt) snapExtCost.textContent = totalExt.value || '$0.00';
+            if (extRow) extRow.style.display = 'flex';
+        } else {
+            if (extRow) extRow.style.display = 'none';
+        }
+    } else {
+        var totalRegNoRange = document.getElementById('total_reg');
+        var snapRegLabelNoRange = document.getElementById('snap_reg_label');
+        var snapRegCostNoRange = document.getElementById('snap_reg_cost');
+        
+        if (snapRegLabelNoRange) snapRegLabelNoRange.textContent = 'Total Cost:';
+        if (snapRegCostNoRange && totalRegNoRange) snapRegCostNoRange.textContent = totalRegNoRange.value || '$0.00';
+        if (regRow) regRow.style.display = 'flex';
+        if (extRow) extRow.style.display = 'none';
+    }
+    
+    var colorList = document.getElementById('color_list');
+    var snapColors = document.getElementById('snap_colors');
+    if (snapColors) {
+        if (colorList && colorList.options.length > 0) {
+            var colors = [];
+            for (var i = 0; i < colorList.options.length; i++) {
+                colors.push(colorList.options[i].text);
+            }
+            snapColors.textContent = colors.join('\n');
+        } else {
+            snapColors.textContent = '';
+        }
+    }
+}
+
+// ============================================
+// COPY SNAPSHOT TO CLIPBOARD
+// ============================================
+function copySnapshotToClipboard() {
+    var vendorCodeEl = document.getElementById('vendor_code');
+    var vendorStyleEl = document.getElementById('vendor_style');
+    var styleNameEl = document.getElementById('style_name');
+    var sizeRangeSelect = document.getElementById('size_range_id');
+    var totalRegEl = document.getElementById('total_reg');
+    var totalExtEl = document.getElementById('total_ext');
+    
+    var vendorCode = vendorCodeEl ? vendorCodeEl.value : 'V999';
+    var vendorStyle = vendorStyleEl ? vendorStyleEl.value : '';
+    var styleName = styleNameEl ? styleNameEl.value : '';
+    
+    var regularSizes = '';
+    var extendedSizes = '';
+    
+    if (sizeRangeSelect && sizeRangeSelect.value) {
+        var selectedOption = sizeRangeSelect.options[sizeRangeSelect.selectedIndex];
+        if (selectedOption) {
+            regularSizes = selectedOption.dataset.regular || '';
+            extendedSizes = selectedOption.dataset.extended || '';
+        }
+    }
+    
+    var totalReg = totalRegEl ? totalRegEl.value : '$0.00';
+    var totalExt = totalExtEl ? totalExtEl.value : '';
+    
+    // Build copy text - NO colors, just empty "Color:"
+    var copyText = 'Vendor Code: ' + vendorCode + '\n';
+    copyText += 'Vendor Style: ' + vendorStyle + '\n';
+    copyText += 'Style Name: ' + styleName + '\n';
+    
+    if (regularSizes) {
+        copyText += 'Sizes ' + regularSizes + ' Cost: ' + totalReg + '\n';
+    } else {
+        copyText += 'Total Cost: ' + totalReg + '\n';
+    }
+    
+    if (extendedSizes && extendedSizes.trim() !== '' && totalExt) {
+        copyText += 'Sizes ' + extendedSizes + ' Cost: ' + totalExt + '\n';
+    }
+    
+    // Color: empty (no colors copied)
+    copyText += 'Color:';
+    
+    // Copy to clipboard
+    var textArea = document.createElement('textarea');
+    textArea.value = copyText;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    textArea.style.top = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        var successful = document.execCommand('copy');
+        if (successful) {
+            showCopySuccess();
+        } else {
+            alert('Failed to copy');
+        }
+    } catch (err) {
+        alert('Failed to copy: ' + err);
+    }
+    
+    document.body.removeChild(textArea);
+}
+
+function showCopySuccess() {
+    var btn = document.getElementById('copySnapshotBtn');
+    if (btn) {
+        var originalHtml = btn.innerHTML;
+        btn.innerHTML = '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Copied!';
+        btn.classList.add('copied');
+        
+        setTimeout(function() {
+            btn.innerHTML = originalHtml;
+            btn.classList.remove('copied');
+        }, 2000);
+    }
+    
+    var existingToast = document.querySelector('.copy-toast');
+    if (existingToast) existingToast.remove();
+    
+    var toast = document.createElement('div');
+    toast.className = 'copy-toast';
+    toast.innerHTML = '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg> Copied to clipboard!';
+    document.body.appendChild(toast);
+    
+    setTimeout(function() {
+        if (toast.parentNode) toast.remove();
+    }, 3000);
+}
+
+function exportCurrentStyle() {
+    var vendorStyleEl = document.getElementById('vendor_style');
+    var styleNameEl = document.getElementById('style_name');
+    var vendorStyle = vendorStyleEl ? vendorStyleEl.value.trim() : '';
+    var styleName = styleNameEl ? styleNameEl.value.trim() : '';
+    
+    var missing = [];
+    if (!vendorStyle) missing.push('• VENDOR STYLE');
+    if (!styleName) missing.push('• STYLE NAME');
+    
+    var colorList = document.getElementById('color_list');
+    if (!colorList || colorList.options.length === 0) missing.push('• At least ONE COLOR');
+    
+    var sizeRange = document.getElementById('size_range_id');
+    if (!sizeRange || !sizeRange.value) missing.push('• SIZE RANGE');
+    
+    if (missing.length > 0) {
+        alert('Cannot export! Missing:\n\n' + missing.join('\n'));
+        return;
+    }
+    
+    var urlParams = new URLSearchParams(window.location.search);
+    var currentVendorStyle = urlParams.get('vendor_style');
+    
+    if (!currentVendorStyle) {
+        alert('Style not saved yet! Please save first.');
+        return;
+    }
+    
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
+    
+    var form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/export-sap-single-style';
+    
+    var csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+    
+    var input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'vendor_style';
+    input.value = currentVendorStyle;
+    form.appendChild(input);
+    
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+}
+
+// Attach click handler when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    var copyBtn = document.getElementById('copySnapshotBtn');
+    if (copyBtn) {
+        copyBtn.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            copySnapshotToClipboard();
+            return false;
+        };
+    }
+});
+
+window.copySnapshotToClipboard = copySnapshotToClipboard;
+window.updateSnapshotDisplay = updateSnapshotDisplay;
+window.exportCurrentStyle = exportCurrentStyle;
+</script>
+
+{% if view_mode %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('input, select, textarea').forEach(function(el) {
+        el.disabled = true;
+        el.style.backgroundColor = '#f3f4f6';
+        el.style.cursor = 'not-allowed';
+    });
+    
+    document.querySelectorAll('button').forEach(function(el) {
+        var text = el.textContent.toLowerCase();
+        if (text.includes('add') || text.includes('remove') || text.includes('delete')) {
+            el.style.display = 'none';
+        }
+    });
+    
+    document.querySelectorAll('.linklike').forEach(function(el) {
+        el.style.display = 'none';
+    });
+});
+</script>
+{% endif %}
+
+{% endblock %}

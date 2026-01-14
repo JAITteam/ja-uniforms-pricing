@@ -858,6 +858,8 @@ document.addEventListener('DOMContentLoaded', () => {
       $('#suggested_price').value = sp.toFixed(2);
       $('#suggested_margin').value = '60.0';
     }
+    // UPDATE SNAPSHOT DISPLAY - ADD THIS LINE
+    if (typeof updateSnapshotDisplay === 'function') updateSnapshotDisplay();
   }
 
 
@@ -2973,4 +2975,64 @@ document.getElementById('quickAddFabricModal')?.addEventListener('click', functi
 
 document.getElementById('quickAddNotionModal')?.addEventListener('click', function(e) {
   if (e.target === this) closeQuickAddNotion();
+});
+
+// ============================================
+// QUICK ADD FABRIC/NOTION MODAL LISTENERS
+// ============================================
+
+// Listen for "__ADD_NEW__" selection on fabric dropdowns
+document.addEventListener('change', function(e) {
+  if (e.target.matches('[data-fabric-id]') && e.target.value === '__ADD_NEW__') {
+    openQuickAddFabric(e.target);
+  }
+  if (e.target.matches('[data-notion-id]') && e.target.value === '__ADD_NEW__') {
+    openQuickAddNotion(e.target);
+  }
+});
+
+// Close modals when clicking outside
+document.getElementById('quickAddFabricModal')?.addEventListener('click', function(e) {
+  if (e.target === this) closeQuickAddFabric();
+});
+
+document.getElementById('quickAddNotionModal')?.addEventListener('click', function(e) {
+  if (e.target === this) closeQuickAddNotion();
+});
+
+// ============================================
+// SNAPSHOT DISPLAY UPDATES
+// ============================================
+
+// Update snapshot when form fields change
+document.getElementById('vendor_code')?.addEventListener('input', function() {
+    if (typeof updateSnapshotDisplay === 'function') updateSnapshotDisplay();
+});
+
+document.getElementById('vendor_style')?.addEventListener('input', function() {
+    if (typeof updateSnapshotDisplay === 'function') updateSnapshotDisplay();
+});
+
+document.getElementById('style_name')?.addEventListener('input', function() {
+    if (typeof updateSnapshotDisplay === 'function') updateSnapshotDisplay();
+});
+
+document.getElementById('size_range_id')?.addEventListener('change', function() {
+    if (typeof updateSnapshotDisplay === 'function') updateSnapshotDisplay();
+});
+
+// Watch for color list changes
+var colorListForSnapshot = document.getElementById('color_list');
+if (colorListForSnapshot) {
+    var snapshotColorObserver = new MutationObserver(function() {
+        if (typeof updateSnapshotDisplay === 'function') updateSnapshotDisplay();
+    });
+    snapshotColorObserver.observe(colorListForSnapshot, { childList: true });
+}
+
+// Initial snapshot update after page load
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        if (typeof updateSnapshotDisplay === 'function') updateSnapshotDisplay();
+    }, 500);
 });

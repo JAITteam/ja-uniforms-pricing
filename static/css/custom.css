@@ -340,54 +340,234 @@ body {
   text-align: right;
 }
 
-/* Snapshot Panel - Clean Blue Accent */
+/* ============================================
+   ENHANCED SNAPSHOT PANEL - COLORS VERTICAL
+   Replace lines 343-555 in your custom.css
+   ============================================ */
+
+/* Snapshot Panel - Sticky */
 .right-sticky {
   position: sticky;
   top: 90px;
+  z-index: 50 !important;
 }
 
+/* Snapshot Container */
 .snapshot {
-  background: var(--white);
-  border: 1px solid var(--border);
+  background: #ffffff !important;
+  border: none !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08) !important;
+  overflow: hidden;
 }
 
+/* Snapshot Header */
 .snapshot .ph {
-  background: var(--primary);
-  color: white;
-  border-bottom: none;
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%) !important;
+  color: #ffffff !important;
+  border-bottom: none !important;
+  padding: 1rem 1.25rem !important;
+  font-weight: 700 !important;
+  font-size: 0.85rem !important;
+  letter-spacing: 0.5px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
 }
 
+/* Copy Button in Header */
+.snapshot .copy-btn {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  color: white !important;
+  padding: 0.5rem 1rem !important;
+  border-radius: 8px !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+}
+
+.snapshot .copy-btn:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+.snapshot .copy-btn.copied {
+  background: #10b981 !important;
+  border-color: #10b981 !important;
+}
+
+/* Snapshot Body */
 .snapshot .pb {
-  background: var(--white);
+  background: #ffffff !important;
+  padding: 1rem !important;
 }
 
-.snapshot .sumline {
-  background: var(--gray-50);
-  border: 1px solid var(--border);
+/* Snapshot Rows - Base */
+.snapshot-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.6rem 0.75rem;
+  margin: 0.2rem 0;
+  border-radius: 6px;
 }
 
-.snapshot #snap_vendor_style {
-  font-size: 1.25rem;
+/* Labels */
+.snapshot-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #64748b;
+  min-width: 100px;
+  flex-shrink: 0;
+}
+
+/* Values */
+.snapshot-value {
+  font-size: 0.9rem;
   font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 0.5rem;
+  color: #1e293b;
+  text-align: right;
+  word-break: break-word;
+  flex: 1;
+  margin-left: 1rem;
 }
 
-.snapshot #snap_style {
-  color: var(--text-secondary);
-  font-size: 0.875rem;
+/* === SUBTLE ROW BACKGROUNDS === */
+
+/* Vendor Code - Very light slate */
+.snapshot-row:nth-child(1) {
+  background: #f8fafc;
 }
 
-.snapshot .sumline strong {
-  color: var(--primary);
-  font-size: 1.25rem;
+/* Vendor Style - Very light blue */
+.snapshot-row:nth-child(2) {
+  background: #f0f7ff;
 }
 
+#snap_vendor_style {
+  font-family: 'SF Mono', 'Monaco', 'Consolas', monospace !important;
+  color: #1e40af !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+}
+
+/* Style Name - Very light cyan */
+.snapshot-row:nth-child(3) {
+  background: #f0fdfa;
+}
+
+#snap_style_name {
+  font-size: 0.85rem !important;
+  color: #334155 !important;
+  font-weight: 500 !important;
+}
+
+/* Regular Sizes - Light green */
+#snap_reg_row {
+  background: #f0fdf4 !important;
+}
+
+#snap_reg_row .snapshot-label {
+  color: #166534 !important;
+  font-weight: 600 !important;
+}
+
+/* Extended Sizes - Light amber */
+#snap_ext_row {
+  background: #fffbeb !important;
+}
+
+#snap_ext_row .snapshot-label {
+  color: #92400e !important;
+  font-weight: 600 !important;
+}
+
+/* Cost values */
+.snapshot-cost {
+  color: #059669 !important;
+  font-size: 1.05rem !important;
+  font-weight: 700 !important;
+}
+
+#snap_ext_row .snapshot-cost {
+  color: #d97706 !important;
+}
+
+/* Colors Row - VERTICAL LAYOUT */
+.snapshot-colors-row {
+  background: #faf5ff !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 0.5rem;
+  margin-top: 0.5rem !important;
+  padding: 0.75rem !important;
+}
+
+.snapshot-colors-row .snapshot-label {
+  min-width: auto !important;
+  color: #7c3aed !important;
+  font-weight: 600 !important;
+  font-size: 0.8rem !important;
+  margin-bottom: 0.25rem;
+}
+
+.snapshot-colors-row .snapshot-value {
+  text-align: left !important;
+  margin-left: 0 !important;
+  font-size: 0.8rem !important;
+  color: #6b21a8 !important;
+  font-weight: 500 !important;
+  line-height: 1.8 !important;
+  white-space: pre-line !important;
+}
+
+/* Divider */
 .snapshot hr {
-  border: none;
-  height: 1px;
-  background: var(--border);
-  margin: 0.875rem 0;
+  border: none !important;
+  height: 1px !important;
+  background: #e5e7eb !important;
+  margin: 0.5rem 0 !important;
+}
+
+/* Copy Success Toast */
+.copy-toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  animation: slideInUp 0.3s ease, fadeOut 0.3s ease 2.5s forwards;
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+    transform: translateY(10px);
+  }
 }
 
 /* Table-like Styling */
@@ -1171,16 +1351,6 @@ textarea {
     to { opacity: 1; }
 }
 
-@keyframes slideIn {
-    from {
-        transform: translateY(-50px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
 /* ============================================
    FABRIC & NOTION ROW DIFFERENTIATION
    Add this to your static/css/custom.css file
@@ -1337,35 +1507,6 @@ textarea {
 .kv label {
     color: #334155;
     font-weight: 500;
-}
-/* ============================================
-   SNAPSHOT PANEL ENHANCEMENT
-   ============================================ */
-
-.snapshot .sumline {
-    border-left: 3px solid #3b82f6;
-    padding-left: 12px;
-    background: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, transparent 100%);
-}
-
-.snapshot .sumline:hover {
-    background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, transparent 100%);
-}
-
-.snapshot .sumline span {
-    color: #334155;
-    font-weight: 500;
-}
-
-/* Total Cost row - make it stand out */
-.snapshot .sumline:last-of-type {
-    border-left: 4px solid #10b981;
-    background: linear-gradient(90deg, rgba(16, 185, 129, 0.08) 0%, transparent 100%);
-}
-
-.snapshot .sumline:last-of-type span {
-    font-weight: 600;
-    color: #1e293b;
 }
 /* Fix Labor Operations table column spacing */
 .table td,

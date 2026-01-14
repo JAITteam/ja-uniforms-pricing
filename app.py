@@ -5308,12 +5308,12 @@ def api_style_save():
                 return jsonify({"error": "Style not found"}), 404
             
             # Capture OLD values BEFORE any changes (for audit log)
-            # Get old colors
-            old_colors = [sc.color.name for sc in StyleColor.query.filter_by(style_id=existing_style.id).all()]
-            # Get old variables
-            old_variables = [sv.variable.name for sv in StyleVariable.query.filter_by(style_id=existing_style.id).all()]
-            # Get old clients
-            old_clients = [sc.client.bp_code for sc in StyleClient.query.filter_by(style_id=existing_style.id).all()]
+            # Get old colors (sorted for comparison)
+            old_colors = sorted([sc.color.name for sc in StyleColor.query.filter_by(style_id=existing_style.id).all()])
+            # Get old variables (sorted for comparison)
+            old_variables = sorted([sv.variable.name for sv in StyleVariable.query.filter_by(style_id=existing_style.id).all()])
+            # Get old clients (sorted for comparison)
+            old_clients = sorted([sc.client.bp_code for sc in StyleClient.query.filter_by(style_id=existing_style.id).all()])
             # Get old fabrics
             old_fabrics = []
             for sf in StyleFabric.query.filter_by(style_id=existing_style.id).all():
@@ -5635,9 +5635,9 @@ def api_style_save():
                     details=f"Created style: {style.style_name}"
                 )
             else:
-                # Get new colors and variables for comparison
-                new_color_names = [c.get("name") for c in data.get("colors") or [] if c.get("name")]
-                new_variable_names = [v.get("name") for v in data.get("variables") or [] if v.get("name")]
+                # Get new colors and variables for comparison (sorted)
+                new_color_names = sorted([c.get("name") for c in data.get("colors") or [] if c.get("name")])
+                new_variable_names = sorted([v.get("name") for v in data.get("variables") or [] if v.get("name")])
                 # Get new fabrics
                 new_fabrics = []
                 for f in fabrics_data:
@@ -5666,7 +5666,7 @@ def api_style_save():
                     "suggested_price": str(style.suggested_price),
                     "colors": new_color_names if new_color_names else None,
                     "variables": new_variable_names if new_variable_names else None,
-                    "clients": new_client_names if new_client_names else None,
+                    "clients": sorted(new_client_names) if new_client_names else None,
                     "fabrics": new_fabrics if new_fabrics else None,
                     "notions": new_notions if new_notions else None,
                     "labor": new_labor if new_labor else None,
