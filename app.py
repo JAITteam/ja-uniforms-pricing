@@ -5319,16 +5319,19 @@ def api_style_save():
             for sf in StyleFabric.query.filter_by(style_id=existing_style.id).all():
                 yards = round(float(sf.yards_required), 2) if sf.yards_required else 0
                 old_fabrics.append(f"{sf.fabric.name} ({yards}yd)")
+            old_fabrics = sorted(old_fabrics)
             # Get old notions
             old_notions = []
             for sn in StyleNotion.query.filter_by(style_id=existing_style.id).all():
                 qty = round(float(sn.quantity_required), 2) if sn.quantity_required else 0
                 old_notions.append(f"{sn.notion.name} (x{qty})")
+            old_notions = sorted(old_notions)
             # Get old labor
             old_labor = []
             for sl in StyleLabor.query.filter_by(style_id=existing_style.id).all():
                 if sl.labor_operation:
                     old_labor.append(sl.labor_operation.name)
+            old_labor = sorted(old_labor)
             
             old_style_values = {
                 "vendor_style": existing_style.vendor_style,
@@ -5337,7 +5340,7 @@ def api_style_save():
                 "gender": existing_style.gender,
                 "garment_type": existing_style.garment_type,
                 "size_range": existing_style.size_range,
-                "total_cost": str(existing_style.get_total_cost()),
+                "total_cost": str(round(existing_style.get_total_cost(), 2)),
                 "margin": str(existing_style.base_margin_percent),
                 "suggested_price": str(existing_style.suggested_price),
                 "colors": old_colors if old_colors else None,
@@ -5620,7 +5623,7 @@ def api_style_save():
                 new_values = {
                     "vendor_style": style.vendor_style,
                     "style_name": style.style_name,
-                    "total_cost": str(style.get_total_cost()),
+                    "total_cost": str(round(style.get_total_cost(), 2)),
                     "fabrics": [f.get("name") for f in fabrics_data if f.get("name")],
                     "notions": [n.get("name") for n in notions_data if n.get("name")],
                     "clients": new_client_names if new_client_names else None
@@ -5644,14 +5647,17 @@ def api_style_save():
                     if f.get("name"):
                         yards = round(float(f.get('yards', 0)), 2)
                         new_fabrics.append(f"{f.get('name')} ({yards}yd)")
+                new_fabrics = sorted(new_fabrics)
                 # Get new notions
                 new_notions = []
                 for n in notions_data:
                     if n.get("name"):
                         qty = round(float(n.get('qty', 0)), 2)
                         new_notions.append(f"{n.get('name')} (x{qty})")
-                # Get new labor
-                new_labor = [l.get("name") for l in data.get("labor") or [] if l.get("name")]
+                new_notions = sorted(new_notions)
+
+                # Get new labor (sorted)
+                new_labor = sorted([l.get("name") for l in data.get("labor") or [] if l.get("name")])
                 
                 # Log style update with changes
                 new_values = {
@@ -5661,7 +5667,7 @@ def api_style_save():
                     "gender": style.gender,
                     "garment_type": style.garment_type,
                     "size_range": style.size_range,
-                    "total_cost": str(style.get_total_cost()),
+                    "total_cost": str(round(style.get_total_cost(), 2)),
                     "margin": str(style.base_margin_percent),
                     "suggested_price": str(style.suggested_price),
                     "colors": new_color_names if new_color_names else None,

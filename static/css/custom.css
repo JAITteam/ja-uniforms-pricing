@@ -339,9 +339,8 @@ body {
   min-width: 100px;
   text-align: right;
 }
-
 /* ============================================
-   ENHANCED SNAPSHOT PANEL - COLORS VERTICAL
+   ENHANCED SNAPSHOT PANEL - GRADIENT FADE
    Replace lines 343-555 in your custom.css
    ============================================ */
 
@@ -436,16 +435,16 @@ body {
   margin-left: 1rem;
 }
 
-/* === SUBTLE ROW BACKGROUNDS === */
+/* === GRADIENT FADE ROW BACKGROUNDS === */
 
-/* Vendor Code - Very light slate */
+/* Vendor Code - Very light slate fade */
 .snapshot-row:nth-child(1) {
-  background: #f8fafc;
+  background: linear-gradient(to right, #f8fafc 0%, #ffffff 100%);
 }
 
-/* Vendor Style - Very light blue */
+/* Vendor Style - Very light blue fade */
 .snapshot-row:nth-child(2) {
-  background: #f0f7ff;
+  background: linear-gradient(to right, #f0f7ff 0%, #ffffff 100%);
 }
 
 #snap_vendor_style {
@@ -455,9 +454,9 @@ body {
   font-weight: 700 !important;
 }
 
-/* Style Name - Very light cyan */
+/* Style Name - Very light cyan fade */
 .snapshot-row:nth-child(3) {
-  background: #f0fdfa;
+  background: linear-gradient(to right, #f0fdfa 0%, #ffffff 100%);
 }
 
 #snap_style_name {
@@ -466,9 +465,9 @@ body {
   font-weight: 500 !important;
 }
 
-/* Regular Sizes - Light green */
+/* Regular Sizes - Light green fade */
 #snap_reg_row {
-  background: #f0fdf4 !important;
+  background: linear-gradient(to right, #f0fdf4 0%, #ffffff 100%) !important;
 }
 
 #snap_reg_row .snapshot-label {
@@ -476,9 +475,9 @@ body {
   font-weight: 600 !important;
 }
 
-/* Extended Sizes - Light amber */
+/* Extended Sizes - Light amber fade */
 #snap_ext_row {
-  background: #fffbeb !important;
+  background: linear-gradient(to right, #fffbeb 0%, #ffffff 100%) !important;
 }
 
 #snap_ext_row .snapshot-label {
@@ -497,9 +496,9 @@ body {
   color: #d97706 !important;
 }
 
-/* Colors Row - VERTICAL LAYOUT */
+/* Colors Row - VERTICAL LAYOUT with gradient fade */
 .snapshot-colors-row {
-  background: #faf5ff !important;
+  background: linear-gradient(to right, #faf5ff 0%, #ffffff 100%) !important;
   flex-direction: column !important;
   align-items: flex-start !important;
   gap: 0.5rem;
