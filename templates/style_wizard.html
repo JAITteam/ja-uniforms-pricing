@@ -340,9 +340,9 @@
   </div>
 
   <!-- RIGHT: Snapshot Panel -->
-  <div class="col-lg-4">
-    <div class="right-sticky panel snapshot">
-      <div class="ph">
+  <div class="col-lg-4" style="position: relative;">
+    <div class="right-sticky panel snapshot" style="position: sticky; top: 190px; max-height: calc(100vh - 160px); overflow-y: auto;">
+      <div class="ph" style="position: sticky; top: 0; z-index: 10;">
         <span>SNAPSHOT</span>
         <button type="button" class="copy-btn" id="copySnapshotBtn">
           <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -585,7 +585,8 @@ function copySnapshotToClipboard() {
         copyText += 'Total Cost: ' + totalReg + '\n';
     }
     
-    if (extendedSizes && extendedSizes.trim() !== '' && totalExt) {
+    // Only include extended sizes if they exist and are not empty/None
+    if (extendedSizes && extendedSizes.trim() !== '' && extendedSizes.trim().toLowerCase() !== 'none' && totalExt) {
         copyText += 'Sizes ' + extendedSizes + ' Cost: ' + totalExt + '\n';
     }
     
