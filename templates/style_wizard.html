@@ -433,6 +433,56 @@
   </div>
 </div>
 
+<!-- Export Color Selection Modal -->
+<div id="exportColorModal" class="custom-alert-modal">
+  <div style="background: white; border-radius: 16px; width: 450px; max-width: 90%; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);">
+    
+    <!-- Header - Blue gradient like Snapshot -->
+    <div style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: white; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <svg width="24" height="24" fill="white" viewBox="0 0 16 16">
+          <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+          <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+        </svg>
+        <div>
+          <div style="font-weight: 700; font-size: 1rem; letter-spacing: 0.5px;">EXPORT STYLE</div>
+          <div id="exportStyleName" style="font-size: 0.8rem; opacity: 0.9;"></div>
+        </div>
+      </div>
+      <button type="button" onclick="closeExportColorModal()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; font-size: 1.2rem; display: flex; align-items: center; justify-content: center;">×</button>
+    </div>
+    
+    <!-- Body -->
+    <div style="padding: 1.25rem; flex: 1; overflow-y: auto;">
+      
+      <!-- Select All Checkbox -->
+      <div style="padding: 0.75rem 1rem; background: linear-gradient(to right, #f0f7ff 0%, #ffffff 100%); border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1rem;">
+        <label style="display: flex; align-items: center; cursor: pointer; gap: 0.75rem;">
+          <input type="checkbox" id="selectAllColorsCheckbox" onchange="toggleAllExportColors(this.checked)" checked style="width: 20px; height: 20px; cursor: pointer; accent-color: #2563eb;">
+          <span style="font-weight: 600; color: #1e40af;">Select All Colors</span>
+          <span id="selectedColorCount" style="margin-left: auto; background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600;"></span>
+        </label>
+      </div>
+      
+      <!-- Color List -->
+      <div id="exportColorList" style="max-height: 280px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;"></div>
+      
+    </div>
+    
+    <!-- Footer - Action Buttons -->
+    <div style="padding: 1rem 1.5rem; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; gap: 1rem; justify-content: flex-end;">
+      <button type="button" onclick="closeExportColorModal()" class="btn btn-outline-secondary" style="padding: 0.6rem 1.25rem;">Cancel</button>
+      <button type="button" onclick="confirmExport()" class="btn btn-primary" style="padding: 0.6rem 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+          <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+        </svg>
+        Export Selected
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- Quick Add Notion Modal -->
 <div id="quickAddNotionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
   <div style="background: white; padding: 2rem; border-radius: 12px; width: 400px; max-width: 90%;">
@@ -672,6 +722,89 @@ function exportCurrentStyle() {
         return;
     }
     
+    // Show color selection modal instead of exporting directly
+    openExportColorModal(vendorStyle, styleName);
+}
+
+function openExportColorModal(vendorStyle, styleName) {
+    var modal = document.getElementById('exportColorModal');
+    var styleNameEl = document.getElementById('exportStyleName');
+    var colorListEl = document.getElementById('exportColorList');
+    var colorList = document.getElementById('color_list');
+    
+    styleNameEl.textContent = vendorStyle + ' - ' + styleName;
+    
+    // Build color checkboxes
+    var html = '';
+    if (colorList && colorList.options.length > 0) {
+        for (var i = 0; i < colorList.options.length; i++) {
+            var opt = colorList.options[i];
+            html += '<label style="display: flex; align-items: center; padding: 0.75rem 1rem; cursor: pointer; border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'white\'">';
+            html += '<input type="checkbox" checked value="' + opt.value + '" data-color-name="' + opt.text + '" onchange="updateExportColorCount()" style="width: 18px; height: 18px; cursor: pointer; accent-color: #10b981; margin-right: 0.75rem;">';
+            html += '<span style="color: #334155;">' + opt.text + '</span>';
+            html += '</label>';
+        }
+    }
+    
+    colorListEl.innerHTML = html;
+    
+    // Set select all checkbox to checked
+    var selectAllCheckbox = document.getElementById('selectAllColorsCheckbox');
+    if (selectAllCheckbox) selectAllCheckbox.checked = true;
+    
+    // Update count
+    updateExportColorCount();
+
+    modal.classList.add('active');
+}
+
+function closeExportColorModal() {
+    var modal = document.getElementById('exportColorModal');
+    modal.classList.remove('active');
+}
+    
+function toggleAllExportColors(selectAll) {
+    var checkboxes = document.querySelectorAll('#exportColorList input[type="checkbox"]');
+    checkboxes.forEach(function(cb) {
+        cb.checked = selectAll;
+    });
+    updateExportColorCount();
+}
+
+function updateExportColorCount() {
+    var total = document.querySelectorAll('#exportColorList input[type="checkbox"]').length;
+    var checked = document.querySelectorAll('#exportColorList input[type="checkbox"]:checked').length;
+    var countEl = document.getElementById('selectedColorCount');
+    var selectAllCheckbox = document.getElementById('selectAllColorsCheckbox');
+    
+    if (countEl) {
+        countEl.textContent = checked + ' / ' + total;
+        countEl.style.background = checked === 0 ? '#ef4444' : '#10b981';
+    }
+    
+    // Update select all checkbox state
+    if (selectAllCheckbox) {
+        selectAllCheckbox.checked = (checked === total);
+        selectAllCheckbox.indeterminate = (checked > 0 && checked < total);
+    }
+}
+
+function confirmExport() {
+    var checkboxes = document.querySelectorAll('#exportColorList input[type="checkbox"]:checked');
+    
+    if (checkboxes.length === 0) {
+        alert('Please select at least one color to export.');
+        return;
+    }
+    
+    var selectedColors = [];
+    checkboxes.forEach(function(cb) {
+        selectedColors.push(cb.dataset.colorName);
+    });
+    
+    var urlParams = new URLSearchParams(window.location.search);
+    var currentVendorStyle = urlParams.get('vendor_style');
+    
     var csrfMeta = document.querySelector('meta[name="csrf-token"]');
     var csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : '';
     
@@ -685,16 +818,29 @@ function exportCurrentStyle() {
     csrfInput.value = csrfToken;
     form.appendChild(csrfInput);
     
-    var input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'vendor_style';
-    input.value = currentVendorStyle;
-    form.appendChild(input);
+    var vendorStyleInput = document.createElement('input');
+    vendorStyleInput.type = 'hidden';
+    vendorStyleInput.name = 'vendor_style';
+    vendorStyleInput.value = currentVendorStyle;
+    form.appendChild(vendorStyleInput);
+    
+    var colorsInput = document.createElement('input');
+    colorsInput.type = 'hidden';
+    colorsInput.name = 'selected_colors';
+    colorsInput.value = JSON.stringify(selectedColors);
+    form.appendChild(colorsInput);
     
     document.body.appendChild(form);
     form.submit();
     document.body.removeChild(form);
+    
+    closeExportColorModal();
 }
+
+// Close modal when clicking outside
+document.getElementById('exportColorModal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeExportColorModal();
+});
 
 // Attach click handler when page loads
 document.addEventListener('DOMContentLoaded', function() {

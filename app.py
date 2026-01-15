@@ -2564,19 +2564,30 @@ def validate_style_for_export(style):
     return (len(missing) == 0, missing)
 
 
-# ===== SINGLE STYLE EXPORT =====
+# ===== SINGLE STYLE EXPORT =====     
 @app.route('/export-sap-single-style', methods=['POST'])
 @login_required
 def export_sap_single_style():
     """Export a single style in SAP B1 format - STRICT VALIDATION"""
     try:
         vendor_style = request.form.get('vendor_style')
+        selected_colors_json = request.form.get('selected_colors')
+        
         if not vendor_style:
             return "No style specified", 400
 
         style = Style.query.filter_by(vendor_style=vendor_style).first()
         if not style:
             return "Style not found", 404
+        
+        # Parse selected colors if provided
+        selected_colors = None
+        if selected_colors_json:
+            import json
+            try:
+                selected_colors = json.loads(selected_colors_json)
+            except:
+                selected_colors = None
 
         # ========================================
         # STRICT VALIDATION
@@ -2695,7 +2706,11 @@ def export_sap_single_style():
         all_sizes = regular_list + [s for s in extended_list if s not in regular_list]
         
         # NO FALLBACK - validation ensures sizes exist
-        colors = [sc.color.name.upper() for sc in style.colors]
+        # Filter colors if specific colors were selected
+        if selected_colors:
+            colors = [c.upper() for c in selected_colors]
+        else:
+            colors = [sc.color.name.upper() for sc in style.colors]
         
         # Get variables - DEFAULT exports as empty string, others export as-is
         variables = []
@@ -5656,8 +5671,8 @@ def api_style_save():
                         new_notions.append(f"{n.get('name')} (x{qty})")
                 new_notions = sorted(new_notions)
 
-                # Get new labor (sorted)
-                new_labor = sorted([l.get("name") for l in data.get("labor") or [] if l.get("name")])
+                # Get new labor (sorted) - only include labor with qty_or_hours > 0
+                new_labor = sorted([l.get("name") for l in data.get("labor") or [] if l.get("name") and float(l.get("qty_or_hours") or 0) > 0])
                 
                 # Log style update with changes
                 new_values = {

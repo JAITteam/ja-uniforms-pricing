@@ -58,13 +58,6 @@ def generate_random_style_name():
     garment = random.choice(GARMENT_STYLES)
     return f"{first} {second} {garment}"
 
-def generate_vendor_style(base_num):
-    """Generate vendor style like 99001-T3P"""
-    suffix = random.choice(["", "T3P", "T5", "T6P", "SUB", "PLN"])
-    if suffix:
-        return f"99{base_num:03d}-{suffix}"
-    return f"99{base_num:03d}"
-
 def insert_test_styles():
     with app.app_context():
         # Get existing data for relationships
@@ -98,16 +91,6 @@ def insert_test_styles():
         
         for i in range(50):
             try:
-                # Generate unique vendor style
-                vendor_style = generate_vendor_style(900 + i)
-                
-                # Check if already exists
-                existing = Style.query.filter_by(vendor_style=vendor_style).first()
-                if existing:
-                    skipped_count += 1
-                    print(f"   ⏭️  {vendor_style} already exists, skipping")
-                    continue
-                
                 # Generate style data
                 style_name = generate_random_style_name()
                 gender = random.choice(GENDERS)
@@ -125,10 +108,30 @@ def insert_test_styles():
                 # Random margin between 55-65%
                 margin = round(random.uniform(55, 65), 1)
                 
+                # Select fabrics first so we can build vendor_style correctly
+                num_fabrics = random.randint(1, min(3, len(fabrics)))
+                selected_fabrics = random.sample(fabrics, num_fabrics)
+                primary_fabric = selected_fabrics[0]
+                is_sublimation = random.choice([True, False, False, False])  # 25% chance for primary
+                
+                # Build vendor style with fabric code
+                base_item = f"99{900 + i:03d}"
+                fabric_code = primary_fabric.fabric_code or ''
+                full_vendor_style = base_item + fabric_code
+                if is_sublimation and fabric_code:
+                    full_vendor_style += 'P'
+                
+                # Check if already exists
+                existing = Style.query.filter_by(vendor_style=full_vendor_style).first()
+                if existing:
+                    skipped_count += 1
+                    print(f"   ⏭️  {full_vendor_style} already exists, skipping")
+                    continue
+                
                 # Create style
                 style = Style(
-                    vendor_style=vendor_style,
-                    base_item_number=vendor_style.split('-')[0],
+                    vendor_style=full_vendor_style,
+                    base_item_number=base_item,
                     style_name=style_name,
                     gender=gender,
                     garment_type=garment_type,
@@ -139,16 +142,14 @@ def insert_test_styles():
                 db.session.add(style)
                 db.session.flush()
                 
-                # Add 1-3 random fabrics
-                num_fabrics = random.randint(1, min(3, len(fabrics)))
-                selected_fabrics = random.sample(fabrics, num_fabrics)
+                # Add fabrics
                 for idx, fabric in enumerate(selected_fabrics):
                     sf = StyleFabric(
                         style_id=style.id,
                         fabric_id=fabric.id,
                         yards_required=round(random.uniform(1.0, 3.5), 2),
                         is_primary=(idx == 0),
-                        is_sublimation=random.choice([True, False, False, False])  # 25% chance
+                        is_sublimation=(is_sublimation if idx == 0 else random.choice([True, False, False, False]))
                     )
                     db.session.add(sf)
                 
@@ -203,7 +204,7 @@ def insert_test_styles():
                 db.session.commit()
                 created_count += 1
                 
-                print(f"   ✅ {vendor_style}: {style_name} (${style.suggested_price or 0:.2f})")
+                print(f"   ✅ {full_vendor_style}: {style_name} (${style.suggested_price or 0:.2f})")
                 
             except Exception as e:
                 db.session.rollback()
