@@ -539,17 +539,17 @@ document.addEventListener('DOMContentLoaded', () => {
       }))
     : [];
 
-  // Auto Vendor Style
+  // Auto Vendor Style - ALWAYS builds fresh from source fields
   function buildVendorStyle(){
-    const base=$('#base_item_number')?.value.trim() || '';
-    const variant=$('#variant_code')?.value.trim() || '';
+    const base = $('#base_item_number')?.value.trim() || '';
+    const variant = $('#variant_code')?.value.trim() || '';
     
-    // Get fabric code from first fabric row
+    // Get fabric code from FIRST fabric row only
     const firstFabricSelect = document.querySelector('[data-fabric-id]');
     let fabricCode = '';
-    if (firstFabricSelect && firstFabricSelect.value) {
+    if (firstFabricSelect && firstFabricSelect.value && firstFabricSelect.value !== '__ADD_NEW__') {
       const selectedOption = firstFabricSelect.options[firstFabricSelect.selectedIndex];
-      fabricCode = selectedOption.dataset.fabricCode || '';
+      fabricCode = selectedOption?.dataset?.fabricCode || '';
     }
     
     // Check sublimation checkbox on first row
@@ -583,10 +583,17 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleSave();
   }
 
-  // Bidirectional: Parse vendor style back to components
+  // Bidirectional: Parse vendor style back to components (only when manually edited)
   function parseVendorStyle() {
     const vendorStyle = $('#vendor_style')?.value.trim() || '';
     if (!vendorStyle) return;
+    
+    // Only parse if manually edited - otherwise just update snapshot
+    const input = $('#vendor_style');
+    if (input && input.dataset.touched !== '1') {
+      setText('#snap_vendor_style', vendorStyle);
+      return;
+    }
     
     const parts = vendorStyle.split('-');
     
@@ -603,6 +610,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update snapshot
     setText('#snap_vendor_style', vendorStyle);
   }
+
   // Auto-build vendor style when components change
   ['#base_item_number','#variant_code'].forEach(sel=> 
     $(sel)?.addEventListener('input', buildVendorStyle)
