@@ -1318,8 +1318,8 @@ updateSizeRangeDisplay();
   $('#vendor_style')?.addEventListener('input', toggleSave);
   $('#base_item_number')?.addEventListener('input', toggleSave);
 
-  // Attach dirty tracking ONLY on style wizard page
-  if (window.location.pathname.startsWith('/style/')) {
+  // Attach dirty tracking ONLY on style wizard page (NOT in view mode)
+  if (window.location.pathname.startsWith('/style/') && !window.location.pathname.includes('/view')) {
       console.log('✅ Dirty tracking enabled on style wizard');
       setTimeout(attachDirtyTracking, 500);
   }

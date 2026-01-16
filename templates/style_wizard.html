@@ -79,12 +79,14 @@
               </select>
             </div>
           </div>
-          
+        
           <!-- ENHANCED IMAGE SECTION -->
           <div class="col-lg-6">
             <div class="image-section">
-              <div id="imageGallery"></div>
+              <div id="imageGallery" {% if view_mode %}data-view-mode="true"{% endif %}></div>
+              {% if not view_mode %}
               <input type="file" id="imageUpload" accept="image/png,image/jpeg,image/jpg,image/gif" multiple style="display: none;">
+              {% endif %}
             </div>
           </div>
         </div>
@@ -863,15 +865,18 @@ window.exportCurrentStyle = exportCurrentStyle;
 {% if view_mode %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Disable all inputs EXCEPT the search box
     document.querySelectorAll('input, select, textarea').forEach(function(el) {
-        el.disabled = true;
-        el.style.backgroundColor = '#f3f4f6';
-        el.style.cursor = 'not-allowed';
+        if (el.id !== 'styleSearch') {
+            el.disabled = true;
+            el.style.backgroundColor = '#f3f4f6';
+            el.style.cursor = 'not-allowed';
+        }
     });
     
     document.querySelectorAll('button').forEach(function(el) {
         var text = el.textContent.toLowerCase();
-        if (text.includes('add') || text.includes('remove') || text.includes('delete')) {
+        if (text.includes('add') || text.includes('remove') || text.includes('delete') || text.includes('create')) {
             el.style.display = 'none';
         }
     });
@@ -879,6 +884,54 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.linklike').forEach(function(el) {
         el.style.display = 'none';
     });
+    
+    // Hide image upload controls in view mode
+    function hideImageControls() {
+        var addImageBox = document.querySelector('.add-image-box');
+        if (addImageBox) {
+            addImageBox.style.display = 'none';
+        }
+        
+        // Hide all delete buttons on images
+        document.querySelectorAll('.image-item .delete-btn').forEach(function(btn) {
+            btn.style.display = 'none';
+        });
+    }
+    
+    // Run immediately
+    hideImageControls();
+    
+    // Run again after images load (they load dynamically)
+    setTimeout(hideImageControls, 500);
+    setTimeout(hideImageControls, 1000);
+    setTimeout(hideImageControls, 2000);
+    
+    // Also watch for new images being added to gallery
+    var imageGallery = document.getElementById('imageGallery');
+    if (imageGallery) {
+        var observer = new MutationObserver(function(mutations) {
+            hideImageControls();
+        });
+        observer.observe(imageGallery, { childList: true, subtree: true });
+    }
+    
+    // Override search result click to redirect to view mode URL
+    var originalSearchHandler = null;
+    var searchResults = document.getElementById('searchResults');
+    if (searchResults) {
+        searchResults.addEventListener('click', function(e) {
+            var item = e.target.closest('.search-result-item');
+            if (item) {
+                e.preventDefault();
+                e.stopPropagation();
+                var vendorStyle = item.dataset.vendorStyle;
+                if (vendorStyle) {
+                    // Redirect to view mode URL
+                    window.location.href = '/style/view?vendor_style=' + encodeURIComponent(vendorStyle);
+                }
+            }
+        }, true);
+    }
 });
 </script>
 {% endif %}
