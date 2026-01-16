@@ -189,6 +189,14 @@ body {
   cursor: not-allowed;
 }
 
+/* Locked state for edit protection */
+.form-control-locked,
+.form-select-locked {
+  background-color: #f3f4f6 !important;
+  cursor: not-allowed !important;
+  opacity: 0.7;
+}
+
 /* Input Sizes */
 .xs { width: 90px; }
 .sm { width: 130px; }

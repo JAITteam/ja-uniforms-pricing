@@ -5341,20 +5341,29 @@ def api_style_save():
                 qty = round(float(sn.quantity_required), 2) if sn.quantity_required else 0
                 old_notions.append(f"{sn.notion.name} (x{qty})")
             old_notions = sorted(old_notions)
-            # Get old labor
+            # Get old labor with quantities
             old_labor = []
             for sl in StyleLabor.query.filter_by(style_id=existing_style.id).all():
                 if sl.labor_operation:
-                    old_labor.append(sl.labor_operation.name)
+                    qty = sl.quantity if sl.quantity else 0
+                    hours = round(float(sl.time_hours), 2) if sl.time_hours else 0
+                    if sl.labor_operation.cost_type == 'hourly':
+                        if hours > 0:
+                            old_labor.append(f"{sl.labor_operation.name} ({hours}hrs)")
+                    else:
+                        if qty > 0:
+                            old_labor.append(f"{sl.labor_operation.name} (x{qty})")
             old_labor = sorted(old_labor)
-            
             old_style_values = {
                 "vendor_style": existing_style.vendor_style,
                 "style_name": existing_style.style_name,
                 "base_item_number": existing_style.base_item_number,
+                "variant_code": existing_style.variant_code,
                 "gender": existing_style.gender,
                 "garment_type": existing_style.garment_type,
                 "size_range": existing_style.size_range,
+                "label_cost": str(existing_style.avg_label_cost) if existing_style.avg_label_cost else None,
+                "shipping_cost": str(existing_style.shipping_cost) if existing_style.shipping_cost else None,
                 "total_cost": str(round(existing_style.get_total_cost(), 2)),
                 "margin": str(existing_style.base_margin_percent),
                 "suggested_price": str(existing_style.suggested_price),
@@ -5439,6 +5448,8 @@ def api_style_save():
         style.size_range = (s.get("size_range") or None)
         style.notes = (s.get("notes") or None)
         style.suggested_price = suggested_price
+        style.avg_label_cost = float(s.get("label_cost") or 0.20)
+        style.shipping_cost = float(s.get("shipping_cost") or 0.00)
         db.session.add(style)
         db.session.flush()
         
@@ -5617,11 +5628,14 @@ def api_style_save():
         if total_cost > 0:
             # Use the margin from payload (user-set or default 60%)
             style.base_margin_percent = margin if margin else 60.0
-            # Calculate sale price from margin
-            margin_decimal = style.base_margin_percent / 100.0
-            if margin_decimal >= 0.99:  # Prevent division by zero or near-zero
-                margin_decimal = 0.99     
-            style.suggested_price = round(total_cost / (1 - margin_decimal), 2)
+            # Only recalculate if user didn't provide a suggested_price
+            if not suggested_price:
+                margin_decimal = style.base_margin_percent / 100.0
+                if margin_decimal >= 0.99:  # Prevent division by zero or near-zero
+                    margin_decimal = 0.99
+                style.suggested_price = round(total_cost / (1 - margin_decimal), 2)
+            else:
+                style.suggested_price = suggested_price
         else:
             # No costs yet - use defaults
             style.base_margin_percent = margin if margin else 60.0
@@ -5671,17 +5685,33 @@ def api_style_save():
                         new_notions.append(f"{n.get('name')} (x{qty})")
                 new_notions = sorted(new_notions)
 
-                # Get new labor (sorted) - only include labor with qty_or_hours > 0
-                new_labor = sorted([l.get("name") for l in data.get("labor") or [] if l.get("name") and float(l.get("qty_or_hours") or 0) > 0])
+                # Get new labor with quantities (sorted)
+                new_labor = []
+                for l in data.get("labor") or []:
+                    if l.get("name") and float(l.get("qty_or_hours") or 0) > 0:
+                        qty = round(float(l.get("qty_or_hours") or 0), 2)
+                        # Check if hourly or piece rate
+                        op = LaborOperation.query.filter(
+                            func.lower(LaborOperation.name) == l["name"].strip().lower()
+                        ).first()
+                        if op and op.cost_type == 'hourly':
+                            new_labor.append(f"{l.get('name')} ({qty}hrs)")
+                        else:
+                            new_labor.append(f"{l.get('name')} (x{int(qty)})")
+                new_labor = sorted(new_labor)
                 
                 # Log style update with changes
+               
                 new_values = {
                     "vendor_style": style.vendor_style,
                     "style_name": style.style_name,
                     "base_item_number": style.base_item_number,
+                    "variant_code": style.variant_code,
                     "gender": style.gender,
                     "garment_type": style.garment_type,
                     "size_range": style.size_range,
+                    "label_cost": str(style.avg_label_cost) if style.avg_label_cost else None,
+                    "shipping_cost": str(style.shipping_cost) if style.shipping_cost else None,
                     "total_cost": str(round(style.get_total_cost(), 2)),
                     "margin": str(style.base_margin_percent),
                     "suggested_price": str(style.suggested_price),

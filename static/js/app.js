@@ -1208,23 +1208,36 @@ updateSizeRangeDisplay();
   // ============================================
   // DIRTY FORM TRACKING - UNSAVED CHANGES
   // ============================================
-  let isDirty = false;
-  let isLoading = false; // Flag to ignore changes during style load
+  window.isDirty = false;
+  window.isLoading = false; // Flag to ignore changes during style load
 
   const saveBtn = $('#saveBtn');
 
   function updateSaveButtonState() {
-      if (!saveBtn) return;
+      console.log('updateSaveButtonState called');
+      console.log('saveBtn:', saveBtn);
+      console.log('window.isDirty:', window.isDirty);
+      console.log('window.isStyleLocked:', window.isStyleLocked);
+      
+      if (!saveBtn) {
+          console.log('No saveBtn found!');
+          return;
+      }
       
       const hasStyleName = $('#style_name')?.value.trim();
       const hasVendorStyle = $('#vendor_style')?.value.trim();
       const hasBaseItem = $('#base_item_number')?.value.trim();
+      
+      console.log('hasStyleName:', hasStyleName);
+      console.log('hasVendorStyle:', hasVendorStyle);
+      console.log('hasBaseItem:', hasBaseItem);
       
       // Disable if required fields missing
       if (!(hasStyleName && hasVendorStyle && hasBaseItem)) {
           saveBtn.disabled = true;
           saveBtn.style.opacity = '0.5';
           saveBtn.style.cursor = 'not-allowed';
+          console.log('Required fields missing');
           return;
       }
       
@@ -1232,14 +1245,14 @@ updateSizeRangeDisplay();
       saveBtn.disabled = false;
       
       // Style based on dirty state
-      if (isDirty) {
-          // Lit up - has unsaved changes
+      if (window.isDirty) {
+          console.log('Setting GREEN style');
           saveBtn.style.opacity = '1';
           saveBtn.style.background = 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)';
           saveBtn.style.boxShadow = '0 0 15px rgba(34, 197, 94, 0.5)';
           saveBtn.style.cursor = 'pointer';
       } else {
-          // Dim - no unsaved changes
+          console.log('Setting GRAY style');
           saveBtn.style.opacity = '0.7';
           saveBtn.style.background = 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)';
           saveBtn.style.boxShadow = 'none';
@@ -1248,15 +1261,17 @@ updateSizeRangeDisplay();
   }
 
   function markDirty() {
-      if (isLoading) return;
-      isDirty = true;
+      if (window.isLoading) return;
+      window.isDirty = true;
       updateSaveButtonState();
   }
-
   function markClean() {
-      isDirty = false;
+      window.isDirty = false;
       updateSaveButtonState();
   }
+  
+  window.markDirty = markDirty;
+  window.markClean = markClean;
 
   // Track changes on all form inputs
   function attachDirtyTracking() {
@@ -1269,7 +1284,7 @@ updateSizeRangeDisplay();
 
   // Warn before leaving page with unsaved changes
   window.addEventListener('beforeunload', function(e) {
-      if (isDirty) {
+      if (window.isDirty) {
           e.preventDefault();
           e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
           return e.returnValue;
@@ -1287,7 +1302,7 @@ updateSizeRangeDisplay();
       const href = link.getAttribute('href');
       if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
       
-      if (!isDirty) return;
+      if (!window.isDirty) return;
         
       e.preventDefault();
       
@@ -1299,12 +1314,12 @@ updateSizeRangeDisplay();
       if (shouldSave) {
           saveBtn?.click();
           setTimeout(() => {
-              if (!isDirty) {
+              if (!window.isDirty) {
                   window.location.href = href;
               }
           }, 1000);
       } else {
-          isDirty = false;
+          window.isDirty = false;
           window.location.href = href;
       }
   });
