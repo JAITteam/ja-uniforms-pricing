@@ -548,7 +548,7 @@ def init_cleanup_scheduler():
     scheduler.add_job(
         func=cleanup_old_audit_logs,
         trigger="cron",
-        hour=2,
+        hour=14,
         minute=0,
         id='cleanup_audit_logs',
         name='Delete old audit logs',
@@ -570,7 +570,7 @@ def init_cleanup_scheduler():
     atexit.register(lambda: scheduler.shutdown(wait=False))
     
     print(f"\n🕐 Database cleanup scheduler started:")
-    print(f"  ✅ Audit logs: Daily at 2 AM (keeps {AUDIT_LOG_RETENTION_DAYS} days)")
+    print(f"  ✅ Audit logs: Daily at 2 PM (keeps {AUDIT_LOG_RETENTION_DAYS} days)")
     print(f"  ✅ Verification codes: Every 6 hours (removes expired)")
 
 @app.route('/audit-logs')

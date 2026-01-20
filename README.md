@@ -350,7 +350,7 @@ redis-cli get "LIMITS:LIMITER/[IP]/login/10/1/minute"
 
 | Task | Schedule | Description |
 |------|----------|-------------|
-| Audit Log Cleanup | Daily at 2 AM | Removes logs older than 90 days |
+| Audit Log Cleanup | Daily at 2 PM | Removes logs older than 90 days |
 | Verification Code Cleanup | Every 6 hours | Removes expired codes |
 
 ---
@@ -406,7 +406,7 @@ python run_production.py
 ### Automated Backups
 
 Backups run automatically at:
-- 12:00 AM daily
+- 12:00 PM daily
 - 4:40 PM daily
 
 ### Manual Backup
