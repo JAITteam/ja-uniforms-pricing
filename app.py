@@ -3592,6 +3592,22 @@ def api_fabric_vendor_detail(vendor_id):
             db.session.rollback()
             app.logger.error(f"Error deleting fabric vendor: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete fabric vendor'}), 500
+        
+@app.route('/api/fabric-vendors/next-code', methods=['GET'])
+@login_required
+def api_next_fabric_vendor_code():
+    """Get next available fabric vendor code (F101, F102...)"""
+    existing = FabricVendor.query.with_entities(FabricVendor.vendor_code).all()
+    existing_nums = []
+    for (code,) in existing:
+        if code and code.upper().startswith('F'):
+            try:
+                num = int(code[1:])
+                existing_nums.append(num)
+            except ValueError:
+                pass
+    next_num = max(existing_nums) + 1 if existing_nums else 101
+    return jsonify({'next_code': f'F{next_num}'})
 
 @app.route('/api/fabric-vendors', methods=['POST'])
 @role_required('admin')
@@ -3699,6 +3715,22 @@ def api_notion_vendor_detail(vendor_id):
             db.session.rollback()
             app.logger.error(f"Error deleting notion vendor: {e}")
             return jsonify({'success': False, 'error': 'Failed to delete notion vendor'}), 500
+        
+@app.route('/api/notion-vendors/next-code', methods=['GET'])
+@login_required
+def api_next_notion_vendor_code():
+    """Get next available notion vendor code (N101, N102...)"""
+    existing = NotionVendor.query.with_entities(NotionVendor.vendor_code).all()
+    existing_nums = []
+    for (code,) in existing:
+        if code and code.upper().startswith('N'):
+            try:
+                num = int(code[1:])
+                existing_nums.append(num)
+            except ValueError:
+                pass
+    next_num = max(existing_nums) + 1 if existing_nums else 101
+    return jsonify({'next_code': f'N{next_num}'})
 
 
 @app.route('/api/notion-vendors', methods=['POST'])
@@ -5454,12 +5486,13 @@ def api_style_save():
         db.session.flush()
         
         # ===== STEP 7: REPLACE EXISTING RELATIONSHIPS =====
-        StyleFabric.query.filter_by(style_id=style.id).delete()
-        StyleNotion.query.filter_by(style_id=style.id).delete()
-        StyleLabor.query.filter_by(style_id=style.id).delete()
-        StyleColor.query.filter_by(style_id=style.id).delete()
-        StyleVariable.query.filter_by(style_id=style.id).delete()
-        StyleClient.query.filter_by(style_id=style.id).delete()
+        # Use synchronize_session='fetch' to ensure proper deletion before inserts
+        StyleFabric.query.filter_by(style_id=style.id).delete(synchronize_session='fetch')
+        StyleNotion.query.filter_by(style_id=style.id).delete(synchronize_session='fetch')
+        StyleLabor.query.filter_by(style_id=style.id).delete(synchronize_session='fetch')
+        StyleColor.query.filter_by(style_id=style.id).delete(synchronize_session='fetch')
+        StyleVariable.query.filter_by(style_id=style.id).delete(synchronize_session='fetch')
+        StyleClient.query.filter_by(style_id=style.id).delete(synchronize_session='fetch')
         db.session.flush()
         
         # ===== STEP 8: ADD FABRICS =====
@@ -5621,25 +5654,22 @@ def api_style_save():
                     db.session.add(sc)
                     new_client_names.append(client.bp_code)
         
-        # ===== STEP 12.2: RECALCULATE MARGIN WITH ACTUAL COSTS =====
+        # ===== STEP 12.2: RECALCULATE PRICE BASED ON MARGIN =====
         db.session.flush()  # Ensure all relationships are saved
         total_cost = style.get_total_cost()
         
+        # Always use the margin from payload (user-set or default 60%)
+        style.base_margin_percent = margin if margin else 60.0
+        
         if total_cost > 0:
-            # Use the margin from payload (user-set or default 60%)
-            style.base_margin_percent = margin if margin else 60.0
-            # Only recalculate if user didn't provide a suggested_price
-            if not suggested_price:
-                margin_decimal = style.base_margin_percent / 100.0
-                if margin_decimal >= 0.99:  # Prevent division by zero or near-zero
-                    margin_decimal = 0.99
-                style.suggested_price = round(total_cost / (1 - margin_decimal), 2)
-            else:
-                style.suggested_price = suggested_price
+            # Always recalculate suggested_price from margin to keep them in sync
+            margin_decimal = style.base_margin_percent / 100.0
+            if margin_decimal >= 0.95:  # Prevent division by zero or near-zero
+                margin_decimal = 0.95
+            style.suggested_price = round(total_cost / (1 - margin_decimal), 2)
         else:
-            # No costs yet - use defaults
-            style.base_margin_percent = margin if margin else 60.0
-            style.suggested_price = suggested_price if suggested_price else 0
+            # No costs yet - price is 0
+            style.suggested_price = 0
 
         # ===== STEP 13: COMMIT ALL CHANGES =====
         style.updated_at = datetime.now()

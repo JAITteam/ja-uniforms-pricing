@@ -110,6 +110,7 @@
           <label>Vendor</label>
           <select class="form-select md" data-fabric-vendor-id>
             <option value="">Select Fabric Vendor</option>
+            <option value="__ADD_NEW_VENDOR__" style="color: #10b981; font-weight: 600;">+ Add New Vendor</option>
             {% for v in fabric_vendors %}
             <option value="{{ v.id }}" data-fship="{{ v.f_ship_cost or 0 }}">{{ v.name }}</option>
             {% endfor %}
@@ -150,6 +151,7 @@
           <label>Vendor</label>
           <select class="form-select md" data-notion-vendor-id>
             <option value="">Select Notion Vendor</option>
+            <option value="__ADD_NEW_VENDOR__" style="color: #10b981; font-weight: 600;">+ Add New Vendor</option>
             {% for v in notion_vendors %}
             <option value="{{ v.id }}">{{ v.name }}</option>
             {% endfor %}
@@ -521,6 +523,56 @@
     <div style="display: flex; gap: 1rem; justify-content: flex-end;">
       <button type="button" onclick="closeQuickAddNotion()" style="padding: 0.5rem 1rem; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer;">Cancel</button>
       <button type="button" onclick="saveQuickNotion()" style="padding: 0.5rem 1rem; border: none; background: #10b981; color: white; border-radius: 6px; cursor: pointer; font-weight: 600;">Save Notion</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Quick Add Fabric Vendor Modal -->
+<div id="quickAddFabricVendorModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+  <div style="background: white; padding: 2rem; border-radius: 12px; width: 400px; max-width: 90%;">
+    <h3 style="margin: 0 0 1.5rem 0; color: #1e293b;">Add New Fabric Vendor</h3>
+    
+    <div style="margin-bottom: 1rem;">
+      <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Vendor Name *</label>
+      <input type="text" id="quick_fabric_vendor_name" class="form-control" placeholder="e.g., TEXLAND" style="width: 100%;">
+    </div>
+    
+    <div style="margin-bottom: 1rem;">
+      <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Vendor Code</label>
+      <input type="text" id="quick_fabric_vendor_code" class="form-control" placeholder="e.g., TXL (optional)" style="width: 100%;">
+    </div>
+    
+    <div style="margin-bottom: 1.5rem;">
+      <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Fabric Shipping Cost</label>
+      <input type="number" id="quick_fabric_vendor_fship" class="form-control" step="0.01" min="0" placeholder="e.g., 0.50" style="width: 100%;">
+    </div>
+    
+    <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+      <button type="button" onclick="closeQuickAddFabricVendor()" style="padding: 0.5rem 1rem; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer;">Cancel</button>
+      <button type="button" onclick="saveQuickFabricVendor()" style="padding: 0.5rem 1rem; border: none; background: #10b981; color: white; border-radius: 6px; cursor: pointer; font-weight: 600;">Save Vendor</button>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Add Notion Vendor Modal -->
+<div id="quickAddNotionVendorModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+  <div style="background: white; padding: 2rem; border-radius: 12px; width: 400px; max-width: 90%;">
+    <h3 style="margin: 0 0 1.5rem 0; color: #1e293b;">Add New Notion Vendor</h3>
+    
+    <div style="margin-bottom: 1rem;">
+      <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Vendor Name *</label>
+      <input type="text" id="quick_notion_vendor_name" class="form-control" placeholder="e.g., BUTTON CO" style="width: 100%;">
+    </div>
+    
+    <div style="margin-bottom: 1.5rem;">
+      <label style="display: block; font-weight: 600; margin-bottom: 0.5rem;">Vendor Code</label>
+      <input type="text" id="quick_notion_vendor_code" class="form-control" placeholder="e.g., BTN (optional)" style="width: 100%;">
+    </div>
+    
+    <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+      <button type="button" onclick="closeQuickAddNotionVendor()" style="padding: 0.5rem 1rem; border: 1px solid #ddd; background: white; border-radius: 6px; cursor: pointer;">Cancel</button>
+      <button type="button" onclick="saveQuickNotionVendor()" style="padding: 0.5rem 1rem; border: none; background: #10b981; color: white; border-radius: 6px; cursor: pointer; font-weight: 600;">Save Vendor</button>
     </div>
   </div>
 </div>
@@ -951,7 +1003,7 @@ function applyUnlockedState() {
     if (lockPath) lockPath.setAttribute('d', 'M7 11V7a5 5 0 0 1 9.9-1');
     
     document.querySelectorAll('input, select, textarea').forEach(function(el) {
-        var alwaysReadonly = ['vendor', 'vendor_code', 'fabric_code', 'vendor_style', 'label_cost', 'shipping_cost', 'cleaning_cost', 'retail_price', 'suggested_price'];
+        var alwaysReadonly = ['vendor', 'vendor_code', 'fabric_code', 'vendor_style', 'label_cost', 'shipping_cost', 'cleaning_cost', 'retail_price'];
         var isAlwaysReadonly = alwaysReadonly.includes(el.id) || el.hasAttribute('data-fabric-cost') || el.hasAttribute('data-notion-cost') || el.hasAttribute('data-fabric-total') || el.hasAttribute('data-notion-total') || el.hasAttribute('data-labor-total') || el.hasAttribute('data-labor-rate') || el.hasAttribute('data-fabric-fship');
         
         if (!isAlwaysReadonly) {

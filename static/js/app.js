@@ -681,9 +681,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     if (!fabricSelect) return;
-    
+
     Array.from(fabricSelect.options).forEach(option => {
-      if (option.value === '') {
+      if (option.value === '' || option.value === '__ADD_NEW__') {
         option.style.display = '';
       } else if (!vendorId) {
         option.style.display = '';
@@ -691,8 +691,8 @@ document.addEventListener('DOMContentLoaded', () => {
         option.style.display = option.dataset.vendor === vendorId ? '' : 'none';
       }
     });
-    
     fabricSelect.value = '';
+
     document.querySelector('[data-fabric-cost]').value = '';
     recalcMaterials();
   });
@@ -700,7 +700,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Notion dropdown - auto-fill cost when selected (first row only)
   $('[data-notion-id]')?.addEventListener('change', function() {
     const opt = this.options[this.selectedIndex];
-    if (opt.value) {
+    // Don't auto-fill vendor if selecting "__ADD_NEW__" - keep existing vendor selection
+    if (opt.value && opt.value !== '__ADD_NEW__') {
       const row = this.closest('.kv');
       row.querySelector('[data-notion-cost]').value = opt.dataset.cost || '';
       row.querySelector('[data-notion-vendor-id]').value = opt.dataset.vendor || '';
@@ -714,9 +715,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const notionSelect = document.querySelector('[data-notion-id]');
     
     if (!notionSelect) return;
-    
+
     Array.from(notionSelect.options).forEach(option => {
-      if (option.value === '') {
+      if (option.value === '' || option.value === '__ADD_NEW__') {
         option.style.display = '';
       } else if (!vendorId) {
         option.style.display = '';
@@ -860,8 +861,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (margin > 0 && total > 0) {
       const sp = total / (1 - (margin / 100));
       $('#suggested_price').value = sp.toFixed(2);
-    } else if (total > 0) {
-      // Default to 60% margin if none set
+    } else if (total > 0 && (!$('#suggested_margin')?.value || $('#suggested_margin')?.value === '0')) {
+      // Default to 60% margin only if field is truly empty or zero
       const sp = total / (1 - 0.60);
       $('#suggested_price').value = sp.toFixed(2);
       $('#suggested_margin').value = '60.0';
@@ -903,28 +904,34 @@ document.addEventListener('DOMContentLoaded', () => {
     
     recalcTotals();
   }
-  
-  // Bidirectional: Change suggested price → calculate margin
-  $('#suggested_price')?.addEventListener('input', function() {
-    const sp = parseFloat(this.value) || 0;
-    const total = parseFloat((($('#snap_total')?.textContent)||'').replace('$',''))||0;
-  
-    if (sp > 0 && total > 0) {
-      const margin = ((sp - total) / sp) * 100;
-      $('#suggested_margin').value = Math.max(0, Math.min(95, margin)).toFixed(1);
-    }
-  });
-  
-  // Bidirectional: Change margin → calculate suggested price
+
+  // Change margin → calculate suggested price (one-way only, sale price is readonly)
   $('#suggested_margin')?.addEventListener('input', function() {
-    const margin = parseFloat(this.value) || 0;
-    const total = parseFloat((($('#snap_total')?.textContent)||'').replace('$',''))||0;
-  
-    if (margin > 0 && total > 0) {
+    let margin = parseFloat(this.value);
+    
+    // If not a valid number, don't process yet (user still typing)
+    if (isNaN(margin)) return;
+    
+    // Enforce min/max limits (0-95%) even for manual typing
+    if (margin < 0) margin = 0;
+    if (margin > 95) margin = 95;
+    
+    // Update the field only if it was out of bounds
+    const originalValue = parseFloat(this.value);
+    if (originalValue !== margin) {
+      this.value = margin.toFixed(1);
+    }
+    
+    // Get total from #total_reg input field
+    const total = parseFloat(($('#total_reg')?.value || '').replace('$','')) || 0;
+    
+    // Allow 0% margin (sale price = cost price)
+    if (margin >= 0 && total > 0) {
       const sp = total / (1 - (margin / 100));
       $('#suggested_price').value = sp.toFixed(2);
     }
   });
+
 
   document.querySelectorAll('[data-fabric-cost],[data-fabric-yds],[data-notion-cost],[data-notion-qty],#label_cost,#shipping_cost')
     .forEach(i=> i?.addEventListener('input',recalcMaterials));
@@ -1347,6 +1354,19 @@ updateSizeRangeDisplay();
     // ENHANCED SAVE VALIDATION
     // ========================================
     
+    // Capture margin value BEFORE blur (to prevent recalc from resetting it)
+    const savedMargin = $('#suggested_margin')?.value;
+    console.log('DEBUG - Margin at save start:', savedMargin);
+    console.log('DEBUG - Element:', $('#suggested_margin'));
+    // Force blur on active element to ensure all values are committed
+    document.activeElement?.blur();
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    // Restore margin if it was changed by recalc
+    if (savedMargin && $('#suggested_margin')) {
+      $('#suggested_margin').value = savedMargin;
+    }
+
     // Get values
     const styleName = ($('#style_name')?.value || '').trim();
     const vendorStyle = ($('#vendor_style')?.value || '').trim();
@@ -1564,7 +1584,15 @@ updateSizeRangeDisplay();
       });
     }
     console.log('🔍 Saving... currentStyleId =', currentStyleId);
-
+    const currentMarginValue = $('#suggested_margin')?.value;
+    console.log('🔍 DEBUG - Margin field value at payload build:', currentMarginValue);
+    console.log('🔍 DEBUG - Parsed margin:', parseFloat(currentMarginValue) || 60.0);
+    console.log('🔍 DEBUG - savedMargin from earlier:', savedMargin);
+    
+    // Use savedMargin (captured before blur) if available, otherwise use current value
+    const marginToSave = savedMargin || currentMarginValue;
+    console.log('🔍 DEBUG - marginToSave:', marginToSave);
+    
     const payload = {
       style: {
         style_id: currentStyleId,
@@ -1575,7 +1603,7 @@ updateSizeRangeDisplay();
         gender: $('#gender')?.value || 'MENS',
         garment_type: $('#garment_type')?.value?.trim() || '',
         size_range: $('#size_range_id')?.options[$('#size_range_id')?.selectedIndex]?.dataset.name || '',
-        margin: parseFloat($('#suggested_margin')?.value) || 60.0,
+        margin: parseFloat(marginToSave) || 60.0,
         label_cost: parseFloat($('#label_cost')?.value) || 0.20,
         shipping_cost: parseFloat($('#shipping_cost')?.value) || 0.00,
         suggested_price: parseFloat($('#suggested_price')?.value) || null,
@@ -1641,8 +1669,8 @@ updateSizeRangeDisplay();
     const newRow = document.createElement('div');
     newRow.className = 'kv';
 
-    const vendorOptionsHtml = '<option value="">Select Fabric Vendor</option>' + 
-      fabricVendorOptions.filter(opt => opt.value !== '').map(opt => 
+    const vendorOptionsHtml = '<option value="">Select Fabric Vendor</option><option value="__ADD_NEW_VENDOR__" style="color: #10b981; font-weight: 600;">+ Add New Vendor</option>' +
+      fabricVendorOptions.filter(opt => opt.value !== '' && opt.value !== '__ADD_NEW_VENDOR__').map(opt =>
         `<option value="${opt.value}" data-fship="${opt.fship}">${opt.text}</option>`
       ).join('');
     
@@ -1718,9 +1746,9 @@ updateSizeRangeDisplay();
       if (fshipInput) {
         fshipInput.value = selectedOption.dataset.fship || '0.00';
       }
-      
+
       Array.from(fabricSelect.options).forEach(option => {
-        if (option.value === '') {
+        if (option.value === '' || option.value === '__ADD_NEW__') {
           option.style.display = '';
         } else if (!vendorId) {
           option.style.display = '';
@@ -1728,8 +1756,9 @@ updateSizeRangeDisplay();
           option.style.display = option.dataset.vendor === vendorId ? '' : 'none';
         }
       });
-      
+
       fabricSelect.value = '';
+
       newRow.querySelector('[data-fabric-cost]').value = '';
       recalcMaterials();
     });
@@ -1772,8 +1801,8 @@ updateSizeRangeDisplay();
     const newRow = document.createElement('div');
     newRow.className = 'kv';
 
-    const vendorOptionsHtml = '<option value="">Select Notion Vendor</option>' + 
-      notionVendorOptions.filter(opt => opt.value !== '').map(opt => 
+    const vendorOptionsHtml = '<option value="">Select Notion Vendor</option><option value="__ADD_NEW_VENDOR__" style="color: #10b981; font-weight: 600;">+ Add New Vendor</option>' +
+      notionVendorOptions.filter(opt => opt.value !== '' && opt.value !== '__ADD_NEW_VENDOR__').map(opt =>
         `<option value="${opt.value}">${opt.text}</option>`
       ).join('');
     
@@ -1807,7 +1836,8 @@ updateSizeRangeDisplay();
     const notionSelect = newRow.querySelector('[data-notion-id]');
     notionSelect?.addEventListener('change', function() {
       const opt = this.options[this.selectedIndex];
-      if (opt.value) {
+      // Don't auto-fill vendor if selecting "__ADD_NEW__" - keep existing vendor selection
+      if (opt.value && opt.value !== '__ADD_NEW__') {
         newRow.querySelector('[data-notion-cost]').value = opt.dataset.cost || '';
         newRow.querySelector('[data-notion-vendor-id]').value = opt.dataset.vendor || '';
         recalcMaterials();
@@ -1816,12 +1846,12 @@ updateSizeRangeDisplay();
 
     // Add vendor filter for dynamic notion row - ADD HERE
     const notionVendorSelect = newRow.querySelector('[data-notion-vendor-id]');
+
     notionVendorSelect?.addEventListener('change', function() {
       const vendorId = this.value;
       const notionSelect = newRow.querySelector('[data-notion-id]');
-      
       Array.from(notionSelect.options).forEach(option => {
-        if (option.value === '') {
+        if (option.value === '' || option.value === '__ADD_NEW__') {
           option.style.display = '';
         } else if (!vendorId) {
           option.style.display = '';
@@ -1829,7 +1859,7 @@ updateSizeRangeDisplay();
           option.style.display = option.dataset.vendor === vendorId ? '' : 'none';
         }
       });
-      
+        
       notionSelect.value = '';
       newRow.querySelector('[data-notion-cost]').value = '';
     });
@@ -2725,13 +2755,22 @@ function openQuickAddFabric(triggerSelect) {
   quickAddFabricTrigger = triggerSelect;
   const modal = document.getElementById('quickAddFabricModal');
   modal.style.display = 'flex';
-  
+
   // Clear form
   document.getElementById('quick_fabric_name').value = '';
   document.getElementById('quick_fabric_code').value = '';
   document.getElementById('quick_fabric_cost').value = '';
-  document.getElementById('quick_fabric_vendor').value = '';
   
+  // Pre-select vendor from the same row
+  const row = triggerSelect?.closest('.kv');
+  const vendorSelect = row?.querySelector('[data-fabric-vendor-id]');
+  const selectedVendorId = vendorSelect?.value;
+  if (selectedVendorId && selectedVendorId !== '__ADD_NEW_VENDOR__') {
+    document.getElementById('quick_fabric_vendor').value = selectedVendorId;
+  } else {
+    document.getElementById('quick_fabric_vendor').value = '';
+  }
+
   // Auto-generate next fabric code
   generateNextFabricCode();
   
@@ -2874,16 +2913,28 @@ async function saveQuickFabric() {
   }
 }
 
+
 // Open Quick Add Notion Modal
 function openQuickAddNotion(triggerSelect) {
   quickAddNotionTrigger = triggerSelect;
   const modal = document.getElementById('quickAddNotionModal');
   modal.style.display = 'flex';
-  
   // Clear form
   document.getElementById('quick_notion_name').value = '';
   document.getElementById('quick_notion_cost').value = '';
-  document.getElementById('quick_notion_vendor').value = '';
+  // Pre-select vendor - check same row first, then previous sibling row
+  const row = triggerSelect?.closest('.kv');
+  let vendorSelect = row?.querySelector('[data-notion-vendor-id]');
+  if (!vendorSelect) {
+    // Vendor might be in the previous .kv row
+    vendorSelect = row?.previousElementSibling?.querySelector('[data-notion-vendor-id]');
+  }
+  const selectedVendorId = vendorSelect?.value;
+  if (selectedVendorId && selectedVendorId !== '__ADD_NEW_VENDOR__') {
+    document.getElementById('quick_notion_vendor').value = selectedVendorId;
+  } else {
+    document.getElementById('quick_notion_vendor').value = '';
+  }
   
   // Focus on name field
   setTimeout(() => document.getElementById('quick_notion_name').focus(), 100);
@@ -3058,4 +3109,252 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(function() {
         if (typeof updateSnapshotDisplay === 'function') updateSnapshotDisplay();
     }, 500);
+});
+
+// ============================================
+// QUICK ADD VENDOR MODALS
+// ============================================
+
+let quickAddFabricVendorTrigger = null;
+let quickAddNotionVendorTrigger = null;
+
+// Open Quick Add Fabric Vendor Modal
+async function openQuickAddFabricVendor(triggerSelect) {
+  quickAddFabricVendorTrigger = triggerSelect;
+  const modal = document.getElementById('quickAddFabricVendorModal');
+  modal.style.display = 'flex';
+  
+  document.getElementById('quick_fabric_vendor_name').value = '';
+  document.getElementById('quick_fabric_vendor_fship').value = '';
+  
+  // Pre-fill next code
+  const nextCode = await fetchNextVendorCode('fabric');
+  document.getElementById('quick_fabric_vendor_code').value = nextCode;
+  
+  setTimeout(() => document.getElementById('quick_fabric_vendor_name').focus(), 100);
+}
+
+function closeQuickAddFabricVendor(keepSelection = false) {
+  const modal = document.getElementById('quickAddFabricVendorModal');
+  modal.style.display = 'none';
+  
+  if (quickAddFabricVendorTrigger && !keepSelection) {
+    quickAddFabricVendorTrigger.value = '';
+  }
+  quickAddFabricVendorTrigger = null;
+}
+
+// Fetch next vendor code from server (F101, F102... for fabric, N101, N102... for notion)
+async function fetchNextVendorCode(type) {
+  try {
+    const url = type === 'fabric' ? '/api/fabric-vendors/next-code' : '/api/notion-vendors/next-code';
+    const response = await fetch(url);
+    const data = await response.json();
+    return data.next_code;
+  } catch (e) {
+    // Fallback
+    const prefix = type === 'fabric' ? 'F' : 'N';
+    return prefix + '101';
+  }
+}
+
+async function saveQuickFabricVendor() {
+  const name = document.getElementById('quick_fabric_vendor_name').value.trim();
+  let code = document.getElementById('quick_fabric_vendor_code').value.trim();
+  
+  // Auto-generate code if empty
+  if (!code) {
+    code = await fetchNextVendorCode('fabric');
+  }
+  const fship = document.getElementById('quick_fabric_vendor_fship').value || 0;
+  
+  if (!name) {
+    alert('Please enter vendor name');
+    document.getElementById('quick_fabric_vendor_name').focus();
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/fabric-vendors', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+      },
+      body: JSON.stringify({
+        name: name,
+        vendor_code: code || name.substring(0, 10).toUpperCase(),
+        f_ship_cost: parseFloat(fship) || 0
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      const newOption = document.createElement('option');
+      newOption.value = data.id;
+      newOption.textContent = name;
+      newOption.dataset.fship = fship || '0';
+      
+      document.querySelectorAll('[data-fabric-vendor-id]').forEach(select => {
+        const clone = newOption.cloneNode(true);
+        const addNewOption = Array.from(select.options).find(o => o.value === '__ADD_NEW_VENDOR__');
+        if (addNewOption) {
+          addNewOption.after(clone);
+        } else {
+          select.add(clone);
+        }
+      });
+      
+      const quickFabricVendorSelect = document.getElementById('quick_fabric_vendor');
+      if (quickFabricVendorSelect) {
+        quickFabricVendorSelect.add(newOption.cloneNode(true));
+      }
+      
+      if (window.fabricVendorOptions) {
+        window.fabricVendorOptions.push({ value: data.id.toString(), text: name, fship: fship || '0' });
+      }
+      
+      if (quickAddFabricVendorTrigger) {
+        quickAddFabricVendorTrigger.value = data.id;
+      }
+
+      // Save row reference BEFORE closing (which sets trigger to null)
+      const row = quickAddFabricVendorTrigger?.closest('.kv');
+      
+      closeQuickAddFabricVendor(true);
+      
+      // Automatically open Add Fabric modal (no need to ask - they're in a fabric row)
+      const fabricSelect = row?.querySelector('[data-fabric-id]');
+      if (fabricSelect) {
+        fabricSelect.value = '__ADD_NEW__';
+        fabricSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    } else {
+      alert('Error: ' + (data.error || 'Failed to create vendor'));
+    }
+  } catch (e) {
+    alert('Error creating vendor: ' + e.message);
+  }
+}
+
+async function openQuickAddNotionVendor(triggerSelect) {
+  quickAddNotionVendorTrigger = triggerSelect;
+  const modal = document.getElementById('quickAddNotionVendorModal');
+  modal.style.display = 'flex';
+  
+  document.getElementById('quick_notion_vendor_name').value = '';
+  
+  // Pre-fill next code
+  const nextCode = await fetchNextVendorCode('notion');
+  document.getElementById('quick_notion_vendor_code').value = nextCode;
+  
+  setTimeout(() => document.getElementById('quick_notion_vendor_name').focus(), 100);
+}
+
+function closeQuickAddNotionVendor(keepSelection = false) {
+  const modal = document.getElementById('quickAddNotionVendorModal');
+  modal.style.display = 'none';
+  
+  if (quickAddNotionVendorTrigger && !keepSelection) {
+    quickAddNotionVendorTrigger.value = '';
+  }
+  quickAddNotionVendorTrigger = null;
+}
+
+async function saveQuickNotionVendor() {
+  const name = document.getElementById('quick_notion_vendor_name').value.trim();
+  let code = document.getElementById('quick_notion_vendor_code').value.trim();
+  
+  // Auto-generate code if empty
+  if (!code) {
+    code = await fetchNextVendorCode('notion');
+  }
+  
+  if (!name) {
+    alert('Please enter vendor name');
+    document.getElementById('quick_notion_vendor_name').focus();
+    return;
+  }
+  
+  try {
+    const response = await fetch('/api/notion-vendors', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+      },
+      body: JSON.stringify({
+        name: name,
+        vendor_code: code || name.substring(0, 10).toUpperCase()
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      const newOption = document.createElement('option');
+      newOption.value = data.id;
+      newOption.textContent = name;
+      
+      document.querySelectorAll('[data-notion-vendor-id]').forEach(select => {
+        const clone = newOption.cloneNode(true);
+        const addNewOption = Array.from(select.options).find(o => o.value === '__ADD_NEW_VENDOR__');
+        if (addNewOption) {
+          addNewOption.after(clone);
+        } else {
+          select.add(clone);
+        }
+      });
+      
+      const quickNotionVendorSelect = document.getElementById('quick_notion_vendor');
+      if (quickNotionVendorSelect) {
+        quickNotionVendorSelect.add(newOption.cloneNode(true));
+      }
+      
+      if (window.notionVendorOptions) {
+        window.notionVendorOptions.push({ value: data.id.toString(), text: name });
+      }
+      
+      if (quickAddNotionVendorTrigger) {
+        quickAddNotionVendorTrigger.value = data.id;
+      }
+
+      // Save row reference BEFORE closing (which sets trigger to null)
+        const row = quickAddNotionVendorTrigger?.closest('.kv');
+        
+        closeQuickAddNotionVendor(true);
+        
+        // Automatically open Add Notion modal - notion dropdown may be in next sibling row
+        let notionSelect = row?.querySelector('[data-notion-id]');
+        if (!notionSelect) {
+          notionSelect = row?.nextElementSibling?.querySelector('[data-notion-id]');
+        }
+        if (notionSelect) {
+          notionSelect.value = '__ADD_NEW__';
+          notionSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    } else {
+      alert('Error: ' + (data.error || 'Failed to create vendor'));
+    }
+  } catch (e) {
+    alert('Error creating vendor: ' + e.message);
+  }
+}
+
+document.addEventListener('change', function(e) {
+  if (e.target.matches('[data-fabric-vendor-id]') && e.target.value === '__ADD_NEW_VENDOR__') {
+    openQuickAddFabricVendor(e.target);
+  }
+  if (e.target.matches('[data-notion-vendor-id]') && e.target.value === '__ADD_NEW_VENDOR__') {
+    openQuickAddNotionVendor(e.target);
+  }
+});
+
+document.getElementById('quickAddFabricVendorModal')?.addEventListener('click', function(e) {
+  if (e.target === this) closeQuickAddFabricVendor();
+});
+
+document.getElementById('quickAddNotionVendorModal')?.addEventListener('click', function(e) {
+  if (e.target === this) closeQuickAddNotionVendor();
 });
