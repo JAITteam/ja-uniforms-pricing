@@ -1282,8 +1282,42 @@ updateSizeRangeDisplay();
 
   // Track changes on all form inputs
   function attachDirtyTracking() {
+      // Elements that are just for UI selection (not actual data) - exclude from dirty tracking
+      const excludeIds = [
+          'color_dropdown',
+          'variable_dropdown', 
+          'client_input',
+          'color_list',
+          'variable_list',
+          'client_list',
+          'quick_fabric_vendor',
+          'quick_notion_vendor',
+          'quick_fabric_vendor_name',
+          'quick_fabric_vendor_code',
+          'quick_fabric_vendor_fship',
+          'quick_notion_vendor_name',
+          'quick_notion_vendor_code'
+      ];
+      
+      // Exclude elements inside modals (they have their own save flow)
+      const excludeSelectors = [
+          '[data-fabric-vendor-id]',
+          '[data-notion-vendor-id]'
+      ];
+      
       const inputs = document.querySelectorAll('input, select, textarea');
       inputs.forEach(input => {
+          // Skip excluded IDs
+          if (excludeIds.includes(input.id)) return;
+          
+          // Skip elements matching exclude selectors
+          for (const selector of excludeSelectors) {
+              if (input.matches(selector)) return;
+          }
+          
+          // Skip elements inside modals
+          if (input.closest('.modal') || input.closest('[id*="Modal"]')) return;
+          
           input.addEventListener('input', markDirty);
           input.addEventListener('change', markDirty);
       });
@@ -1913,8 +1947,8 @@ updateSizeRangeDisplay();
     option.text = colorName;
     option.value = colorId;
     colorList.add(option);
-    
     dropdown.value = '';
+    if (typeof markDirty === 'function') markDirty();
   };
 
   window.addNewColor = async function() {
@@ -1959,6 +1993,7 @@ updateSizeRangeDisplay();
         } else {
           alert('New color created and added!');
         }
+        if (typeof markDirty === 'function') markDirty();
       } else {
         alert(data.error || 'Failed to create color');
       }
@@ -1978,8 +2013,8 @@ updateSizeRangeDisplay();
     }
     
     selected.forEach(opt => opt.remove());
+    if (typeof markDirty === 'function') markDirty();
   };
-
 
   // VARIABLE MANAGEMENT FUNCTIONS - ADD THIS ENTIRE BLOCK HERE
   async function loadVariables() {
@@ -2021,8 +2056,8 @@ updateSizeRangeDisplay();
     option.text = variableName;
     option.value = variableId;
     variableList.add(option);
-    
     dropdown.value = '';
+    if (typeof markDirty === 'function') markDirty();
   };
 
   window.addNewVariable = async function() {
@@ -2067,6 +2102,7 @@ updateSizeRangeDisplay();
         } else {
           alert('New variable created and added!');
         }
+        if (typeof markDirty === 'function') markDirty();
       } else {
         alert(data.error || 'Failed to create variable');
       }
@@ -2086,6 +2122,7 @@ updateSizeRangeDisplay();
     }
     
     selected.forEach(opt => opt.remove());
+    if (typeof markDirty === 'function') markDirty();
   };
 
   // =============================================================================

@@ -1003,7 +1003,7 @@ function applyUnlockedState() {
     if (lockPath) lockPath.setAttribute('d', 'M7 11V7a5 5 0 0 1 9.9-1');
     
     document.querySelectorAll('input, select, textarea').forEach(function(el) {
-        var alwaysReadonly = ['vendor', 'vendor_code', 'fabric_code', 'vendor_style', 'label_cost', 'shipping_cost', 'cleaning_cost', 'retail_price'];
+        var alwaysReadonly = ['vendor', 'vendor_code', 'fabric_code', 'vendor_style', 'label_cost', 'shipping_cost', 'cleaning_cost', 'retail_price', 'total_reg', 'total_ext'];
         var isAlwaysReadonly = alwaysReadonly.includes(el.id) || el.hasAttribute('data-fabric-cost') || el.hasAttribute('data-notion-cost') || el.hasAttribute('data-fabric-total') || el.hasAttribute('data-notion-total') || el.hasAttribute('data-labor-total') || el.hasAttribute('data-labor-rate') || el.hasAttribute('data-fabric-fship');
         
         if (!isAlwaysReadonly) {
@@ -1029,12 +1029,15 @@ function applyUnlockedState() {
         btn.style.display = 'flex';
     });
   
-    // Re-attach dirty tracking to all inputs after unlocking
+    // Re-attach dirty tracking to all inputs after unlocking (excluding selection-only elements)
+    var excludeIds = ['color_dropdown', 'variable_dropdown', 'client_input', 'color_list', 'variable_list', 'client_list'];
     document.querySelectorAll('input, select, textarea').forEach(function(el) {
         el.removeEventListener('input', window.markDirty);
         el.removeEventListener('change', window.markDirty);
-        el.addEventListener('input', window.markDirty);
-        el.addEventListener('change', window.markDirty);
+        if (!excludeIds.includes(el.id)) {
+            el.addEventListener('input', window.markDirty);
+            el.addEventListener('change', window.markDirty);
+        }
     });
 }
 
