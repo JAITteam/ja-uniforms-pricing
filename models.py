@@ -302,7 +302,6 @@ class Style(db.Model):
 
 class StyleFabric(db.Model):
     __tablename__ = 'style_fabrics'
-    __table_args__ = (db.UniqueConstraint('style_id', 'fabric_id', name='uq_style_fabric'),)
 
     id = db.Column(db.Integer, primary_key=True)
     style_id = db.Column(db.Integer, db.ForeignKey('styles.id', ondelete='CASCADE'), nullable=False, index=True)  # ← ADDED INDEX

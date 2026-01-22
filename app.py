@@ -5778,7 +5778,7 @@ def api_style_save():
             "style_id": style.id,
             "message": message
         }), 200
-    
+        
     except IntegrityError as e:
         db.session.rollback()
         app.logger.warning(f"IntegrityError in style save: {e}")
@@ -5786,8 +5786,16 @@ def api_style_save():
         error_msg = str(e.orig).lower() if e.orig else str(e).lower()
         if 'vendor_style' in error_msg:
             return jsonify({"success": False, "error": "A style with this Vendor Style already exists. Please use a different code."}), 400
+        elif 'uq_style_notion' in error_msg or 'style_notion' in error_msg:
+            return jsonify({"success": False, "error": "You added the same notion twice. Please remove the duplicate notion row."}), 400
+        elif 'uq_style_color' in error_msg or 'style_color' in error_msg:
+            return jsonify({"success": False, "error": "You added the same color twice. Please remove the duplicate color."}), 400
+        elif 'uq_style_variable' in error_msg or 'style_variable' in error_msg:
+            return jsonify({"success": False, "error": "You added the same variable twice. Please remove the duplicate variable."}), 400
+        elif 'uq_style_client' in error_msg or 'style_client' in error_msg:
+            return jsonify({"success": False, "error": "You added the same client twice. Please remove the duplicate client."}), 400
         else:
-            return jsonify({"success": False, "error": "This record already exists. Please check for duplicates."}), 400
+            return jsonify({"success": False, "error": "A duplicate entry was detected. Please check for duplicate fabrics, notions, colors, or variables."}), 400
     
     except ValueError as e:
         db.session.rollback()

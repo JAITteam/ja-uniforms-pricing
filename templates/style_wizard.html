@@ -620,7 +620,7 @@ function updateSnapshotDisplay() {
         if (snapRegCost && totalReg) snapRegCost.textContent = totalReg.value || '$0.00';
         if (regRow) regRow.style.display = 'flex';
         
-        if (extendedSizes && extendedSizes.trim() !== '') {
+        if (extendedSizes && extendedSizes.trim() !== '' && extendedSizes.trim().toLowerCase() !== 'none') {
             var totalExt = document.getElementById('total_ext');
             var snapExtLabel = document.getElementById('snap_ext_label');
             var snapExtCost = document.getElementById('snap_ext_cost');
