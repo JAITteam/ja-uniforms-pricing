@@ -873,7 +873,7 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
                     data-style-name-lower="{{ style.style_name|lower }}"
                     data-gender="{{ style.gender }}"
                     data-cost="{{ style.get_total_cost() }}"
-                    data-margin="{{ actual_margin|round(1) }}"
+                    data-margin="{{ actual_margin }}"
                     data-updated="{{ style.updated_at.isoformat() if style.updated_at else '' }}"
                     data-favorite="{{ 'true' if style.is_favorite else 'false' }}"
                     data-visible="true">
@@ -894,11 +894,11 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
                     <td><strong>${{ "%.2f"|format(style.get_total_cost()) }}</strong></td>
                     <td>
                         {% if actual_margin >= 65 %}
-                        <span style="font-weight: 700; color: #059669;">{{ actual_margin|round(1) }}%</span>
+                        <span style="font-weight: 700; color: #059669;">{{ "%.2f"|format(actual_margin) }}%</span>
                         {% elif actual_margin >= 50 %}
-                        <span style="font-weight: 700; color: #3b82f6;">{{ actual_margin|round(1) }}%</span>
+                        <span style="font-weight: 700; color: #3b82f6;">{{ "%.2f"|format(actual_margin) }}%</span>
                         {% else %}
-                        <span style="font-weight: 700; color: #dc2626;">{{ actual_margin|round(1) }}%</span>
+                        <span style="font-weight: 700; color: #dc2626;">{{ "%.2f"|format(actual_margin) }}%</span>
                         {% endif %}
                     </td>
                     <td>
