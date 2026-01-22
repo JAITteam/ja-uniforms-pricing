@@ -667,19 +667,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Filter fabrics by vendor 
-  document.querySelector('[data-fabric-vendor-id]')?.addEventListener('change', function() {
-    const vendorId = this.value;
-    const fabricSelect = document.querySelector('[data-fabric-id]');
-    const row = this.closest('.kv');
+  // Filter fabrics by vendor - extracted as reusable function
+  function filterFabricsByVendor() {
+    const vendorSelect = document.querySelector('[data-fabric-vendor-id]');
+    if (!vendorSelect) return;
     
+    const vendorId = vendorSelect.value;
+    const fabricSelect = document.querySelector('[data-fabric-id]');
+    const row = vendorSelect.closest('.kv');
+
     // Auto-fill F.Ship from selected vendor
-    const selectedOption = this.options[this.selectedIndex];
+    const selectedOption = vendorSelect.options[vendorSelect.selectedIndex];
     const fshipInput = row.querySelector('[data-fabric-fship]');
     if (fshipInput) {
       fshipInput.value = selectedOption.dataset.fship || '0.00';
     }
-    
+
     if (!fabricSelect) return;
 
     Array.from(fabricSelect.options).forEach(option => {
@@ -695,7 +698,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelector('[data-fabric-cost]').value = '';
     recalcMaterials();
-  });
+  }
+
+  document.querySelector('[data-fabric-vendor-id]')?.addEventListener('change', filterFabricsByVendor);
 
   // Notion dropdown - auto-fill cost when selected (first row only)
   $('[data-notion-id]')?.addEventListener('change', function() {
@@ -709,11 +714,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Filter notions by vendor - ADD HERE (around line 110)
-  document.querySelector('[data-notion-vendor-id]')?.addEventListener('change', function() {
-    const vendorId = this.value;
-    const notionSelect = document.querySelector('[data-notion-id]');
+  // Filter notions by vendor - extracted as reusable function
+  function filterNotionsByVendor() {
+    const vendorSelect = document.querySelector('[data-notion-vendor-id]');
+    if (!vendorSelect) return;
     
+    const vendorId = vendorSelect.value;
+    const notionSelect = document.querySelector('[data-notion-id]');
+
     if (!notionSelect) return;
 
     Array.from(notionSelect.options).forEach(option => {
@@ -725,12 +733,13 @@ document.addEventListener('DOMContentLoaded', () => {
         option.style.display = option.dataset.vendor === vendorId ? '' : 'none';
       }
     });
-    
+
     notionSelect.value = '';
     document.querySelector('[data-notion-cost]').value = '';
-  });
- 
-  // Garment type - auto-fill cleaning cost
+  }
+
+  document.querySelector('[data-notion-vendor-id]')?.addEventListener('change', filterNotionsByVendor);
+
   // Garment type - auto-fill cleaning cost
   $('#garment_type')?.addEventListener('change', async function() {
     const garmentType = this.value;
@@ -1066,8 +1075,12 @@ updateSizeRangeDisplay();
     const fabrics = data.fabrics || [];
     fabrics.forEach((f, index) => {
       if (index === 0) {
-        $('[data-fabric-id]').value = f.fabric_id;
         if (f.vendor_id) $('[data-fabric-vendor-id]').value = f.vendor_id;
+        
+        // IMPORTANT: Filter fabrics after setting vendor but before setting fabric
+        filterFabricsByVendor();
+        
+        $('[data-fabric-id]').value = f.fabric_id;
         $('[data-fabric-yds]').value = f.yards;
 
         // Set F.Ship from vendor
@@ -1099,12 +1112,29 @@ updateSizeRangeDisplay();
         $('#addFabric').click();
         const allFabricSelects = document.querySelectorAll('[data-fabric-id]');
         const newRow = allFabricSelects[allFabricSelects.length - 1].closest('.kv');
-        newRow.querySelector('[data-fabric-id]').value = f.fabric_id;
+        
         if (f.vendor_id) newRow.querySelector('[data-fabric-vendor-id]').value = f.vendor_id;
+        
+        // IMPORTANT: Filter fabrics for this row after setting vendor
+        const vendorSelect = newRow.querySelector('[data-fabric-vendor-id]');
+        const fabricSelect = newRow.querySelector('[data-fabric-id]');
+        if (vendorSelect && fabricSelect) {
+          const vendorId = vendorSelect.value;
+          Array.from(fabricSelect.options).forEach(option => {
+            if (option.value === '' || option.value === '__ADD_NEW__') {
+              option.style.display = '';
+            } else if (!vendorId) {
+              option.style.display = '';
+            } else {
+              option.style.display = option.dataset.vendor === vendorId ? '' : 'none';
+            }
+          });
+        }
+        
+        newRow.querySelector('[data-fabric-id]').value = f.fabric_id;
         newRow.querySelector('[data-fabric-yds]').value = f.yards;
 
         // Set F.Ship from vendor
-        const vendorSelect = newRow.querySelector('[data-fabric-vendor-id]');
         const fshipInput = newRow.querySelector('[data-fabric-fship]');
         if (vendorSelect && fshipInput) {
           const selectedVendorOpt = vendorSelect.options[vendorSelect.selectedIndex];
@@ -1126,18 +1156,40 @@ updateSizeRangeDisplay();
     const notions = data.notions || [];
     notions.forEach((n, index) => {
       if (index === 0) {
+        if (n.vendor_id) $('[data-notion-vendor-id]').value = n.vendor_id;
+        
+        // IMPORTANT: Filter notions after setting vendor but before setting notion
+        filterNotionsByVendor();
+        
         $('[data-notion-id]').value = n.notion_id;
         $('[data-notion-cost]').value = n.cost_per_unit;
         $('[data-notion-qty]').value = n.qty || '';
-        if (n.vendor_id) $('[data-notion-vendor-id]').value = n.vendor_id;
       } else {
         $('#addNotion').click();
         const allNotionSelects = document.querySelectorAll('[data-notion-id]');
         const newRow = allNotionSelects[allNotionSelects.length - 1].closest('.kv');
+        
+        if (n.vendor_id) newRow.querySelector('[data-notion-vendor-id]').value = n.vendor_id;
+        
+        // IMPORTANT: Filter notions for this row after setting vendor
+        const vendorSelect = newRow.querySelector('[data-notion-vendor-id]');
+        const notionSelect = newRow.querySelector('[data-notion-id]');
+        if (vendorSelect && notionSelect) {
+          const vendorId = vendorSelect.value;
+          Array.from(notionSelect.options).forEach(option => {
+            if (option.value === '' || option.value === '__ADD_NEW__') {
+              option.style.display = '';
+            } else if (!vendorId) {
+              option.style.display = '';
+            } else {
+              option.style.display = option.dataset.vendor === vendorId ? '' : 'none';
+            }
+          });
+        }
+        
         newRow.querySelector('[data-notion-id]').value = n.notion_id;
         newRow.querySelector('[data-notion-cost]').value = n.cost_per_unit;
         newRow.querySelector('[data-notion-qty]').value = n.qty || '';
-        if (n.vendor_id) newRow.querySelector('[data-notion-vendor-id]').value = n.vendor_id;
       }
     });
 
@@ -1473,39 +1525,65 @@ updateSizeRangeDisplay();
       return;
     }
     
-    // ===== STEP 5: VALIDATE ALL FABRIC YARDS =====
-    const allFabricYards = document.querySelectorAll('[data-fabric-yds]');
-    for (let i = 0; i < allFabricYards.length; i++) {
-      const yards = allFabricYards[i].value;
-      if (yards) {
+    // ===== STEP 5: VALIDATE ALL FABRIC ROWS =====
+    const allFabricRows = document.querySelectorAll('[data-fabric-id]');
+    for (let i = 0; i < allFabricRows.length; i++) {
+      const row = allFabricRows[i].closest('.kv');
+      const vendor = row.querySelector('[data-fabric-vendor-id]')?.value;
+      const fabric = row.querySelector('[data-fabric-id]')?.value;
+      const yards = row.querySelector('[data-fabric-yds]')?.value;
+      
+      // If any field in the row has a value, all fields must be filled
+      if (vendor || fabric || yards) {
+        if (!vendor || !fabric || !yards) {
+          await customAlert(
+            `Fabric row ${i+1} is incomplete. All fields (Vendor, Fabric, and Yards) must be filled.`,
+            'error'
+          );
+          return;
+        }
+        
+        // Validate yards is positive
         validation = validatePositiveNumber(yards, `Fabric row ${i+1} yards`, false);
         if (!validation.valid) {
           await customAlert(validation.error, 'error');
-          allFabricYards[i].focus();
+          row.querySelector('[data-fabric-yds]')?.focus();
           return;
         }
       }
     }
     
-    // ===== STEP 6: VALIDATE ALL NOTION QUANTITIES =====
-    const allNotionQty = document.querySelectorAll('[data-notion-qty]');
-    for (let i = 0; i < allNotionQty.length; i++) {
-      const qty = allNotionQty[i].value;
-      if (qty) {
+    // ===== STEP 6: VALIDATE ALL NOTION ROWS =====
+    const allNotionRows = document.querySelectorAll('[data-notion-id]');
+    for (let i = 0; i < allNotionRows.length; i++) {
+      const row = allNotionRows[i].closest('.kv');
+      const vendor = row.querySelector('[data-notion-vendor-id]')?.value;
+      const notion = row.querySelector('[data-notion-id]')?.value;
+      const qty = row.querySelector('[data-notion-qty]')?.value;
+      
+      // If any field in the row has a value, all fields must be filled
+      if (vendor || notion || qty) {
+        if (!vendor || !notion || !qty) {
+          await customAlert(
+            `Notion row ${i+1} is incomplete. All fields (Vendor, Notion, and Qty) must be filled.`,
+            'error'
+          );
+          return;
+        }
+        
+        // Validate quantity is positive
         validation = validatePositiveNumber(qty, `Notion row ${i+1} quantity`, false);
         if (!validation.valid) {
           await customAlert(validation.error, 'error');
-          allNotionQty[i].focus();
+          row.querySelector('[data-notion-qty]')?.focus();
           return;
         }
       }
     }
-    
+
     console.log('✅ All validations passed, preparing to save...');
     
-    // ========================================
-    // DUPLICATION VALIDATION
-  
+
     // ========================================
     // DUPLICATION VALIDATION
     // ========================================
@@ -1820,6 +1898,8 @@ updateSizeRangeDisplay();
       newRow.remove();
       recalcMaterials();
     });
+    // Mark dirty after adding new row
+    markDirty();
   });
 
   $('#addNotion')?.addEventListener('click', () => {
@@ -1905,6 +1985,8 @@ updateSizeRangeDisplay();
       newRow.remove();
       recalcMaterials();
     });
+    // Mark dirty after adding new row
+    markDirty();
   });
 
   // COLOR MANAGEMENT FUNCTIONS
