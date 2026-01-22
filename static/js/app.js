@@ -874,7 +874,6 @@ document.addEventListener('DOMContentLoaded', () => {
       // Default to 60% margin only if field is truly empty or zero
       const sp = total / (1 - 0.60);
       $('#suggested_price').value = sp.toFixed(2);
-      $('#suggested_margin').value = '60.0';
     }
     // UPDATE SNAPSHOT DISPLAY - ADD THIS LINE
     if (typeof updateSnapshotDisplay === 'function') updateSnapshotDisplay();

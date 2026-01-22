@@ -864,7 +864,7 @@ body > nav + div { max-width: 100% !important; width: 100% !important; padding: 
             </thead>
             <tbody id="tableBody">
                 {% for style in styles %}
-                {% set actual_margin = ((style.suggested_price - style.get_total_cost()) / style.suggested_price * 100) if style.suggested_price and style.suggested_price > 0 else style.base_margin_percent %}
+                {% set actual_margin = style.base_margin_percent if style.base_margin_percent else 60 %}
                 <tr class="{% if actual_margin >= 65 %}margin-high{% elif actual_margin >= 50 %}margin-medium{% else %}margin-low{% endif %}"
                     data-id="{{ style.id }}"
                     data-vendor-style="{{ style.vendor_style }}"
